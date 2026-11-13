@@ -175,6 +175,7 @@ test("chat inbox uses only member-scoped unread counts and never includes messag
   assert.deepEqual(result.map(chat => [chat.id,chat.count,chat.displayName]), [
     [a,4,"Група крипто"], [b,2,"Друг"],
   ]);
+  assert.doesNotMatch(JSON.stringify(result), /Секрет/);
   assert.equal(unreadChatNotices(null).length, 0);
   assert.equal(unreadChatNotices([{ id: a, unread_count: Infinity }]).length, 0);
   assert.equal(unreadChatNotices([{ id: a, unread_count: 100000 }])[0].count, 100);
