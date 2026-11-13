@@ -183,6 +183,17 @@ export function PublicProfile() {
     setExpandedComments(id);
     if (!comments[id]) void loadComments(id);
   };
+  useEffect(() => {
+    if (!focusedPost || !profile) return;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById("post-" + focusedPost.id)?.scrollIntoView({
+        behavior: "auto",
+        block: "start",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focusedPost?.id, profile?.id]);
+
   const copy = async (value: string, id: string) => {
     try {
       await navigator.clipboard.writeText(value);
@@ -190,6 +201,20 @@ export function PublicProfile() {
     } catch {
       setCopied("error:" + id);
     }
+  };
+
+  const sharePost = async (id: string) => {
+    if (!profile) return;
+    const url = publicPostUrl(profile.url, id);
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: profile.displayName + " · h00k Community", url });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+    await copy(url, id);
   };
 
   const communityUrl = profile ? profile.communityOrigin + "/#community?section=profile&owner=" + encodeURIComponent(profile.id) : null;
@@ -356,7 +381,7 @@ export function PublicProfile() {
                   aria-controls={"public-comments-" + item.id}
                   onClick={() => toggleComments(item.id)}
                 ><MessageCircle size={16} aria-hidden="true" /> {expandedComments === item.id ? "Сховати обговорення" : "Публічні коментарі"}</button>
-                <button type="button" onClick={() => void copy(publicPostUrl(profile.url, item.id), item.id)}>
+                <button type="button" onClick={() => void sharePost(item.id)}>
                   {copied === item.id ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
                   {copied === item.id ? "Скопійовано" : "Поділитися"}
                 </button>
