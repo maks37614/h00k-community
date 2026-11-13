@@ -31,6 +31,7 @@ import type {
 import { ChartPreview } from "./ChartPreview";
 import "./community.css";
 import "./social-friends-settings.css";
+import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from "./friendsModel";
 const SharedHookChart = lazy(() => import("./SharedHookChart"));
 type Tab =
   | "feed"
@@ -1522,16 +1523,6 @@ function Workspace({
   );
 }
 
-type CommunityFriend = {
-  id: string;
-  displayName?: string;
-  accepted?: boolean;
-  incoming?: boolean;
-  friend?: boolean;
-};
-
-type FriendFilter = "all" | "friends" | "requests";
-
 function Friends({
   run,
   onProfile,
@@ -1546,27 +1537,9 @@ function Friends({
   const [filter, setFilter] = useState<FriendFilter>("all");
 
   const relationships: CommunityFriend[] = resource.data?.people ?? [];
-  const relationshipsById = new Map(relationships.map((p) => [p.id, p]));
-  const combined = new Map<string, CommunityFriend>();
-  for (const person of people) combined.set(person.id, person);
-  for (const person of relationships) {
-    combined.set(person.id, { ...combined.get(person.id), ...person });
-  }
-
-  const isFriend = (person: CommunityFriend) =>
-    relationshipsById.get(person.id)?.accepted === true ||
-    (!relationshipsById.has(person.id) && person.friend === true);
-  const isPending = (person: CommunityFriend) => {
-    const relationship = relationshipsById.get(person.id);
-    return !!relationship && !relationship.accepted;
-  };
-  const visible = [...combined.values()].filter((person) => {
-    if (filter === "friends") return isFriend(person);
-    if (filter === "requests") return isPending(person);
-    return true;
-  });
-  const friendsCount = relationships.filter((p) => p.accepted).length;
-  const requestsCount = relationships.filter((p) => !p.accepted).length;
+  const { rows: visible, friendsCount, requestsCount } = buildFriendDirectory(
+    relationships, people, filter,
+  );
 
   function changeFriend(person: CommunityFriend, action: "send" | "accept" | "cancel" | "remove") {
     if (action === "remove" && !window.confirm("Видалити цього користувача з друзів?")) return;
@@ -1667,17 +1640,10 @@ function Friends({
 
       <div className="community-friends-grid">
         {visible.map((person) => {
-          const relation = relationshipsById.get(person.id);
-          const accepted = isFriend(person);
-          const incoming = !!relation && !relation.accepted && !!relation.incoming;
-          const outgoing = !!relation && !relation.accepted && !relation.incoming;
-          const state = accepted
-            ? "Друзі"
-            : incoming
-              ? "Вхідний запит"
-              : outgoing
-                ? "Запит надіслано"
-                : "Трейдер";
+          const accepted = person.isAccepted;
+          const incoming = person.isIncoming;
+          const outgoing = person.isOutgoing;
+          const state = person.statusText;
           const name = person.displayName?.trim() || "Трейдер";
 
           return (
