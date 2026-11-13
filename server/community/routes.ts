@@ -93,12 +93,19 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
           ? "friends"
           : "public",
       wallOwner = req.query.owner ? uuid(req.query.owner) : null,
-      before = req.query.before ? uuid(req.query.before) : null;
+      before = req.query.before ? uuid(req.query.before) : null,
+      categoryRaw = req.query.category ? bounded(req.query.category, 16) : null;
+    if (categoryRaw && !["idea", "analysis", "education"].includes(categoryRaw))
+      fail("Некоректна категорія публікації");
     const { rows } = await db.query<Item>(
       `SELECT * FROM hc_items WHERE kind='post' AND NOT deleted
       AND ($1::uuid IS NULL OR (created_at,id)<(SELECT created_at,id FROM hc_items WHERE id=$1))
-      AND ($2<>'public' OR audience='public') AND ($3::uuid IS NULL OR owner_id=$3) ORDER BY created_at DESC,id DESC LIMIT 40`,
-      [before, mode, wallOwner],
+      AND ($2<>'public' OR audience='public')
+      AND ($3::uuid IS NULL OR owner_id=$3)
+      AND ($4::text IS NULL OR body->>'category'=$4)
+      AND ($2<>'friends' OR owner_id=$5 OR owner_id=ANY($6::uuid[]))
+      ORDER BY created_at DESC,id DESC LIMIT 40`,
+      [before, mode, wallOwner, categoryRaw, _a.id, [...p.accepted]],
     );
     const output = [];
     for (const row of rows) {
