@@ -2159,12 +2159,18 @@ function Chats({
   const [pollError, setPollError] = useState("");
   const inFlightPoll = useRef(false);
   const acknowledged = useRef<Map<string, string>>(new Map());
+  const reading = useRef<Set<string>>(new Set());
   async function acknowledgeRead(conversationId: string, messageId: string) {
-    if (acknowledged.current.get(conversationId) === messageId) return;
-    await post(api + "/conversations/" + encodeURIComponent(conversationId) + "/read", { messageId });
-    acknowledged.current.set(conversationId, messageId);
-    if (activeId.current === conversationId) list.refresh();
-    window.dispatchEvent(new Event("community:chat-read"));
+    if (acknowledged.current.get(conversationId) === messageId || reading.current.has(conversationId)) return;
+    reading.current.add(conversationId);
+    try {
+      await post(api + "/conversations/" + encodeURIComponent(conversationId) + "/read", { messageId });
+      acknowledged.current.set(conversationId, messageId);
+      if (activeId.current === conversationId) list.refresh();
+      window.dispatchEvent(new Event("community:chat-read"));
+    } finally {
+      reading.current.delete(conversationId);
+    }
   }
   useEffect(() => {
     if (!inviteTarget) return;
@@ -2241,7 +2247,8 @@ function Chats({
       ];
     });
     if (!after) setBefore(data.next);
-    if (!older && document.visibilityState === "visible") {
+    // Do not mark a new arrival as read while the user is browsing older messages.
+    if (!older && document.visibilityState === "visible" && stayAtBottom.current) {
       const lastSeenId = data.items.at(-1)?.id ?? latestMessages.current.at(-1)?.id;
       if (lastSeenId)
         void acknowledgeRead(startedId, lastSeenId)
@@ -2509,6 +2516,11 @@ function Chats({
                   const thread = event.currentTarget;
                   stayAtBottom.current =
                     thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
+                  if (stayAtBottom.current && document.visibilityState === "visible") {
+                    const lastSeen = latestMessages.current.at(-1)?.id;
+                    if (lastSeen) void acknowledgeRead(id, lastSeen)
+                      .catch(error => setPollError(error instanceof Error ? error.message : "Не вдалося позначити повідомлення прочитаним"));
+                  }
                 }}
               >
                 {before && (
