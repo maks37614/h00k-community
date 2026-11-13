@@ -370,13 +370,14 @@ test('muting a conversation is private, reversible, and never clears its unread 
 });
 
 test('timed mute expires automatically for one member and restores alerts without clearing unread', async () => {
-  await call(api + '/friends/' + bob.id, alice, 'POST', {});
-  await call(api + '/friends/' + alice.id, bob, 'POST', {});
-  const conversation = await call(api + '/conversations', alice, 'POST', {
-    title: 'Тимчасове приглушення', isGroup: true, members: [bob.id],
-  });
-  assert.equal(conversation.res.status, 201, JSON.stringify(conversation.data));
-  const id = conversation.data.id;
+  // Reuse the authenticated direct chat from the preceding mute test.
+  // Do not exhaust the production-like conversation creation rate limit.
+  const existing = await db.query(
+    "SELECT id FROM hc_conversations WHERE owner_id=$1 AND title=$2 LIMIT 1",
+    [alice.id, 'Діалог без звуку'],
+  );
+  assert.ok(existing.rows[0]?.id, 'a real previous conversation is available');
+  const id = existing.rows[0].id;
   const message = await call(api + '/items', alice, 'POST', {
     kind: 'message', conversationId: id, body: { text: 'Залишається непрочитаним' },
   });
