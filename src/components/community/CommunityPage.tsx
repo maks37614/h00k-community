@@ -2165,7 +2165,7 @@ function Trades({ run, owner }: { run: Run; owner?: string }) {
                       ? "Недостатньо даних"
                       : v.winRate.toFixed(1) + "%"}
                   </p>
-                </article>
+                </div>
               ),
             )}
           </div>
