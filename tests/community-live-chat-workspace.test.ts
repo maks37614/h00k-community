@@ -34,6 +34,12 @@ test("live chat UI keeps authenticated conversations and API-backed messages", (
   assert.match(chat, /className="community-chat-panel"/);
   assert.match(chat, /target=\{\{ kind: "message", conversationId: id \}\}/);
   assert.match(chat, /setInterval\(pull, 5000\)/);
+  assert.match(chat, /stayAtBottom = useRef\(true\)/);
+  assert.match(chat, /restoreOlderOffset = useRef<number \| null>\(null\)/);
+  assert.match(chat, /useLayoutEffect\(\(\) => \{/);
+  assert.match(chat, /className="community-chat-jump"/);
+  assert.match(chat, /ref=\{threadRef\}/);
+  assert.match(chat, /onScroll=\{\(event\) => \{/);
   assert.match(chat, /setName\(""/);
   assert.match(chat, /setChatSearch\(""/);
   assert.doesNotMatch(chat, /INITIAL_CHAT_MESSAGES|mockData|unreadCount\s*=\s*2/);
@@ -45,6 +51,7 @@ test("chat styles keep full conversation titles and responsive composer visible"
   assert.match(style, /\.community-workspace \.community-chat-active-header/);
   assert.match(style, /\.community-workspace \.community-chat-thread/);
   assert.match(style, /\.community-workspace \.community-chat-panel \.community-composer-message/);
+  assert.match(style, /\.community-workspace \.community-chat-jump/);
   assert.match(style, /@media \(max-width: 700px\)/);
   assert.match(style, /font-size: 16px !important/);
   assert.doesNotMatch(style, /(^|\n)\s*(html|body)\s*\{/);
