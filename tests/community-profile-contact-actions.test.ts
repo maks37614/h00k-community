@@ -38,7 +38,8 @@ test("profile messaging preselects one friend but needs user confirmation before
   assert.match(page, /setChatInvite\(\{ id, name \}\)/);
   assert.match(page, /setTab\("chats"\)/);
   assert.match(page, /inviteTarget=\{chatInvite\}/);
-  assert.match(page, /defaultOpen=\{Boolean\(inviteTarget\)\}/);
+  assert.match(page, /open=\{createOpen\}/);
+  assert.match(page, /onToggle=\{\(event\) => setCreateOpen\(event\.currentTarget\.open\)\}/);
   assert.match(page, /setMembers\(\[inviteTarget\.id\]\)/);
   assert.match(page, /setName\("Діалог із " \+ inviteTarget\.name\)/);
   assert.match(page, /Підтвердіть створення розмови/);
