@@ -250,6 +250,10 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
       lifestyle: c.lifestyleAudience === "public" ? text(c.lifestyle, 2000) : "",
       telegram: c.telegramAudience === "public" && /^https:\/\/t\.me\/[A-Za-z0-9_]+$/.test(c.telegram ?? "") ? c.telegram : "",
       status, statistics, awards,
+      sessions: c.publicSessionsEnabled === true && Array.isArray(c.tradingSessionIds)
+        ? c.tradingSessionIds.filter((value: unknown) => typeof value === "string" &&
+          ["sydney", "tokyo", "london", "new-york"].includes(value)).slice(0, 4)
+        : null,
       avatarUrl: c.avatarAudience === "public" && typeof c.avatarMediaId === "string"
         ? "/api/public/profiles/" + owner.username + "/avatar" : null,
       coverUrl: c.coverAudience === "public" && typeof c.coverMediaId === "string"
