@@ -617,7 +617,7 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
   route("get", "/conversations", async (_req, res, db, a) => {
     const { rows } = await db.query(
       `SELECT c.*,m.role,
-        (m.muted OR m.muted_until>NOW()) AS muted,
+        (m.muted OR COALESCE(m.muted_until>NOW(),false)) AS muted,
         m.muted_until,
         CASE WHEN c.is_group THEN NULL ELSE (
           SELECT COALESCE(NULLIF(peer.profile->>'displayName',''),'Трейдер')
@@ -752,7 +752,7 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
            muted_until=CASE WHEN $4::integer IS NULL THEN NULL
              ELSE NOW() + ($4::integer * INTERVAL '1 minute') END
        WHERE conversation_id=$1 AND user_id=$2
-       RETURNING (muted OR muted_until>NOW()) AS muted,muted_until`,
+       RETURNING (muted OR COALESCE(muted_until>NOW(),false)) AS muted,muted_until`,
       [id,a.id,permanently,duration ?? null],
     );
     if (!rows.length) fail("Розмова недоступна", 404);
