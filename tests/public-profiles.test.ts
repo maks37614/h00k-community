@@ -178,6 +178,66 @@ test("public wall excludes private/friends material and does not serialize arbit
   assert.doesNotMatch(result.text, /DO_NOT_SERIALIZE|friends post|private post|owner_id|revision/);
 });
 
+test("guest /u/ wall shows only opt-in public comments, post deep links and aggregate reactions", async () => {
+  const owner = await named("social-wall-owner");
+  const writer = await named("social-wall-writer");
+  const hidden = await actor();
+  const id = await post(owner, { text: "Public trading plan", internalNote: "SECRET_NOT_FOR_PUBLIC" });
+  const root = "/api/public/profiles/social-wall-owner/posts/" + id;
+
+  assert.equal((await call(root)).res.status, 200);
+  assert.equal((await call(root + "/missing")).res.status, 404);
+  assert.doesNotMatch((await call(root)).text, /SECRET_NOT_FOR_PUBLIC|owner_id|internalNote/);
+
+  const visible = await call("/api/community/items", writer, "POST", {
+    kind: "comment", audience: "public", parentId: id, body: { text: "Відкритий коментар", internalNote: "SECRET_COMMENT" },
+  });
+  assert.equal(visible.res.status, 201, visible.text);
+  const privateComment = await call("/api/community/items", writer, "POST", {
+    kind: "comment", audience: "private", parentId: id, body: { text: "НЕ ПУБЛІКУВАТИ КОМЕНТАР" },
+  });
+  assert.equal(privateComment.res.status, 201, privateComment.text);
+  const noConsent = await call("/api/community/items", hidden, "POST", {
+    kind: "comment", audience: "public", parentId: id, body: { text: "НЕ ЗГОДЕН НА ПУБЛІЧНИЙ ПРОФІЛЬ" },
+  });
+  assert.equal(noConsent.res.status, 201, noConsent.text);
+
+  const quoted = await call("/api/community/items", owner, "POST", {
+    kind: "comment", audience: "public", parentId: id,
+    body: { text: "Дякую за аналіз", sourceItemId: visible.data.id },
+  });
+  assert.equal(quoted.res.status, 201, quoted.text);
+  const react = await call("/api/community/items/" + id + "/reaction", writer, "POST", { emoji: "❤️" });
+  assert.equal(react.res.status, 200, react.text);
+
+  const page = await call("/api/public/profiles/social-wall-owner/posts");
+  assert.equal(page.res.status, 200);
+  const listed = page.data.items.find((item: any) => item.id === id);
+  assert.ok(listed);
+  assert.deepEqual(listed.reactions, [{ emoji: "❤️", count: 1 }]);
+
+  const single = await call(root);
+  assert.equal(single.res.status, 200, single.text);
+  assert.deepEqual(single.data.item.reactions, [{ emoji: "❤️", count: 1 }]);
+  assert.doesNotMatch(single.text, /user_id|email|internalNote/);
+
+  const discussion = await call(root + "/comments");
+  assert.equal(discussion.res.status, 200, discussion.text);
+  assert.equal(discussion.data.items.length, 2);
+  assert.deepEqual(discussion.data.items.map((item: any) => item.text), ["Відкритий коментар", "Дякую за аналіз"]);
+  assert.equal(discussion.data.items[1].quote, "Відкритий коментар");
+  assert.doesNotMatch(discussion.text, /SECRET_COMMENT|НЕ ПУБЛІКУВАТИ|НЕ ЗГОДЕН|owner_id|cookie|email|internalNote/);
+
+  await enable(writer, { publicProfileEnabled: false });
+  const revoked = await call(root + "/comments");
+  assert.equal(revoked.res.status, 200);
+  assert.deepEqual(revoked.data.items, []); // quoted descendants close with their source
+  assert.equal((await call(root)).res.status, 200); // owner's post remains public
+  await enable(owner, { publicProfileEnabled: false });
+  assert.equal((await call(root)).res.status, 404);
+  assert.equal((await call(root + "/comments")).res.status, 404);
+});
+
 test("saved public chart is fetched only explicitly and revocation closes direct chart links", async () => {
   const a = await named("chart-owner"), document = snapshot();
   const id = await saveChart(db, await policy(db, a.id), document), item = await post(a, { text: "saved setup" }, "public", id);
