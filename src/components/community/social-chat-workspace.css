@@ -174,6 +174,23 @@
   font-size: 16px;
   overflow-wrap: anywhere;
 }
+.community-workspace .community-chat-jump {
+  margin-left: auto;
+  flex: 0 0 auto;
+  min-height: 38px;
+  border: 1px solid #277b70;
+  border-radius: 10px;
+  padding: 8px 11px;
+  color: #b5f7e8;
+  background: #143c39;
+  font-size: 12px;
+  font-weight: 750;
+}
+.community-workspace .community-chat-jump:hover {
+  color: #edfffa;
+  border-color: #2fa596;
+  background: #19564b;
+}
 .community-workspace .community-chat-thread {
   flex: 1 1 auto;
   min-height: 0;
@@ -341,6 +358,11 @@
   }
   .community-workspace .community-chat-active-header {
     padding: 12px;
+    flex-wrap: wrap;
+  }
+  .community-workspace .community-chat-jump {
+    min-height: 36px;
+    padding-inline: 9px;
   }
   .community-workspace .community-chat-thread {
     flex: none;
