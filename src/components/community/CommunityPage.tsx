@@ -2332,6 +2332,15 @@ function Profile({
   useEffect(() => setProfileSection("wall"), [id]);
   const [form, setForm] = useState<any>({ ...profile?.community }),
     [displayName, setName] = useState(profile?.displayName ?? "");
+  const hydratedFor = useRef<string | null>(profile && user?.uid === id ? id : null);
+  useEffect(() => {
+    // Restore persisted settings once when account data arrives; never erase a draft on refresh.
+    if (id === user?.uid && profile && hydratedFor.current !== id) {
+      setForm({ ...profile.community });
+      setName(profile.displayName ?? "");
+      hydratedFor.current = id;
+    }
+  }, [id, user?.uid, profile]);
   const wall = useResource("wall:" + id, () =>
     apiJson(api + "/feed?mode=wall&owner=" + id),
   );
