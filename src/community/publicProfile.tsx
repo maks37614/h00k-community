@@ -44,15 +44,37 @@ export function PublicProfile() {
   };
   const communityUrl = profile ? profile.communityOrigin + "/#community?section=profile&owner=" + encodeURIComponent(profile.id) : null;
   return <main className="public-profile" data-network-mode="public-snapshot">
-    <header className="public-profile-top"><span className="public-profile-brand">h00k<span>Community</span></span><span>Публічна сторінка трейдера</span></header>
+    <header className="public-profile-top">
+      <a className="public-profile-brand" href="https://community-stage.h00k.top/">
+        h00k <span>Community</span>
+      </a>
+      <div className="public-profile-top-links">
+        <span>Публічна сторінка трейдера</span>
+        <a href="https://h00k.top" className="public-profile-screener-link">До скрінера ↗</a>
+      </div>
+    </header>
     {error && <p className="public-profile-error" role="alert">{error}</p>}
     {!profile && !error && <p role="status">Завантажуємо профіль…</p>}
     {profile && <>
       <section className="public-profile-hero">
-        <div className="public-profile-avatar" aria-hidden="true">{profile.displayName.slice(0, 1).toUpperCase()}</div>
-        <div><p className="public-profile-handle">@{profile.username}</p><h1>{profile.displayName}</h1>{profile.status && <p>{profile.status}</p>}</div>
-        <a className="public-profile-action" href={communityUrl!}>Відкрити у Community ↗</a>
+        <div className="public-profile-cover" aria-hidden="true">
+          <span>h00k / COMMUNITY</span>
+        </div>
+        <div className="public-profile-identity">
+          <div className="public-profile-avatar" aria-hidden="true">
+            {(profile.displayName || "Т").slice(0, 1).toUpperCase()}
+          </div>
+          <div className="public-profile-hero-text">
+            <p className="public-profile-kicker">ПРОФІЛЬ ТРЕЙДЕРА</p>
+            <p className="public-profile-handle">@{profile.username}</p>
+            <h1>{profile.displayName}</h1>
+            {profile.status && <p className="public-profile-status">{profile.status}</p>}
+          </div>
+          <a className="public-profile-action" href={communityUrl!}>Відкрити у Community ↗</a>
+        </div>
       </section>
+      <div className="public-profile-columns">
+        <aside className="public-profile-aside" aria-label="Інформація про трейдера">
       {profile.bio && <section className="public-profile-panel"><h2>Про себе</h2><p>{profile.bio}</p></section>}
       {(profile.interests || profile.lifestyle || profile.telegram) && <section className="public-profile-panel">
         {profile.interests && <><h2>Інтереси</h2><p>{profile.interests}</p></>}
@@ -72,8 +94,17 @@ export function PublicProfile() {
           {c.covered_from && " · початок покриття: " + new Date(c.covered_from).toLocaleDateString("uk-UA")}
         </p>)}
       </section>}
-      <section aria-label="Публічна стіна"><h2>Публікації</h2>
-        {items.map(item => <article className="public-profile-panel" key={item.id}>
+        </aside>
+        <div className="public-profile-main">
+      <section aria-label="Публічна стіна" className="public-profile-wall">
+        <div className="public-profile-wall-heading">
+          <div>
+            <p className="public-profile-kicker">СТІНА ТРЕЙДЕРА</p>
+            <h2>Публікації</h2>
+          </div>
+          <span>Доступні лише відкриті автором дописи</span>
+        </div>
+        {items.map(item => <article className="public-profile-panel public-profile-post" key={item.id}>
           <time dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString("uk-UA")}</time>
           {item.title && <h3>{item.title}</h3>}<p>{item.text}</p>
           <div className="public-profile-photos">{item.photos.map((id: string) => <img key={id} loading="lazy" alt="Фото до публікації" src={`${base}/posts/${item.id}/media/${id}`} />)}</div>
@@ -83,6 +114,8 @@ export function PublicProfile() {
         {!items.length && <p className="public-profile-muted">Публічних публікацій поки немає.</p>}
         {next && <button type="button" disabled={busy} onClick={() => void more()}>Ще публікації</button>}
       </section>
+        </div>
+      </div>
       {chart && <section id="public-chart-workspace" className="public-profile-panel public-profile-workspace" aria-label="Збережений HookChart">
         <div className="public-profile-workspace-heading"><h2>HookChart · власний розбір</h2><button type="button" onClick={() => setChart(null)}>Закрити графік</button></div>
         <p>Зміни локальні й не змінюють публікацію. Доступні свічки збереженого знімка; біржових підключень немає. Для публікації відповіді відкрийте оригінал у Community.</p>
