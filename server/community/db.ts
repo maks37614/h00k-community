@@ -60,7 +60,10 @@ export async function migrate(db: Database) {
     "utf8",
   );
   await db.transaction(async (tx) => {
+    // Drop standalone SQL comments before splitting statements. In particular,
+    // punctuation inside "--" comments must never become executable SQL.
     for (const statement of source
+      .replace(/^\s*--[^\r\n]*$/gm, "")
       .split(";")
       .map((s) => s.trim())
       .filter(Boolean))
