@@ -2,7 +2,7 @@ import { AccountSecuritySettings } from "./AccountSecuritySettings";
 import { PublicProfileSettings } from "./PublicProfileSettings";
 import { STRATEGY_PRESETS } from "../hookchart/strategyEngine";
 import { saveChartArchive } from "../../community/archiveChart";
-import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, useId } from "react";
 import {
   Users,
   ShieldCheck,
@@ -68,12 +68,15 @@ const emojis = ["👍", "🔥", "🤔", "📈", "📉", "✅", "💡", "🙂"];
 function Audience({
   value,
   onChange,
+  id,
 }: {
   value: string;
   onChange: (value: string) => void;
+  id?: string;
 }) {
   return (
     <select
+      id={id}
       aria-label="Аудиторія"
       value={value}
       onChange={(e) => onChange(e.target.value)}
@@ -528,6 +531,8 @@ function Composer({
   const [photoError, setPhotoError] = useState("");
   const inFlight = useRef(false);
   const clientId = useRef(crypto.randomUUID());
+  const emojiPanelId = useId();
+  const audienceId = useId();
   const canSubmit = canSendCommunityContent(text, photos.length, busy);
   const kindLabel = target.kind === "post" ? "Нова публікація" :
     target.kind === "comment" ? "Написати коментар" : "Нове повідомлення";
@@ -662,7 +667,7 @@ function Composer({
             className="community-composer-tool"
             disabled={busy}
             aria-expanded={showEmojis}
-            aria-controls="community-emoji-panel"
+            aria-controls={emojiPanelId}
             onClick={() => setShowEmojis((value) => !value)}
           >
             <Smile size={17} aria-hidden="true" /> <span>Емодзі</span>
@@ -670,10 +675,10 @@ function Composer({
         </div>
         {target.kind !== "message" && (
           <div className="community-composer-audience">
-            <label htmlFor={"community-audience-" + target.kind + "-" + (target.parentId ?? "root")}>
+            <label htmlFor={audienceId}>
               Аудиторія
             </label>
-            <Audience value={audience} onChange={setAudience} />
+            <Audience id={audienceId} value={audience} onChange={setAudience} />
           </div>
         )}
         <button type="submit" className="community-primary community-composer-send" disabled={!canSubmit}>
@@ -682,7 +687,7 @@ function Composer({
         </button>
       </div>
       {showEmojis && (
-        <div className="community-composer-emojis" id="community-emoji-panel" aria-label="Вибір емодзі">
+        <div className="community-composer-emojis" id={emojiPanelId} aria-label="Вибір емодзі">
           {emojis.map((emoji) => (
             <button
               type="button"
