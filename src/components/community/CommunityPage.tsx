@@ -910,6 +910,17 @@ function ItemCard({
 }) {
   const { user } = useAuth();
   const [reply, setReply] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
+  async function copyPostLink() {
+    try {
+      await navigator.clipboard.writeText(
+        location.origin + "/#community?post=" + encodeURIComponent(item.id),
+      );
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("error");
+    }
+  }
   const thread = useResource((reply ? "open:" : "closed:") + item.id, () =>
     reply
       ? apiJson(api + "/items/" + item.id + "/comments")
@@ -1014,11 +1025,12 @@ function ItemCard({
           ))}
         </div>
       )}
-      <footer className="community-card-actions">
+      <footer className="community-card-actions" aria-label="Дії з публікацією">
         {["👍", "❤️", "🔥", "🤔"].map((emoji) => (
           <button
             type="button"
             key={emoji}
+            aria-label={`Поставити реакцію ${emoji}`}
             onClick={() =>
               void run(async () => {
                 await post(api + "/items/" + item.id + "/reaction", { emoji });
@@ -1031,8 +1043,13 @@ function ItemCard({
           </button>
         ))}
         {item.kind === "post" && (
-          <button type="button" onClick={() => setReply((v) => !v)}>
-            Коментарі
+          <button
+            type="button"
+            aria-expanded={reply}
+            onClick={() => setReply((v) => !v)}
+          >
+            <MessageCircle size={15} aria-hidden="true" />
+            {reply ? "Згорнути коментарі" : "Коментарі"}
           </button>
         )}
         {item.chart && (
@@ -1062,6 +1079,19 @@ function ItemCard({
           </button>
         )}
         {item.audience === "public" && item.kind === "post" && (
+          <button
+            type="button"
+            className="community-post-copy"
+            onClick={() => void copyPostLink()}
+          >
+            {copyStatus === "copied" ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
+            {copyStatus === "copied" ? "Посилання скопійовано" : "Копіювати посилання"}
+          </button>
+        )}
+        {copyStatus === "error" && (
+          <span className="community-copy-error" role="status">Не вдалося скопіювати посилання</span>
+        )}
+        {item.audience === "public" && item.kind === "post" && (
           <a
             target="_blank"
             rel="noopener noreferrer"
@@ -1082,32 +1112,42 @@ function ItemCard({
           {thread.error && <p role="status">{thread.error}</p>}
           {[...(thread.data?.items ?? []), ...moreComments].map(
             (comment: any) => (
-              <div className="community-comment" key={comment.id}>
-                <b>{comment.author?.displayName}</b>
-                <button
-                  type="button"
-                  onClick={() =>
-                    void run(async () => {
-                      if (comment.owner_id === user?.uid)
-                        await apiJson(api + "/items/" + comment.id, {
-                          method: "DELETE",
-                        });
-                      else {
-                        const reason = window.prompt(
-                          "Причина скарги на коментар",
-                        );
-                        if (!reason) return;
-                        await post(api + "/reports", {
-                          itemId: comment.id,
-                          reason,
-                        });
-                      }
-                      thread.refresh();
-                    })
-                  }
-                >
-                  {comment.owner_id === user?.uid ? "Видалити" : "Скарга"}
-                </button>
+              <article className="community-comment" key={comment.id}>
+                <header className="community-comment-head">
+                  <span className="community-comment-avatar" aria-hidden="true">
+                    {(comment.author?.displayName ?? "Т").trim().slice(0, 1).toUpperCase()}
+                  </span>
+                  <div className="community-comment-identity">
+                    <strong>{comment.author?.displayName ?? "Трейдер"}</strong>
+                    <time dateTime={comment.created_at}>
+                      {new Date(comment.created_at).toLocaleString("uk-UA")}
+                    </time>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void run(async () => {
+                        if (comment.owner_id === user?.uid)
+                          await apiJson(api + "/items/" + comment.id, {
+                            method: "DELETE",
+                          });
+                        else {
+                          const reason = window.prompt(
+                            "Причина скарги на коментар",
+                          );
+                          if (!reason) return;
+                          await post(api + "/reports", {
+                            itemId: comment.id,
+                            reason,
+                          });
+                        }
+                        thread.refresh();
+                      })
+                    }
+                  >
+                    {comment.owner_id === user?.uid ? "Видалити" : "Скарга"}
+                  </button>
+                </header>
                 <p>{comment.body.text}</p>
                 {comment.chart && (
                   <ChartPreview
@@ -2125,7 +2165,7 @@ function Trades({ run, owner }: { run: Run; owner?: string }) {
                       ? "Недостатньо даних"
                       : v.winRate.toFixed(1) + "%"}
                   </p>
-                </div>
+                </article>
               ),
             )}
           </div>
