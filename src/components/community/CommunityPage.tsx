@@ -1753,10 +1753,6 @@ function Chats({
   async function load(older = false, replace = false) {
     if (!id) return;
     const startedId = id;
-    if (older && threadRef.current) {
-      // Preserve the same visible messages when historical items are prepended.
-      restoreOlderOffset.current = threadRef.current.scrollHeight - threadRef.current.scrollTop;
-    }
     const after = !older && !replace ? latestMessages.current.at(-1)?.id : null;
     const data = await apiJson(
       api +
@@ -1770,6 +1766,10 @@ function Chats({
             : ""),
     );
     if (activeId.current !== startedId) return;
+    if (older && threadRef.current) {
+      // Record position just before prepending; concurrent polling cannot steal it.
+      restoreOlderOffset.current = threadRef.current.scrollHeight - threadRef.current.scrollTop;
+    }
     setMessages((old) => {
       const combined = older
         ? [...data.items, ...old]
