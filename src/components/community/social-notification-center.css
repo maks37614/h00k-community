@@ -293,3 +293,21 @@
 @media (prefers-reduced-motion: reduce) {
   .community-workspace .community-notification-panel * { scroll-behavior: auto; }
 }
+
+
+/* Real social notices link to existing authorized friend/post views. */
+.community-workspace .community-notification-item-body > button.community-notification-open {
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:35px;margin:8px 6px 5px 0;padding:7px 10px;
+  background:linear-gradient(115deg,#126359,#104d53);
+  color:#c2fff0;border:1px solid #23988a;border-radius:9px;
+  font-size:11px;font-weight:750;
+}
+.community-workspace .community-notification-item-body > button.community-notification-open:hover {
+  background:#187a6c;border-color:#35c1b0;
+}
+@media (max-width:700px) {
+  .community-workspace .community-notification-item-body > button.community-notification-open {
+    min-height:40px;padding:9px 11px;
+  }
+}
