@@ -17,6 +17,41 @@ export type CommunityNotice = {
 };
 
 export type NoticeFilter = "unread" | "all";
+export type ChatNotice = {
+  id: string;
+  title?: string | null;
+  peer_name?: string | null;
+  is_group?: boolean;
+  unread_count?: number | string | null;
+};
+const CHAT_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SOCIAL_TYPES = new Set(["friend_request", "friend_accepted", "comment", "award"]);
+
+export function visibleCommunityNotices(items: CommunityNotice[], filter: NoticeFilter, socialEnabled = true): CommunityNotice[] {
+  const included = socialEnabled ? items : items.filter(notice => !SOCIAL_TYPES.has(notice.type));
+  return filterCommunityNotices(included, filter);
+}
+
+/** Existing authorized /conversations response; no message contents or extra event rows. */
+export function unreadChatNotices(items: unknown, limit = 8): Array<ChatNotice & { count: number; displayName: string }> {
+  if (!Array.isArray(items)) return [];
+  return items.filter((item): item is ChatNotice =>
+    item !== null && typeof item === "object" && CHAT_UUID.test(String(item.id ?? "")))
+    .map(item => {
+      const count = Number(item.unread_count);
+      return {
+        id: item.id,
+        is_group: item.is_group === true,
+        count: Number.isFinite(count) ? Math.max(0, Math.min(100, Math.floor(count))) : 0,
+        displayName: item.is_group
+          ? (typeof item.title === "string" && item.title.trim() ? item.title.slice(0, 100) : "Групова розмова")
+          : (typeof item.peer_name === "string" && item.peer_name.trim() ? item.peer_name.slice(0, 100) : "Особистий діалог"),
+      };
+    })
+    .filter(item => item.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, Math.max(0, Math.min(30, Math.floor(limit))));
+}
 
 export function unreadNoticeCount(items: CommunityNotice[]): number {
   return items.filter((notice) => !notice.read_at).length;
@@ -99,7 +134,8 @@ export function safeNoticeDate(input: string): string {
 const PUBLIC_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export type CommunityNoticeDestination =
   | { section: "friends" }
-  | { section: "feed"; postId: string };
+  | { section: "feed"; postId: string }
+  | { section: "chats"; conversationId: string };
 
 /** Only known server-defined destinations may be opened from an inbox item. */
 export function communityNoticeDestination(notice: CommunityNotice): CommunityNoticeDestination | null {

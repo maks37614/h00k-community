@@ -346,10 +346,12 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
               setTab(destination.section);
               const params = new URLSearchParams({ section: destination.section });
               if (destination.section === "feed") params.set("post", destination.postId);
-              // The existing Feed deep-link resolves the post through the
-              // current account's authorization, not through a public bypass.
+              if (destination.section === "chats") params.set("conversation", destination.conversationId);
+              // The existing Feed/Chats endpoints enforce current account membership.
               location.hash = "community?" + params.toString();
             }}
+            showChatNotices={profile?.community?.notificationChatInbox !== false}
+            showSocialNotices={profile?.community?.notificationSocialInbox !== false}
           />
           <button type="button" className="community-chat-unread-shortcut" onClick={() => { setTab("chats"); setViewProfile(null); }}>
             <MessageCircle size={17} aria-hidden="true" /> Повідомлення
@@ -2155,6 +2157,10 @@ function Chats({
     ),
     friends = useResource("chat-friends", () => apiJson(api + "/friends"));
   const [id, setId] = useState(""),
+    [requestedConversationId, setRequestedConversationId] = useState(() => {
+      const requested = new URLSearchParams(location.hash.split("?")[1] ?? "").get("conversation") ?? "";
+      return /^[a-f0-9-]{36}$/i.test(requested) ? requested : "";
+    }),
     [name, setName] = useState(""),
     [members, setMembers] = useState<string[]>([]),
     [messages, setMessages] = useState<any[]>([]),
@@ -2205,6 +2211,26 @@ function Chats({
     }
   }, [id, messages]);
   const conversations: any[] = Array.isArray(list.data?.items) ? list.data.items : [];
+  // Navigate only to conversations the authenticated server actually returned.
+  useEffect(() => {
+    const jump = () => {
+      const requested = new URLSearchParams(location.hash.split("?")[1] ?? "").get("conversation") ?? "";
+      setRequestedConversationId(/^[a-f0-9-]{36}$/i.test(requested) ? requested : "");
+    };
+    window.addEventListener("hashchange", jump);
+    return () => window.removeEventListener("hashchange", jump);
+  }, []);
+  useEffect(() => {
+    if (!requestedConversationId || !list.data) return;
+    if (conversations.some(chat => chat.id === requestedConversationId)) {
+      setId(requestedConversationId);
+      setChatSearch("");
+    } else {
+      setId("");
+      setPollError("Розмова недоступна або ви не є її учасником.");
+    }
+    setRequestedConversationId("");
+  }, [requestedConversationId, list.data]);
   const filteredConversations = filterConversations(conversations, chatSearch);
   const currentConversation = conversations.find((c) => c.id === id);
   const currentTitle = conversationDisplayTitle(currentConversation);
@@ -2395,7 +2421,7 @@ function Chats({
                 key={c.id}
                 aria-pressed={id === c.id}
                 aria-label={(c.is_group ? "Група: " : "Діалог: ") + conversationDisplayTitle(c) + (Number(c.unread_count) ? ". Непрочитаних: " + c.unread_count : "")}
-                onClick={() => setId(c.id)}
+                onClick={() => { setId(c.id); setRequestedConversationId(""); }}
               >
                 <span className="community-chat-channel-symbol" aria-hidden="true">
                   {c.is_group ? "👥" : "✉"}
@@ -3274,6 +3300,31 @@ function CommunitySettings({ run }: { run: Run }) {
           ),
         )}
       </form>
+      <section className="community-card community-form community-settings-notifications">
+        <h3>Показ сповіщень</h3>
+        <p>Виберіть, які події бачити у центрі сповіщень. Налаштування синхронізуються між вашими пристроями. Критичні повідомлення безпеки залишаються доступними.</p>
+        <label className="community-notification-preference">
+          <input type="checkbox"
+            checked={profile?.community?.notificationChatInbox !== false}
+            onChange={(event) => void run(() => updateProfileData({
+              community: { notificationChatInbox: event.target.checked },
+            }))} />
+          <span><strong>Непрочитані особисті та групові чати</strong>
+            <small>Показувати кількість непрочитаних і перехід до розмови. Самі тексти повідомлень не відображаються у сповіщеннях.</small>
+          </span>
+        </label>
+        <label className="community-notification-preference">
+          <input type="checkbox"
+            checked={profile?.community?.notificationSocialInbox !== false}
+            onChange={(event) => void run(() => updateProfileData({
+              community: { notificationSocialInbox: event.target.checked },
+            }))} />
+          <span><strong>Друзі, коментарі та нагороди</strong>
+            <small>Показувати соціальні події у центрі сповіщень. Це не видаляє вже збережені події.</small>
+          </span>
+        </label>
+        <p className="community-hint">Ці перемикачі керують лише центром сповіщень, а не доставкою push або роботою чатів. Лічильники непрочитаних у списку чатів залишаються доступними.</p>
+      </section>
       <section className="community-card community-settings-privacy">
         <h3>Фінансова приватність</h3>
         {[

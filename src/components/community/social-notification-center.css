@@ -311,3 +311,33 @@
     min-height:40px;padding:9px 11px;
   }
 }
+
+
+/* Per-account inbox preferences and private chat alerts reuse Community colors. */
+.community-workspace .community-settings-notifications {
+  gap:12px;padding:clamp(14px,2vw,20px);
+  border:1px solid #28505c;background:linear-gradient(140deg,#122536,#0f2030);
+}
+.community-workspace .community-notification-preference {
+  display:flex;align-items:flex-start;gap:12px;
+  padding:12px;border:1px solid #2a4b53;border-radius:12px;background:#102d35;
+  cursor:pointer;
+}
+.community-workspace .community-notification-preference input {
+  margin:3px 0 0;flex:0 0 auto;width:17px;height:17px;accent-color:#1ccbb8;
+}
+.community-workspace .community-notification-preference span {
+  min-width:0;display:grid;gap:5px;color:#e0f8f7;
+}
+.community-workspace .community-notification-preference strong {font-size:12px;}
+.community-workspace .community-notification-preference small {
+  font-size:11px;line-height:1.6;color:#a6c6ca;
+}
+.community-workspace .community-notification-chat-item {border-color:#266b67;background:#113139;}
+.community-workspace .community-notification-chat-item .community-notification-item-icon {
+  background:#174f4f;border-color:#288f86;color:#93f7e6;
+}
+@media (max-width:700px) {
+  .community-workspace .community-notification-preference {padding:10px;gap:10px;}
+  .community-workspace .community-notification-chat-item .community-notification-open {min-height:40px;}
+}

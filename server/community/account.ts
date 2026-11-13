@@ -507,6 +507,12 @@ export function installAccountRoutes(
         if (typeof raw.publicSessionsEnabled !== "boolean") fail("Некоректна видимість торгових сесій");
         clean.publicSessionsEnabled = raw.publicSessionsEnabled;
       }
+      for (const key of ["notificationChatInbox", "notificationSocialInbox"]) {
+        if (raw[key] !== undefined) {
+          if (typeof raw[key] !== "boolean") fail("Некоректне налаштування сповіщень");
+          clean[key] = raw[key];
+        }
+      }
       if (raw.status !== undefined) {
         if (
           !raw.status ||
