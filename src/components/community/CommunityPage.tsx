@@ -2,7 +2,7 @@ import { AccountSecuritySettings } from "./AccountSecuritySettings";
 import { PublicProfileSettings } from "./PublicProfileSettings";
 import { STRATEGY_PRESETS } from "../hookchart/strategyEngine";
 import { saveChartArchive } from "../../community/archiveChart";
-import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
+import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Users,
   ShieldCheck,
@@ -1730,8 +1730,21 @@ function Chats({
     [chatSearch, setChatSearch] = useState("");
   const activeId = useRef(id);
   const latestMessages = useRef(messages);
+  const threadRef = useRef<HTMLDivElement>(null);
+  const stayAtBottom = useRef(true);
+  const restoreOlderOffset = useRef<number | null>(null);
   activeId.current = id;
   latestMessages.current = messages;
+  useLayoutEffect(() => {
+    const thread = threadRef.current;
+    if (!thread) return;
+    if (restoreOlderOffset.current !== null) {
+      thread.scrollTop = Math.max(0, thread.scrollHeight - restoreOlderOffset.current);
+      restoreOlderOffset.current = null;
+    } else if (stayAtBottom.current) {
+      thread.scrollTop = thread.scrollHeight;
+    }
+  }, [id, messages]);
   const conversations: any[] = Array.isArray(list.data?.items) ? list.data.items : [];
   const filteredConversations = filterConversations(conversations, chatSearch);
   const currentConversation = conversations.find((c) => c.id === id);
@@ -1740,6 +1753,10 @@ function Chats({
   async function load(older = false, replace = false) {
     if (!id) return;
     const startedId = id;
+    if (older && threadRef.current) {
+      // Preserve the same visible messages when historical items are prepended.
+      restoreOlderOffset.current = threadRef.current.scrollHeight - threadRef.current.scrollTop;
+    }
     const after = !older && !replace ? latestMessages.current.at(-1)?.id : null;
     const data = await apiJson(
       api +
@@ -1769,6 +1786,8 @@ function Chats({
     setMessages([]);
     latestMessages.current = [];
     setBefore(null);
+    stayAtBottom.current = true;
+    restoreOlderOffset.current = null;
     if (!id) return;
     let active = true;
     const pull = () => {
@@ -1891,8 +1910,30 @@ function Chats({
                   </span>
                   <h3>{currentTitle}</h3>
                 </div>
+                <button
+                  className="community-chat-jump"
+                  type="button"
+                  onClick={() => {
+                    if (!threadRef.current) return;
+                    stayAtBottom.current = true;
+                    threadRef.current.scrollTop = threadRef.current.scrollHeight;
+                  }}
+                >
+                  До останніх
+                </button>
               </header>
-              <div className="community-chat-thread" role="log" aria-label="Повідомлення розмови" aria-live="off">
+              <div
+                className="community-chat-thread"
+                role="log"
+                aria-label="Повідомлення розмови"
+                aria-live="off"
+                ref={threadRef}
+                onScroll={(event) => {
+                  const thread = event.currentTarget;
+                  stayAtBottom.current =
+                    thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
+                }}
+              >
                 {before && (
                   <button
                     className="community-chat-older"
