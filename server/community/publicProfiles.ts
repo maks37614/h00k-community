@@ -69,10 +69,22 @@ async function publicShareMeta(db: Database, owner: any, possiblePost: unknown):
   const c = owner.profile?.community ?? {};
   const displayName = safePublicShareText(owner.profile?.displayName, 100) || "Трейдер";
   const bio = (c.bioAudience ?? "public") === "public" ? safePublicShareText(c.bio, 170) : "";
+  let imageUrl: string | undefined;
+  for (const kind of ["cover", "avatar"] as const) {
+    const candidate = c[kind + "MediaId"];
+    if (c[kind + "Audience"] !== "public" || typeof candidate !== "string") continue;
+    let id: string;
+    try { id = uuid(candidate); } catch { continue; }
+    const media = await db.query("SELECT id FROM hc_media WHERE id=$1 AND owner_id=$2", [id, owner.id]);
+    if (!media.rows.length) continue;
+    imageUrl = new URL("/api/public/profiles/" + owner.username + "/" + kind, publicProfileUrl(owner.username)).toString();
+    break;
+  }
   const fallback: PublicShareMetadata = {
     title: displayName + " (@" + owner.username + ") · h00k Community",
     description: bio || "Публічний профіль трейдера @" + owner.username + " у h00k Community. Власник сам обирає, чим ділитися.",
     canonicalUrl: publicProfileUrl(owner.username),
+    ...(imageUrl ? { imageUrl } : {}),
     type: "profile",
   };
   if (typeof possiblePost !== "string" || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(possiblePost))
@@ -91,6 +103,7 @@ async function publicShareMeta(db: Database, owner: any, possiblePost: unknown):
     title: (postTitle || "Публікація " + displayName) + " · h00k Community",
     description: safePublicShareText(post.body?.text, 170) || "Публічний розбір трейдера @" + owner.username + " у h00k Community.",
     canonicalUrl: link.toString(),
+    ...(imageUrl ? { imageUrl } : {}),
     type: "article",
   };
 }
