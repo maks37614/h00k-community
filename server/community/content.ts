@@ -242,8 +242,8 @@ export async function presentItem(db: Database, rules: Policy, row: Item) {
   ]);
   const profile = rows[0]?.profile ?? {};
   const reactions = await db.query(
-    "SELECT emoji,count(*)::integer AS count FROM hc_reactions WHERE item_id=$1 GROUP BY emoji",
-    [row.id],
+    "SELECT emoji,count(*)::integer AS count,bool_or(user_id=$2)::boolean AS mine FROM hc_reactions WHERE item_id=$1 GROUP BY emoji",
+    [row.id, rules.viewer],
   );
   let source = null;
   if (row.body?.sourceItemId) {
