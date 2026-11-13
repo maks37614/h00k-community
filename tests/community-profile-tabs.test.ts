@@ -26,7 +26,7 @@ test("owner alone can edit profile, status, visibility, and personal address", (
   assert.match(profile, /await updateProfileData\(\{ displayName, community: fields \}\)/);
   assert.match(profile, /const \{ publicProfileEnabled: _publicVisibility, \.\.\.fields \} = form/);
   assert.match(profile, /<PublicProfileSettings \/>/);
-  assert.match(profile, /"status"/);
+  assert.match(profile, /form\.status\?\.text/);
   assert.match(profile, /<Audience/);
   assert.match(profile, /community-profile-readonly/);
   assert.match(profile, /p\?\.interests/);
