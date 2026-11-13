@@ -509,3 +509,34 @@
 @media(max-width:700px) {
   .community-workspace .community-chat-mute-toggle {min-height:40px;white-space:normal;}
 }
+
+
+/* Timed mute choices appear only on demand; no extra chat polling. */
+.community-workspace .community-chat-mute-control {
+  position:relative;display:flex;flex-direction:column;align-items:flex-start;
+  gap:4px;min-width:0;
+}
+.community-workspace .community-chat-muted-until {
+  color:#e8cda2;font-size:10px;line-height:1.35;
+  font-variant-numeric:tabular-nums;
+}
+.community-workspace .community-chat-mute-options {
+  position:absolute;z-index:35;top:calc(100% + 5px);left:0;
+  display:grid;gap:3px;padding:6px;min-width:160px;max-width:min(240px,90vw);
+  background:#112a37;border:1px solid #326c72;border-radius:11px;
+  box-shadow:0 14px 35px #0009;
+}
+.community-workspace .community-chat-mute-options button {
+  min-height:40px;padding:9px 12px;text-align:left;
+  background:transparent;border:0;border-radius:8px;
+  color:#d7f1f0;font-size:12px;font-weight:700;
+}
+.community-workspace .community-chat-mute-options button:hover,
+.community-workspace .community-chat-mute-options button:focus-visible {
+  background:#17645e;color:#fff;outline:1px solid #2cac9e;
+}
+@media(max-width:700px) {
+  .community-workspace .community-chat-mute-options {
+    left:0;right:auto;min-width:156px;max-width:calc(100vw - 30px);
+  }
+}
