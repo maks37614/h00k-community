@@ -38,6 +38,7 @@ import type {
   Timeframe,
 } from "../../types";
 import { ChartPreview } from "./ChartPreview";
+import { CommunityItemEditor } from "./CommunityItemEditor";
 import "./community.css";
 import "./social-friends-settings.css";
 import "./social-chat-workspace.css";
@@ -937,6 +938,8 @@ function ItemCard({
 }) {
   const { user } = useAuth();
   const [reply, setReply] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   async function copyPostLink() {
     try {
@@ -991,19 +994,32 @@ function ItemCard({
         </button>
         <div>
           {item.owner_id === user?.uid ? (
-            <button
-              type="button"
-              onClick={() =>
-                void run(async () => {
-                  await apiJson(api + "/items/" + item.id, {
-                    method: "DELETE",
+            <>
+              {item.kind === "post" && (
+                <button
+                  type="button"
+                  aria-expanded={editing}
+                  aria-label="Редагувати свій допис"
+                  onClick={() => setEditing((current) => !current)}
+                >
+                  {editing ? "Закрити редактор" : "Редагувати"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!window.confirm("Видалити цей матеріал без можливості відновлення?")) return;
+                  void run(async () => {
+                    await apiJson(api + "/items/" + item.id, {
+                      method: "DELETE",
+                    });
+                    refresh();
                   });
-                  refresh();
-                })
-              }
-            >
-              Видалити
-            </button>
+                }}
+              >
+                Видалити
+              </button>
+            </>
           ) : (
             <button
               type="button"
@@ -1020,6 +1036,15 @@ function ItemCard({
           )}
         </div>
       </header>
+      {editing && item.kind === "post" && (
+        <CommunityItemEditor
+          item={item}
+          onCancel={() => setEditing(false)}
+          onSaved={() => { setEditing(false); refresh(); }}
+        />
+      )}
+      {!editing && (
+        <>
       {item.body?.title && <h3>{item.body.title}</h3>}
       <p className="community-text">{item.body?.text}</p>
       {item.source && (
@@ -1134,6 +1159,8 @@ function ItemCard({
           </a>
         )}
       </footer>
+        </>
+      )}
       {reply && (
         <div className="community-comments">
           {thread.error && <p role="status">{thread.error}</p>}
@@ -1150,15 +1177,23 @@ function ItemCard({
                       {new Date(comment.created_at).toLocaleString("uk-UA")}
                     </time>
                   </div>
+                  {comment.owner_id === user?.uid && (
+                    <button
+                      type="button"
+                      aria-expanded={editingCommentId === comment.id}
+                      onClick={() => setEditingCommentId((current) => current === comment.id ? null : comment.id)}
+                    >
+                      {editingCommentId === comment.id ? "Закрити редактор" : "Редагувати"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() =>
                       void run(async () => {
-                        if (comment.owner_id === user?.uid)
-                          await apiJson(api + "/items/" + comment.id, {
-                            method: "DELETE",
-                          });
-                        else {
+                        if (comment.owner_id === user?.uid) {
+                          if (!window.confirm("Видалити коментар без можливості відновлення?")) return;
+                          await apiJson(api + "/items/" + comment.id, { method: "DELETE" });
+                        } else {
                           const reason = window.prompt(
                             "Причина скарги на коментар",
                           );
@@ -1175,7 +1210,15 @@ function ItemCard({
                     {comment.owner_id === user?.uid ? "Видалити" : "Скарга"}
                   </button>
                 </header>
-                <p>{comment.body.text}</p>
+                {editingCommentId === comment.id ? (
+                  <CommunityItemEditor
+                    item={comment}
+                    onCancel={() => setEditingCommentId(null)}
+                    onSaved={() => { setEditingCommentId(null); thread.refresh(); }}
+                  />
+                ) : (
+                  <p>{comment.body.text}</p>
+                )}
                 {comment.chart && (
                   <ChartPreview
                     document={comment.chart}
