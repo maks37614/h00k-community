@@ -33,7 +33,7 @@ test("a guest only sees actual aggregate reactions and a real join date", () => 
   assert.deepEqual(visibleReactionSummary([{ emoji: "❤️", count: 2 }, { emoji: "👍", count: 0 }]),
     [{ emoji: "❤️", count: 2 }]);
   assert.deepEqual(visibleReactionSummary([{ emoji: "👍", count: 2, user_id: "SECRET" }]),
-    [{ emoji: "👍", count: 2, user_id: "SECRET" }]); // presentation must print emoji + count only
+    [{ emoji: "👍", count: 2 }]); // Never retain extra user fields
   assert.deepEqual(visibleReactionSummary(null), []);
   assert.equal(publicProfileDate("not a date"), "");
   assert.ok(publicProfileDate("2026-11-01T00:00:00.000Z").includes("2026"));
