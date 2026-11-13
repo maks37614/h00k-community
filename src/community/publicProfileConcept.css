@@ -445,3 +445,34 @@ body { background: #080f1b; }
 .public-profile-insights .public-profile-awards-breakdown svg {color:#e5bd64;}
 .public-profile-insights .public-profile-awards-breakdown strong {margin-left:auto;color:#f6d896;font-size:12px;}
 .public-profile-insights .public-profile-awards-summary > small {font-size:10px;color:#98aabb;line-height:1.55;}
+
+
+/* Public social discussion: replies reference real comment sources on the same post. */
+.public-profile-comment-groups { display:grid;gap:10px;margin:10px 0; }
+.public-profile-comment-thread { min-width:0; }
+.public-profile-comment-thread > .public-profile-comment {
+  padding:10px 12px;border:1px solid #304359;border-radius:12px;
+  background:linear-gradient(120deg,#132438,#0f1b2c);margin:0;
+}
+.public-profile-comment-thread-reply {
+  min-width:0; margin:7px 0 0 clamp(15px,3vw,34px);
+  padding-left:10px;border-left:2px solid #297e7e;
+}
+.public-profile-comment-thread-reply > .public-profile-comment {
+  padding:10px 12px;border:1px solid #2a3c50;border-radius:11px;
+  background:linear-gradient(120deg,#0d2430,#111d2e);margin:0;
+}
+.public-profile-comment-thread-reply .public-profile-comment-avatar {color:#74e3d0;}
+.public-profile .public-profile-post-actions a.public-profile-telegram-share {
+  display:inline-flex;align-items:center;gap:6px;
+  min-height:34px;border:1px solid #31637a;
+  padding:7px 9px;border-radius:9px;background:#10283b;color:#91dce9!important;
+  font-size:11px;text-decoration:none!important;
+}
+.public-profile .public-profile-post-actions a.public-profile-telegram-share:hover {
+  background:#18435a;border-color:#39acbd;
+}
+@media (max-width:670px) {
+  .public-profile-comment-thread-reply {margin-left:14px;padding-left:8px;}
+  .public-profile-comment-thread .public-profile-comment {padding:9px;}
+}
