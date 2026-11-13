@@ -23,6 +23,7 @@ export type ChatNotice = {
   peer_name?: string | null;
   is_group?: boolean;
   unread_count?: number | string | null;
+  muted?: boolean;
 };
 const CHAT_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SOCIAL_TYPES = new Set(["friend_request", "friend_accepted", "comment", "award"]);
@@ -36,7 +37,8 @@ export function visibleCommunityNotices(items: CommunityNotice[], filter: Notice
 export function unreadChatNotices(items: unknown, limit = 8): Array<ChatNotice & { count: number; displayName: string }> {
   if (!Array.isArray(items)) return [];
   return items.filter((item): item is ChatNotice =>
-    item !== null && typeof item === "object" && CHAT_UUID.test(String(item.id ?? "")))
+    item !== null && typeof item === "object" &&
+    item.muted !== true && CHAT_UUID.test(String(item.id ?? "")))
     .map(item => {
       const count = Number(item.unread_count);
       return {

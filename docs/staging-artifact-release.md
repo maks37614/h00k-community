@@ -19,6 +19,9 @@ Release містить:
 - точний коміт у назві тега `community-stage-<SHA>`.
 
 **Не запускайте workflow з іншої гілки.** Налаштовано публікацію тільки з `main`.
+Повторний ручний запуск для того ж SHA не змінює існуючий реліз. Якщо
+обидва файли вже опубліковано, запуск завершується успішно; якщо чогось
+бракує — зупиняється, не перезаписуючи реліз.
 Не потрібно видавати токен VPS або дозволи на автоматичний деплой.
 
 ## 2. Перевірка VPS перед завантаженням
@@ -48,10 +51,13 @@ RELEASE_SHA="ВСТАВ_12_СИМВОЛІВ"
   echo 'Неправильний SHA; зупинено'; exit 1;
 }
 
+set -euo pipefail
 umask 077
-mkdir -p /home/ubuntu/community-image-download
-cd /home/ubuntu/community-image-download
+mkdir -p "/home/ubuntu/community-image-download/$RELEASE_SHA"
+cd "/home/ubuntu/community-image-download/$RELEASE_SHA"
 
+# Видалити тільки файли цього випуску. Старі архіви не можуть дати хибний OK.
+rm -f h00k-community-image.tar.gz h00k-community-image.tar.gz.sha256
 BASE="https://github.com/maks37614/h00k-community/releases/download/community-stage-$RELEASE_SHA"
 curl -fL --retry 3 --output h00k-community-image.tar.gz \
   "$BASE/h00k-community-image.tar.gz"
@@ -97,6 +103,14 @@ sudo docker image inspect "$NEW_IMAGE" >/dev/null || {
 if [ "$(sudo grep -c '^H00K_COMMUNITY_IMAGE=' .env.community)" != 1 ]; then
   echo 'Не знайдено єдине поле H00K_COMMUNITY_IMAGE'; exit 1;
 fi
+# Перевірити, що backup .env, PostgreSQL і медіафайлів уже зроблено.
+# Міграція без перезапуску старої Community; потрібна для нових полів hc_members.
+sudo env H00K_COMMUNITY_IMAGE="$NEW_IMAGE" \
+  docker compose --env-file .env.community \
+  -f deploy/compose.community-sidecar.yaml \
+  run --rm --no-deps community npm run community:migrate
+
+# Лише якщо міграція успішна, змінити активний образ.
 sudo sed -i "s|^H00K_COMMUNITY_IMAGE=.*$|H00K_COMMUNITY_IMAGE=$NEW_IMAGE|" .env.community
 
 sudo docker compose --env-file .env.community \

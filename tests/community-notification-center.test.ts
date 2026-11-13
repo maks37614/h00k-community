@@ -176,6 +176,10 @@ test("chat inbox uses only member-scoped unread counts and never includes messag
     [a,4,"Група крипто"], [b,2,"Друг"],
   ]);
   assert.doesNotMatch(JSON.stringify(result), /Секрет/);
+  assert.equal(unreadChatNotices([
+    { id: a, is_group: true, title: "Приглушена група", muted: true, unread_count: 7 },
+    { id: b, is_group: false, peer_name: "Активний чат", muted: false, unread_count: 2 },
+  ]).length, 1, "muted chat is absent from notification center but remains available in conversations");
   assert.equal(unreadChatNotices(null).length, 0);
   assert.equal(unreadChatNotices([{ id: a, unread_count: Infinity }]).length, 0);
   assert.equal(unreadChatNotices([{ id: a, unread_count: 100000 }])[0].count, 100);

@@ -200,3 +200,5 @@ ALTER TABLE hc_members ADD COLUMN IF NOT EXISTS last_read_message_id uuid;
 CREATE INDEX IF NOT EXISTS hc_messages_unread
   ON hc_items(conversation_id,created_at,id)
   WHERE kind='message' AND NOT deleted;
+-- Mutes are per-account; they never mark another person's messages as read.
+ALTER TABLE hc_members ADD COLUMN IF NOT EXISTS muted boolean NOT NULL DEFAULT false;

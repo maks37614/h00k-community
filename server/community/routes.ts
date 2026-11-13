@@ -606,7 +606,7 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
          SELECT 1 FROM hc_members m
          LEFT JOIN hc_items marker ON marker.id=m.last_read_message_id AND marker.conversation_id=m.conversation_id
          JOIN hc_items msg ON msg.conversation_id=m.conversation_id
-         WHERE m.user_id=$1 AND ${unreadPredicate} LIMIT 100
+         WHERE m.user_id=$1 AND NOT m.muted AND ${unreadPredicate} LIMIT 100
        ) notices`,
       [a.id],
     );
@@ -614,7 +614,7 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
   });
   route("get", "/conversations", async (_req, res, db, a) => {
     const { rows } = await db.query(
-      `SELECT c.*,m.role,
+      `SELECT c.*,m.role,m.muted,
         CASE WHEN c.is_group THEN NULL ELSE (
           SELECT COALESCE(NULLIF(peer.profile->>'displayName',''),'Трейдер')
           FROM hc_members others JOIN hc_users peer ON peer.id=others.user_id
@@ -731,6 +731,20 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
     );
     res.json({ success: true });
   }, 80);
+  // Muting affects only this account's notification surfaces, not unread
+  // counts inside conversations or other members of the chat.
+  route("post", "/conversations/:id/mute", async (req, res, db, a) => {
+    const id = uuid(req.params.id);
+    if (typeof req.body?.muted !== "boolean")
+      fail("Оберіть, чи приглушити сповіщення розмови");
+    const { rows } = await db.query(
+      `UPDATE hc_members SET muted=$3
+       WHERE conversation_id=$1 AND user_id=$2 RETURNING muted`,
+      [id,a.id,req.body.muted],
+    );
+    if (!rows.length) fail("Розмова недоступна", 404);
+    res.json({ success: true, muted: rows[0].muted });
+  }, 30);
   route("get", "/conversations/:id/members", async (req, res, db, _a, p) => {
     const id = uuid(req.params.id);
     if (!p.member.has(id)) fail("Розмова недоступна", 404);

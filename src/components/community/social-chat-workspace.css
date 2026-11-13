@@ -493,3 +493,19 @@
   .community-workspace .community-chat-unread-shortcut {font-size:11px;min-height:36px;padding:7px 8px;}
   .community-workspace .community-chat-channels button > .community-chat-unread-count {min-width:20px;}
 }
+
+
+/* Per-member notification mute: the chat and its unread number remain accessible. */
+.community-workspace .community-chat-mute-toggle {
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:37px;padding:7px 10px;border:1px solid #326570;
+  border-radius:10px;background:#112d39;color:#c3e9e7;
+  font-size:11px;font-weight:750;
+}
+.community-workspace .community-chat-mute-toggle[aria-pressed="true"] {
+  border-color:#876c45;background:#342d29;color:#f2d7aa;
+}
+.community-workspace .community-chat-muted-icon {flex:0 0 auto;color:#b6a28a;}
+@media(max-width:700px) {
+  .community-workspace .community-chat-mute-toggle {min-height:40px;white-space:normal;}
+}

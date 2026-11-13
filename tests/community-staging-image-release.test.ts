@@ -37,6 +37,12 @@ test("manual release verifies source and package, signs archive with SHA256", ()
   ]) assert.ok(workflow.includes(command), command);
   assert.match(workflow, /community-stage-\$\{RELEASE_SHA\}/);
   assert.match(workflow, /if gh release view "\$TAG"/);
+  assert.match(workflow, /gh release view "\$TAG" --json assets --jq/);
+  assert.match(workflow, /grep -Fxq "h00k-community-image\.tar\.gz"/);
+  assert.match(workflow, /grep -Fxq "h00k-community-image\.tar\.gz\.sha256"/);
+  assert.match(workflow, /already exists with both assets/);
+  assert.match(workflow, /Existing release \$TAG has missing assets/);
+
   assert.doesNotMatch(workflow, /docker compose (up|down)|ssh |scp |rsync /);
 });
 
