@@ -2118,6 +2118,12 @@ function Chats({
     [before, setBefore] = useState<string | null>(null),
     [chatSearch, setChatSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [createGroup, setCreateGroup] = useState(false);
+  const [groupOpen, setGroupOpen] = useState(false);
+  const [groupNotice, setGroupNotice] = useState("");
+  const [inviteMember, setInviteMember] = useState("");
+  const [pollError, setPollError] = useState("");
+  const inFlightPoll = useRef(false);
   useEffect(() => {
     if (!inviteTarget) return;
     setCreateOpen(true);
@@ -2146,6 +2152,23 @@ function Chats({
   const currentConversation = conversations.find((c) => c.id === id);
   const currentTitle = currentConversation?.title ||
     (currentConversation?.is_group ? "Групова розмова" : "Особистий діалог");
+  const myRole = currentConversation?.role as "owner" | "admin" | "member" | undefined;
+  const canManageGroup = currentConversation?.is_group && (myRole === "owner" || myRole === "admin");
+  const groupMembers = useResource("chat-members:" + id + ":" + groupOpen, () =>
+    id && groupOpen && currentConversation?.is_group
+      ? apiJson(api + "/conversations/" + encodeURIComponent(id) + "/members")
+      : Promise.resolve({ items: [] }),
+  );
+  const currentMembers: Array<{ id:string; displayName:string; role:string; joined_at:string }> =
+    Array.isArray(groupMembers.data?.items) ? groupMembers.data.items : [];
+  const memberIds = new Set(currentMembers.map(member => member.id));
+  const eligibleFriends: Array<{ id:string; displayName:string }> =
+    (friends.data?.people ?? []).filter((person: any) => person.accepted && !memberIds.has(person.id));
+  useEffect(() => {
+    setGroupOpen(false);
+    setGroupNotice("");
+    setInviteMember("");
+  }, [id]);
   async function load(older = false, replace = false) {
     if (!id) return;
     const startedId = id;
@@ -2184,17 +2207,27 @@ function Chats({
     setBefore(null);
     stayAtBottom.current = true;
     restoreOlderOffset.current = null;
+    setPollError("");
     if (!id) return;
     let active = true;
     const pull = () => {
-      if (active && document.visibilityState === "visible")
-        void run(() => load());
+      if (!active || document.visibilityState !== "visible" || inFlightPoll.current) return;
+      inFlightPoll.current = true;
+      void load().then(() => { if (active) setPollError(""); })
+        .catch((error) => {
+          if (active) setPollError(error instanceof Error ? error.message : "Не вдалося оновити повідомлення");
+        }).finally(() => { inFlightPoll.current = false; });
     };
     pull();
-    const timer = setInterval(pull, 5000);
+    // One visible, active conversation per user. No polling for hidden tabs.
+    const timer = setInterval(pull, 12000);
+    document.addEventListener("visibilitychange", pull);
+    window.addEventListener("focus", pull);
     return () => {
       active = false;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", pull);
+      window.removeEventListener("focus", pull);
     };
   }, [id, revision]);
   return (
@@ -2211,6 +2244,12 @@ function Chats({
         onToggle={(event) => setCreateOpen(event.currentTarget.open)}
       >
         <summary>Створити розмову</summary>
+        <label className="community-chat-group-toggle">
+          <input type="checkbox" checked={createGroup || members.length > 1}
+            disabled={members.length > 1}
+            onChange={(event) => setCreateGroup(event.target.checked)} />
+          Групова розмова — можна додавати друзів пізніше
+        </label>
         {inviteTarget && (
           <p className="community-chat-invite-notice" role="status">
             Обрано трейдера {inviteTarget.name}. Підтвердіть створення розмови — вона не відкривається автоматично.
@@ -2249,6 +2288,7 @@ function Chats({
               const d = await post(api + "/conversations", {
                 title: name || "Розмова",
                 members,
+                isGroup: createGroup || members.length > 1,
               });
               setId(d.id);
               list.refresh();
@@ -2256,6 +2296,7 @@ function Chats({
               setName("");
               setChatSearch("");
               setCreateOpen(false);
+              setCreateGroup(false);
               onInviteHandled();
             })
           }
@@ -2317,6 +2358,12 @@ function Chats({
                   </span>
                   <h3>{currentTitle}</h3>
                 </div>
+                {currentConversation?.is_group && (
+                  <button type="button" className="community-chat-members-toggle" aria-expanded={groupOpen}
+                    onClick={() => setGroupOpen(open => !open)}>
+                    <Users size={15} aria-hidden="true" /> {groupOpen ? "Сховати учасників" : "Учасники групи"}
+                  </button>
+                )}
                 <button
                   className="community-chat-jump"
                   type="button"
@@ -2329,6 +2376,77 @@ function Chats({
                   До останніх
                 </button>
               </header>
+              {groupOpen && currentConversation?.is_group && (
+                <section className="community-chat-members-panel" aria-label="Учасники групової розмови">
+                  <div className="community-chat-members-title">
+                    <h4>Учасники групи{groupMembers.data ? " · " + currentMembers.length : ""}</h4>
+                    <span>{myRole === "owner" ? "Власник" : myRole === "admin" ? "Адміністратор" : "Учасник"}</span>
+                  </div>
+                  {groupMembers.error && <p role="alert">{groupMembers.error}</p>}
+                  {groupNotice && <p role="status">{groupNotice}</p>}
+                  <div className="community-chat-members-list">
+                    {currentMembers.map(member => (
+                      <div key={member.id} className="community-chat-member-row">
+                        <span className="community-chat-member-avatar" aria-hidden="true">{member.displayName.slice(0,1).toUpperCase()}</span>
+                        <span className="community-chat-member-info">
+                          <strong>{member.displayName}</strong>
+                          <small>{member.role === "owner" ? "Власник" : member.role === "admin" ? "Адміністратор" : "Учасник"}</small>
+                        </span>
+                        {myRole === "owner" && member.id !== user?.uid && (
+                          <button type="button" onClick={() => {
+                            if (!window.confirm("Передати керування групою користувачу " + member.displayName + "?")) return;
+                            void run(async () => {
+                              await post(api + "/conversations/" + id + "/transfer", { targetId: member.id });
+                              setGroupNotice("Новий власник групи: " + member.displayName);
+                              groupMembers.refresh();
+                              list.refresh();
+                            });
+                          }}>Передати права</button>
+                        )}
+                        {canManageGroup && member.id !== user?.uid && member.role !== "owner" && (
+                          <button type="button" onClick={() => {
+                            if (!window.confirm("Видалити " + member.displayName + " з групи?")) return;
+                            void run(async () => {
+                              await apiJson(api + "/conversations/" + id + "/members/" + member.id, { method: "DELETE" });
+                              setGroupNotice("Учасника видалено");
+                              groupMembers.refresh();
+                            });
+                          }}>Видалити</button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {canManageGroup && (
+                    <div className="community-chat-add-member">
+                      <label htmlFor="community-chat-add-member">Запросити підтвердженого друга</label>
+                      <select id="community-chat-add-member" value={inviteMember}
+                        onChange={event => setInviteMember(event.target.value)}>
+                        <option value="">Оберіть друга</option>
+                        {eligibleFriends.map(friend => <option value={friend.id} key={friend.id}>{friend.displayName}</option>)}
+                      </select>
+                      <button type="button" disabled={!inviteMember} onClick={() => void run(async () => {
+                        await post(api + "/conversations/" + id + "/members", { id: inviteMember });
+                        setInviteMember("");
+                        setGroupNotice("Учасника додано до групи");
+                        groupMembers.refresh();
+                      })}>Додати</button>
+                    </div>
+                  )}
+                  {myRole && myRole !== "owner" && (
+                    <button className="community-chat-leave" type="button" onClick={() => {
+                      if (!window.confirm("Вийти з групи? Нові повідомлення стануть недоступними.")) return;
+                      void run(async () => {
+                        await apiJson(api + "/conversations/" + id + "/members/" + user?.uid, { method: "DELETE" });
+                        setId("");
+                        setGroupOpen(false);
+                        list.refresh();
+                      });
+                    }}>Вийти з групи</button>
+                  )}
+                  {myRole === "owner" && <p className="community-chat-members-hint">Щоб вийти з групи, спочатку передайте права іншому учаснику.</p>}
+                </section>
+              )}
+              {pollError && <p className="community-chat-poll-error" role="status">{pollError}</p>}
               <div
                 className="community-chat-thread"
                 role="log"
