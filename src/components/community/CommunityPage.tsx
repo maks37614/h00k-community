@@ -39,6 +39,7 @@ import type {
 } from "../../types";
 import { ChartPreview } from "./ChartPreview";
 import { CommunityItemEditor } from "./CommunityItemEditor";
+import { CommunityPhotoGallery } from "./CommunityPhotoGallery";
 import "./community.css";
 import "./social-friends-settings.css";
 import "./social-chat-workspace.css";
@@ -47,6 +48,7 @@ import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from ".
 import { canSendCommunityContent, communityAudienceHint, validateCommunityPhoto, MAX_COMMUNITY_PHOTOS } from "./composerPolicy";
 import "./social-composer-posts.css";
 import "./social-edit-items.css";
+import "./social-photo-gallery.css";
 import "./social-profile-actions.css";
 import "./social-profile-tabs.css";
 import "./social-resource-library.css";
@@ -1061,22 +1063,10 @@ function ItemCard({
         />
       )}
       {!!item.body?.photos?.length && (
-        <div className="community-photo-strip">
-          {item.body.photos.map((id: string) => (
-            <a
-              key={id}
-              href={api + "/media/" + id}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <img
-                loading="lazy"
-                alt="Вкладення до матеріалу"
-                src={api + "/media/" + id}
-              />
-            </a>
-          ))}
-        </div>
+        <CommunityPhotoGallery
+          ids={item.body.photos}
+          label="Фото допису"
+        />
       )}
       <footer className="community-card-actions" aria-label="Дії з публікацією">
         {["👍", "❤️", "🔥", "🤔"].map((emoji) => (
@@ -1231,16 +1221,12 @@ function ItemCard({
                     }
                   />
                 )}
-                <div className="community-photo-strip">
-                  {comment.body.photos?.map((id: string) => (
-                    <img
-                      key={id}
-                      alt="Фото в коментарі"
-                      loading="lazy"
-                      src={api + "/media/" + id}
-                    />
-                  ))}
-                </div>
+                {!!comment.body.photos?.length && (
+                  <CommunityPhotoGallery
+                    ids={comment.body.photos}
+                    label="Фото коментаря"
+                  />
+                )}
               </article>
             ),
           )}
