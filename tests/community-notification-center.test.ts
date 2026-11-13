@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   describeCommunityNotice,
+  communityNoticeDestination,
   filterCommunityNotices,
   safeNoticeDate,
   unreadNoticeCount,
@@ -112,4 +113,50 @@ test("mobile and desktop notification panel is scoped to Community", () => {
   assert.match(css, /@media \(max-width: 700px\)/);
   assert.match(css, /\.community-workspace \.community-notification-count/);
   assert.doesNotMatch(css, /^(?:html|body|\*)\s*\{/m);
+});
+
+test("social inbox classifies friend requests, accepted invites, comments and earned awards", () => {
+  assert.equal(describeCommunityNotice({ id: "a", type: "friend_request", created_at: "" }).title, "Нова заявка у друзі");
+  assert.equal(describeCommunityNotice({ id: "b", type: "friend_accepted", created_at: "" }).title, "Запит у друзі прийнято");
+  assert.equal(describeCommunityNotice({ id: "c", type: "comment", created_at: "" }).title, "Нове обговорення");
+  const award = describeCommunityNotice({
+    id: "d", type: "award", created_at: "", body: { awardType: "thanks" },
+  });
+  assert.match(award.description, /Подяка/);
+  assert.equal(award.isImportant, false);
+  assert.doesNotMatch(award.description, /senderId|postId/);
+});
+
+test("notification actions accept only canonical internal destinations, never untrusted URLs", () => {
+  assert.deepEqual(communityNoticeDestination({ id: "f", type: "friend_request", created_at: "" }),
+    { section: "friends" });
+  assert.deepEqual(communityNoticeDestination({ id: "a", type: "friend_accepted", created_at: "" }),
+    { section: "friends" });
+  const postId = "51c340e3-a176-4124-bd64-12896d96886a";
+  assert.deepEqual(communityNoticeDestination({
+    id: "p", type: "comment", created_at: "", body: { postId },
+  }), { section: "feed", postId });
+  assert.equal(communityNoticeDestination({
+    id: "x", type: "comment", created_at: "", body: { postId: "javascript:alert(1)" },
+  }), null);
+  assert.equal(communityNoticeDestination({ id: "x", type: "security", created_at: "",
+    body: { postId } }), null);
+  assert.equal(communityNoticeDestination({ id: "x", type: "award", created_at: "",
+    body: { postId } }), null);
+});
+
+test("social notification navigation uses actual Community feed/friends views and no external links", () => {
+  const component = readFileSync(new URL("../src/components/community/CommunityNotificationCenter.tsx", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../src/components/community/CommunityPage.tsx", import.meta.url), "utf8");
+  const backend = readFileSync(new URL("../server/community/routes.ts", import.meta.url), "utf8");
+  assert.match(component, /communityNoticeDestination\(notice\)/);
+  assert.match(component, /onNavigate\(destination\)/);
+  assert.match(component, /community-notification-open/);
+  assert.match(page, /onNavigate=\{\(destination\) =>/);
+  assert.match(page, /params\.set\("post", destination\.postId\)/);
+  assert.match(backend, /'friend_request'/);
+  assert.match(backend, /'friend_accepted'/);
+  assert.match(backend, /'comment'/);
+  assert.match(backend, /ON CONFLICT\(dedup_key\) DO NOTHING/);
+  assert.doesNotMatch(component, /window\.open\(|location\.href\s*=|dangerouslySetInnerHTML/);
 });
