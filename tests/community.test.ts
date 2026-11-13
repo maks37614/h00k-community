@@ -496,8 +496,26 @@ test('bookmarks persist per user, toggle and never disclose private posts', asyn
 });
 
 test('social notices are real, deduplicated, private and limited to public discussions', async () => {
-  const hana = await register('Hana');
-  const ihor = await register('Ihor');
+  // Reuse existing authenticated actors: registration is deliberately rate-limited
+  // to five accounts per IP. Reset only this pair's social fixtures.
+  const hana = alice, ihor = eve;
+  await db.query(
+    "DELETE FROM hc_blocks WHERE (owner_id=$1 AND target_id=$2) OR (owner_id=$2 AND target_id=$1)",
+    [hana.id, ihor.id],
+  );
+  await db.query(
+    "DELETE FROM hc_friendships WHERE (sender=$1 AND recipient=$2) OR (sender=$2 AND recipient=$1)",
+    [hana.id, ihor.id],
+  );
+  await db.query(
+    "DELETE FROM hc_notifications WHERE dedup_key=ANY($1::text[])",
+    [[
+      "friend-request:" + hana.id + ":" + ihor.id,
+      "friend-request:" + ihor.id + ":" + hana.id,
+      "friend-accepted:" + hana.id + ":" + ihor.id,
+      "friend-accepted:" + ihor.id + ":" + hana.id,
+    ]],
+  );
   const request = await call(api + '/friends/' + ihor.id, hana, 'POST', {});
   assert.equal(request.res.status, 200, JSON.stringify(request.data));
   const incoming = await call(api + '/notifications', ihor);
