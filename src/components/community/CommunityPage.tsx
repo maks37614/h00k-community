@@ -959,6 +959,7 @@ function ItemCard({
   const [reply, setReply] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [selectedReply, setSelectedReply] = useState<ReplySource | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   async function copyPostLink() {
     try {
@@ -981,6 +982,7 @@ function ItemCard({
     setMoreComments([]);
     setNextComment(thread.data?.next ?? null);
   }, [thread.data]);
+  useEffect(() => { if (!reply) setSelectedReply(null); }, [reply]);
   const target: Target =
     item.kind === "message"
       ? { kind: "message", conversationId: item.conversation_id }
@@ -1226,6 +1228,12 @@ function ItemCard({
                 ) : (
                   <p>{comment.body.text}</p>
                 )}
+                {comment.source && (
+                  <blockquote className="community-comment-quoted">
+                    <span>У відповідь на коментар</span>
+                    <p>{replyPreviewText(comment.source.text) || "Коментар із вкладенням"}</p>
+                  </blockquote>
+                )}
                 {comment.chart && (
                   <ChartPreview
                     document={comment.chart}
@@ -1233,6 +1241,12 @@ function ItemCard({
                       void onChart(comment, {
                         kind: "comment",
                         parentId: item.id,
+                        replyTo: {
+                          id: comment.id,
+                          displayName: comment.author?.displayName ?? "Трейдер",
+                          text: comment.body?.text ?? "",
+                          audience: comment.audience,
+                        },
                       })
                     }
                   />
@@ -1241,6 +1255,39 @@ function ItemCard({
                   <CommunityPhotoGallery
                     ids={comment.body.photos}
                     label="Фото коментаря"
+                  />
+                )}
+                <div className="community-comment-reply-actions">
+                  <button
+                    type="button"
+                    aria-expanded={selectedReply?.id === comment.id}
+                    onClick={() => {
+                      setSelectedReply((current) =>
+                        current?.id === comment.id
+                          ? null
+                          : {
+                              id: comment.id,
+                              displayName: comment.author?.displayName ?? "Трейдер",
+                              text: comment.body?.text ?? "",
+                              audience: comment.audience,
+                            },
+                      );
+                    }}
+                  >
+                    {selectedReply?.id === comment.id ? "Скасувати відповідь" : "Відповісти"}
+                  </button>
+                </div>
+                {selectedReply?.id === comment.id && (
+                  <Composer
+                    key={comment.id}
+                    target={{ ...target, replyTo: selectedReply }}
+                    onPick={onPick}
+                    onSent={() => {
+                      setSelectedReply(null);
+                      thread.refresh();
+                      refresh();
+                    }}
+                    run={run}
                   />
                 )}
               </article>
@@ -1305,7 +1352,7 @@ function ChartDialog({
 }) {
   const { user } = useAuth();
   const [text, setText] = useState(""),
-    [audience, setAudience] = useState("private"),
+    [audience, setAudience] = useState(() => draft.target.replyTo ? normalizeReplyAudience(draft.target.replyTo.audience) : "private"),
     [target, setTarget] = useState(draft.target),
     [busy, setBusy] = useState(false),
     [savedId, setSavedId] = useState<string | null>(draft.historyId ?? null);
@@ -1402,7 +1449,7 @@ function ChartDialog({
             ))}
           </select>
           {target.kind !== "message" && (
-            <Audience value={audience} onChange={setAudience} />
+            <Audience value={audience} onChange={setAudience} allowedValues={replyAudienceOptions(target.replyTo)} />
           )}
           <button
             type="button"
@@ -1414,7 +1461,7 @@ function ChartDialog({
           <button
             type="button"
             className="community-primary"
-            disabled={busy}
+            disabled={busy || !canShareReplyWithAudience(target.replyTo, audience)}
             onClick={() => {
               setBusy(true);
               void run(async () => {
@@ -1423,7 +1470,7 @@ function ChartDialog({
                   ...target,
                   audience,
                   chartId: id,
-                  body: { text: text || "Мій варіант розбору графіка" },
+                  body: { text: text || "Мій варіант розбору графіка", ...(target.replyTo ? { sourceItemId: target.replyTo.id } : {}) },
                 });
                 onSaved();
               }).finally(() => setBusy(false));
