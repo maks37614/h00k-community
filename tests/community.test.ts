@@ -208,6 +208,9 @@ test('real group chats support membership listing, invitations, ownership transf
   assert.equal(direct.res.status, 201, JSON.stringify(direct.data));
   const directInfo = await call(api + '/conversations', alice);
   assert.equal(directInfo.data.items.find((c: any) => c.id === direct.data.id)?.is_group, false);
+  assert.equal(directInfo.data.items.find((c: any) => c.id === direct.data.id)?.peer_name, 'Bob');
+  const peerView = await call(api + '/conversations', bob);
+  assert.match(peerView.data.items.find((c: any) => c.id === direct.data.id)?.peer_name, /Alice/);
   assert.equal((await call(api + '/conversations/' + direct.data.id + '/members', eve)).res.status, 404);
   assert.equal((await call(api + '/conversations/' + direct.data.id + '/members', alice)).data.items.length, 2);
   assert.equal((await call(api + '/conversations/' + direct.data.id + '/members', alice, 'POST', {
