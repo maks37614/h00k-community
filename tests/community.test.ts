@@ -258,6 +258,73 @@ test('real group chats support membership listing, invitations, ownership transf
   assert.equal((await call(api + '/conversations/' + id + '/members', eve)).res.status, 200);
 });
 
+test('unread message cursors are member-private, monotonic, and respect join time', async () => {
+  await call(api + '/friends/' + eve.id, alice, 'POST', {});
+  await call(api + '/friends/' + alice.id, eve, 'POST', {});
+  await call(api + '/friends/' + bob.id, alice, 'POST', {});
+  await call(api + '/friends/' + alice.id, bob, 'POST', {});
+  const room = await call(api + '/conversations', alice, 'POST', {
+    title: 'Непрочитані повідомлення', members: [eve.id], isGroup: true,
+  });
+  assert.equal(room.res.status, 201, JSON.stringify(room.data));
+  const roomId = room.data.id;
+  const baseline = (await call(api + '/conversations/unread', eve)).data.unread;
+
+  const first = await call(api + '/items', alice, 'POST', {
+    kind: 'message', conversationId: roomId, body: { text: 'Перше повідомлення' },
+  });
+  const second = await call(api + '/items', alice, 'POST', {
+    kind: 'message', conversationId: roomId, body: { text: 'Друге повідомлення' },
+  });
+  assert.equal(first.res.status, 201);
+  assert.equal(second.res.status, 201);
+  const findRoom = async (actor: Actor) =>
+    (await call(api + '/conversations', actor)).data.items.find((c: any) => c.id === roomId);
+  assert.equal((await findRoom(eve)).unread_count, 2);
+  assert.equal((await findRoom(alice)).unread_count, 0);
+  assert.equal((await call(api + '/conversations/unread', eve)).data.unread, baseline + 2);
+  assert.equal((await call(api + '/conversations/unread', alice)).data.unread, 0);
+  assert.equal((await call(api + '/conversations/' + roomId + '/read', bob, 'POST', {
+    messageId: second.data.id,
+  })).res.status, 404);
+  assert.equal((await call(api + '/conversations/' + roomId + '/read', eve, 'POST', {
+    messageId: randomUUID(),
+  })).res.status, 404);
+  assert.equal((await call(api + '/conversations/' + roomId + '/read', eve, 'POST', {
+    messageId: first.data.id,
+  })).res.status, 200);
+  assert.equal((await findRoom(eve)).unread_count, 1);
+  assert.equal((await call(api + '/conversations/' + roomId + '/read', eve, 'POST', {
+    messageId: second.data.id,
+  })).res.status, 200);
+  assert.equal((await findRoom(eve)).unread_count, 0);
+  assert.equal((await call(api + '/conversations/' + roomId + '/read', eve, 'POST', {
+    messageId: first.data.id,
+  })).res.status, 200);
+  assert.equal((await findRoom(eve)).unread_count, 0, 'older read cursor must never overwrite the newer one');
+  assert.equal((await call(api + '/conversations/unread', eve)).data.unread, baseline);
+
+  // Newly invited participants may not inherit another member's earlier messages.
+  assert.equal((await call(api + '/conversations/' + roomId + '/members', alice, 'POST', {
+    id: bob.id,
+  })).res.status, 200);
+  assert.equal((await findRoom(bob)).unread_count, 0);
+  const newer = await call(api + '/items', alice, 'POST', {
+    kind: 'message', conversationId: roomId, body: { text: 'Після запрошення' },
+  });
+  assert.equal(newer.res.status, 201);
+  assert.equal((await findRoom(bob)).unread_count, 1);
+  assert.equal((await findRoom(eve)).unread_count, 1);
+  assert.equal((await call(api + '/conversations/' + roomId + '/read', bob, 'POST', {
+    messageId: first.data.id,
+  })).res.status, 404, 'cannot acknowledge messages from before joining');
+  await call(api + '/conversations/' + roomId + '/members/' + bob.id, bob, 'DELETE');
+  assert.equal((await call(api + '/conversations/' + roomId + '/read', bob, 'POST', {
+    messageId: newer.data.id,
+  })).res.status, 404);
+  assert.equal((await call(api + '/conversations', bob)).data.items.some((c: any) => c.id === roomId), false);
+});
+
 test('group membership, message idempotence and block policy apply to direct links too',async()=>{
   await call(api+'/friends/'+bob.id,alice,'POST',{});await call(api+'/friends/'+alice.id,bob,'POST',{});
   const group=await call(api+'/conversations',alice,'POST',{title:'Спільний тест',members:[bob.id]});assert.equal(group.res.status,201,JSON.stringify(group.data));const conversationId=group.data.id;

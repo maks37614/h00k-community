@@ -466,3 +466,30 @@
   .community-workspace .community-chat-member-row button {min-height:36px;}
   .community-workspace .community-chat-add-member select {font-size:16px;}
 }
+
+
+/* Lightweight unread indicators; counts come only from authorized conversation APIs. */
+.community-workspace .community-chat-unread-count {
+  flex:0 0 auto;display:inline-grid;place-items:center;
+  min-width:21px;height:21px;padding:0 5px;
+  border-radius:999px;background:#19d4c3;border:1px solid #3af6df;
+  color:#09282b;font-size:11px;line-height:1;font-weight:850;
+  box-shadow:0 0 12px #1cdeca26;font-variant-numeric:tabular-nums;
+}
+.community-workspace .community-chat-unread-shortcut {
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:34px;padding:6px 9px;border:1px solid #247a76;
+  background:linear-gradient(120deg,#153e40,#132739);
+  color:#c5eee7;border-radius:9px;font-size:11px;font-weight:750;
+}
+.community-workspace .community-chat-unread-shortcut:hover {border-color:#32b4a7;background:#145551;}
+.community-workspace .community-chat-unread-shortcut > .community-chat-unread-count {margin-left:3px;}
+.community-workspace .community-chat-channel-label {min-width:0;}
+.community-workspace .community-chat-channels button > .community-chat-unread-count {margin-left:auto;}
+.community-workspace .community-concept-navigation .community-nav button .community-chat-unread-count {
+  margin-left:auto;font-size:10px;
+}
+@media(max-width:700px) {
+  .community-workspace .community-chat-unread-shortcut {font-size:11px;min-height:36px;padding:7px 8px;}
+  .community-workspace .community-chat-channels button > .community-chat-unread-count {min-width:20px;}
+}
