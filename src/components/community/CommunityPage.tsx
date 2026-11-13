@@ -148,12 +148,10 @@ const api = "/api/community";
 export function CommunityPage({ onReplay }: { onReplay: () => void }) {
   const { user, profile } = useAuth();
   const { archivedFormations } = useArchive();
-  const [tab, setTab] = useState<Tab>(() =>
-      new URLSearchParams(location.hash.split("?")[1] ?? "").get("section") ===
-      "settings"
-        ? "settings"
-        : new URLSearchParams(location.hash.split("?")[1] ?? "").get("section") === "profile" ? "profile" : "feed",
-    ),
+  const [tab, setTab] = useState<Tab>(() => {
+      const section = new URLSearchParams(location.hash.split("?")[1] ?? "").get("section");
+      return (["feed","day","sessions","strategies","trades","learning","chats","friends","profile","settings"] as string[]).includes(section ?? "") ? section as Tab : "feed";
+    }),
     [notice, setNotice] = useState(""),
     [picker, setPicker] = useState<Target | null>(null),
     [draft, setDraft] = useState<DraftChart | null>(null);
@@ -178,19 +176,17 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
   useEffect(() => {
     const jump = () => {
       const query = new URLSearchParams(location.hash.split("?")[1] ?? "");
-      if (query.get("section") === "profile") {
-        const owner = query.get("owner");
-        setViewProfile(owner && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(owner) ? owner : null);
-        setTab("profile");
+      const section = query.get("section");
+      if (section && (["feed","day","sessions","strategies","trades","learning","chats","friends","profile","settings"] as string[]).includes(section)) {
+        if (section === "profile") {
+          const owner = query.get("owner");
+          setViewProfile(owner && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(owner) ? owner : null);
+        } else {
+          setViewProfile(null);
+        }
+        setTab(section as Tab);
       }
-      if (new URLSearchParams(location.hash.split("?")[1] ?? "").has("post"))
-        setTab("feed");
-      if (
-        new URLSearchParams(location.hash.split("?")[1] ?? "").get(
-          "section",
-        ) === "settings"
-      )
-        setTab("settings");
+      if (query.has("post")) setTab("feed");
     };
     window.addEventListener("hashchange", jump);
     return () => window.removeEventListener("hashchange", jump);
@@ -330,6 +326,8 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
             onFriends={() => setTab("friends")}
             onSettings={() => setTab("settings")}
           />
+        <details className="community-concept-navigation">
+          <summary>Усі розділи Community</summary>
         <nav className="community-nav" aria-label="Розділи спільноти">
         {nav.map(([id, title, icon]) => (
           <button
@@ -346,6 +344,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           </button>
         ))}
         </nav>
+        </details>
         </div>
         <div className="community-main-pane">
       {notice && (
