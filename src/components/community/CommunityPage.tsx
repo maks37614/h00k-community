@@ -46,6 +46,7 @@ import "./social-chat-workspace.css";
 import { filterConversations } from "./chatModel";
 import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from "./friendsModel";
 import { canSendCommunityContent, communityAudienceHint, validateCommunityPhoto, MAX_COMMUNITY_PHOTOS } from "./composerPolicy";
+import { canShareReplyWithAudience, normalizeReplyAudience, replyAudienceOptions, replyBody, replyPreviewText, type ReplySource, type CommentAudience } from "./commentReplyModel";
 import "./social-composer-posts.css";
 import "./social-edit-items.css";
 import "./social-photo-gallery.css";
@@ -68,6 +69,7 @@ type Target = {
   kind: "post" | "comment" | "message";
   parentId?: string;
   conversationId?: string;
+  replyTo?: ReplySource;
 };
 type DraftChart = {
   document: ChartDocument;
@@ -81,21 +83,31 @@ function Audience({
   value,
   onChange,
   id,
+  allowedValues = ["private", "friends", "public"],
 }: {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: CommentAudience) => void;
   id?: string;
+  allowedValues?: readonly CommentAudience[];
 }) {
+  const labels: Record<CommentAudience, string> = {
+    private: "Лише я",
+    friends: "Друзі",
+    public: "Публічно",
+  };
   return (
     <select
       id={id}
       aria-label="Аудиторія"
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => {
+        const next = e.target.value;
+        if (next === "private" || next === "friends" || next === "public") onChange(next);
+      }}
     >
-      <option value="private">Лише я</option>
-      <option value="friends">Друзі</option>
-      <option value="public">Публічно</option>
+      {allowedValues.map((scope) => (
+        <option key={scope} value={scope}>{labels[scope]}</option>
+      ))}
     </select>
   );
 }
@@ -555,7 +567,7 @@ function Composer({
 }) {
   const { user, profile } = useAuth();
   const [text, setText] = useState("");
-  const [audience, setAudience] = useState("private");
+  const [audience, setAudience] = useState(() => target.replyTo ? normalizeReplyAudience(target.replyTo.audience) : "private");
   const [photos, setPhotos] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
@@ -564,13 +576,13 @@ function Composer({
   const clientId = useRef(crypto.randomUUID());
   const emojiPanelId = useId();
   const audienceId = useId();
-  const canSubmit = canSendCommunityContent(text, photos.length, busy);
+  const canSubmit = canSendCommunityContent(text, photos.length, busy) && canShareReplyWithAudience(target.replyTo, audience);
   const kindLabel = target.kind === "post" ? "Нова публікація" :
     target.kind === "comment" ? "Написати коментар" : "Нове повідомлення";
 
   function send(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (inFlight.current || !canSendCommunityContent(text, photos.length, false)) return;
+    if (inFlight.current || !canSendCommunityContent(text, photos.length, false) || !canShareReplyWithAudience(target.replyTo, audience)) return;
     inFlight.current = true;
     setBusy(true);
     setPhotoError("");
@@ -581,7 +593,7 @@ function Composer({
         conversationId: target.conversationId,
         audience,
         clientId: clientId.current,
-        body: { text, photos },
+        body: replyBody(text, photos, target.replyTo),
       });
       setText("");
       setPhotos([]);
@@ -642,6 +654,13 @@ function Composer({
         <div className="community-composer-context">
           <span className="community-page-kicker">{kindLabel}</span>
         </div>
+      )}
+      {target.kind === "comment" && target.replyTo && (
+        <blockquote className="community-reply-composer-quote">
+          <span>Відповідь на коментар {target.replyTo.displayName}</span>
+          <p>{replyPreviewText(target.replyTo.text) || "Коментар із вкладенням"}</p>
+          <small>Відповідь залишиться в обговоренні цього допису.</small>
+        </blockquote>
       )}
       <textarea
         aria-label={
@@ -709,7 +728,7 @@ function Composer({
             <label htmlFor={audienceId}>
               Аудиторія
             </label>
-            <Audience id={audienceId} value={audience} onChange={setAudience} />
+            <Audience id={audienceId} value={audience} onChange={setAudience} allowedValues={replyAudienceOptions(target.replyTo)} />
           </div>
         )}
         <button type="submit" className="community-primary community-composer-send" disabled={!canSubmit}>
@@ -943,6 +962,7 @@ function ItemCard({
   const [reply, setReply] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [selectedReply, setSelectedReply] = useState<ReplySource | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   async function copyPostLink() {
     try {
@@ -965,6 +985,7 @@ function ItemCard({
     setMoreComments([]);
     setNextComment(thread.data?.next ?? null);
   }, [thread.data]);
+  useEffect(() => { if (!reply) setSelectedReply(null); }, [reply]);
   const target: Target =
     item.kind === "message"
       ? { kind: "message", conversationId: item.conversation_id }
@@ -1210,6 +1231,12 @@ function ItemCard({
                 ) : (
                   <p>{comment.body.text}</p>
                 )}
+                {comment.source && (
+                  <blockquote className="community-comment-quoted">
+                    <span>У відповідь на коментар</span>
+                    <p>{replyPreviewText(comment.source.text) || "Коментар із вкладенням"}</p>
+                  </blockquote>
+                )}
                 {comment.chart && (
                   <ChartPreview
                     document={comment.chart}
@@ -1217,6 +1244,12 @@ function ItemCard({
                       void onChart(comment, {
                         kind: "comment",
                         parentId: item.id,
+                        replyTo: {
+                          id: comment.id,
+                          displayName: comment.author?.displayName ?? "Трейдер",
+                          text: comment.body?.text ?? "",
+                          audience: comment.audience,
+                        },
                       })
                     }
                   />
@@ -1225,6 +1258,39 @@ function ItemCard({
                   <CommunityPhotoGallery
                     ids={comment.body.photos}
                     label="Фото коментаря"
+                  />
+                )}
+                <div className="community-comment-reply-actions">
+                  <button
+                    type="button"
+                    aria-expanded={selectedReply?.id === comment.id}
+                    onClick={() => {
+                      setSelectedReply((current) =>
+                        current?.id === comment.id
+                          ? null
+                          : {
+                              id: comment.id,
+                              displayName: comment.author?.displayName ?? "Трейдер",
+                              text: comment.body?.text ?? "",
+                              audience: comment.audience,
+                            },
+                      );
+                    }}
+                  >
+                    {selectedReply?.id === comment.id ? "Скасувати відповідь" : "Відповісти"}
+                  </button>
+                </div>
+                {selectedReply?.id === comment.id && (
+                  <Composer
+                    key={comment.id}
+                    target={{ ...target, replyTo: selectedReply }}
+                    onPick={onPick}
+                    onSent={() => {
+                      setSelectedReply(null);
+                      thread.refresh();
+                      refresh();
+                    }}
+                    run={run}
                   />
                 )}
               </article>
@@ -1289,7 +1355,7 @@ function ChartDialog({
 }) {
   const { user } = useAuth();
   const [text, setText] = useState(""),
-    [audience, setAudience] = useState("private"),
+    [audience, setAudience] = useState(() => draft.target.replyTo ? normalizeReplyAudience(draft.target.replyTo.audience) : "private"),
     [target, setTarget] = useState(draft.target),
     [busy, setBusy] = useState(false),
     [savedId, setSavedId] = useState<string | null>(draft.historyId ?? null);
@@ -1386,7 +1452,7 @@ function ChartDialog({
             ))}
           </select>
           {target.kind !== "message" && (
-            <Audience value={audience} onChange={setAudience} />
+            <Audience value={audience} onChange={setAudience} allowedValues={replyAudienceOptions(target.replyTo)} />
           )}
           <button
             type="button"
@@ -1398,7 +1464,7 @@ function ChartDialog({
           <button
             type="button"
             className="community-primary"
-            disabled={busy}
+            disabled={busy || !canShareReplyWithAudience(target.replyTo, audience)}
             onClick={() => {
               setBusy(true);
               void run(async () => {
@@ -1407,7 +1473,7 @@ function ChartDialog({
                   ...target,
                   audience,
                   chartId: id,
-                  body: { text: text || "Мій варіант розбору графіка" },
+                  body: { text: text || "Мій варіант розбору графіка", ...(target.replyTo ? { sourceItemId: target.replyTo.id } : {}) },
                 });
                 onSaved();
               }).finally(() => setBusy(false));

@@ -99,6 +99,60 @@ test('a feed mount reads snapshots without exchange network requests; public and
   const mine=await call(api+'/feed?mode=wall&owner='+alice.id,alice);assert.ok(mine.data.items.some((p:any)=>p.id===item.data.id));
 });
 
+test('quoted comment replies respect source audience and stay attached to the original post', async () => {
+  // Reuse preexisting actors: avoid bypassing registration rate limits in tests.
+  const author = alice;
+  const peer = eve;
+  const outsider = bob;
+  assert.equal((await call(api + '/friends/' + peer.id, author, 'POST', {})).res.status, 200);
+  assert.equal((await call(api + '/friends/' + author.id, peer, 'POST', {})).res.status, 200);
+
+  const post = await call(api + '/items', author, 'POST', {
+    kind: 'post', audience: 'public', body: { text: 'Публічний розбір з обговоренням' },
+  });
+  assert.equal(post.res.status, 201, JSON.stringify(post.data));
+
+  const source = await call(api + '/items', peer, 'POST', {
+    kind: 'comment', audience: 'friends', parentId: post.data.id,
+    body: { text: 'Коментар тільки для підтверджених друзів' },
+  });
+  assert.equal(source.res.status, 201, JSON.stringify(source.data));
+  assert.equal((await call(api + '/items/' + source.data.id, outsider)).res.status, 404);
+
+  const forbidden = await call(api + '/items', author, 'POST', {
+    kind: 'comment', parentId: post.data.id, audience: 'public',
+    body: { text: 'Не можна цитувати для всіх', sourceItemId: source.data.id },
+  });
+  assert.equal(forbidden.res.status, 403, JSON.stringify(forbidden.data));
+
+  const reply = await call(api + '/items', author, 'POST', {
+    kind: 'comment', parentId: post.data.id, audience: 'friends',
+    body: { text: 'Відповідаю на конкретний коментар', sourceItemId: source.data.id },
+  });
+  assert.equal(reply.res.status, 201, JSON.stringify(reply.data));
+
+  const thread = await call(api + '/items/' + post.data.id + '/comments', peer);
+  const quoted = thread.data.items.find((item: any) => item.id === reply.data.id);
+  assert.equal(quoted.parent_id, post.data.id);
+  assert.equal(quoted.body.sourceItemId, source.data.id);
+  assert.equal(quoted.source.text, 'Коментар тільки для підтверджених друзів');
+  assert.equal((await call(api + '/items/' + reply.data.id, outsider)).res.status, 404);
+
+  const publicSource = await call(api + '/items', author, 'POST', {
+    kind: 'comment', parentId: post.data.id, audience: 'public',
+    body: { text: 'Загальнодоступний коментар' },
+  });
+  assert.equal(publicSource.res.status, 201, JSON.stringify(publicSource.data));
+  const publicReply = await call(api + '/items', peer, 'POST', {
+    kind: 'comment', parentId: post.data.id, audience: 'public',
+    body: { text: 'Публічна відповідь', sourceItemId: publicSource.data.id },
+  });
+  assert.equal(publicReply.res.status, 201, JSON.stringify(publicReply.data));
+  const readable = await call(api + '/items/' + publicReply.data.id, outsider);
+  assert.equal(readable.res.status, 200, JSON.stringify(readable.data));
+  assert.equal(readable.data.item.source.text, 'Загальнодоступний коментар');
+});
+
 test('group membership, message idempotence and block policy apply to direct links too',async()=>{
   await call(api+'/friends/'+bob.id,alice,'POST',{});await call(api+'/friends/'+alice.id,bob,'POST',{});
   const group=await call(api+'/conversations',alice,'POST',{title:'Спільний тест',members:[bob.id]});assert.equal(group.res.status,201,JSON.stringify(group.data));const conversationId=group.data.id;
