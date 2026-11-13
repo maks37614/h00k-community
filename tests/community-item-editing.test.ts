@@ -59,7 +59,7 @@ test("post and comments edit via server PATCH, not client-only fake changes", ()
   assert.match(page, /comment\.owner_id === user\?\.uid && \(/);
   assert.match(page, /editingCommentId === comment\.id/);
   assert.match(page, /thread\.refresh\(\)/);
-  assert.match(page, /community-item-editor/);
+  assert.match(page, /<CommunityItemEditor/);
   assert.match(editor, /method: "PATCH"/);
   assert.match(editor, /buildEditedItemPayload\(item, text, audience\)/);
   assert.match(editor, /onSaved\(\)/);
