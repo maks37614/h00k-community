@@ -19,7 +19,7 @@ test('feed context rail links to real Community actions only on the feed', () =>
   for (const target of ['profile', 'friends', 'chats', 'settings']) {
     assert.match(page, new RegExp('setTab\\("' + target + '"\\)'));
   }
-  assert.match(page, /className="community-dashboard" \+ \(tab === "feed" \? " community-dashboard-feed" : ""\)/);
+  assert.match(page, /className=\{"community-dashboard" \+ \(tab === "feed" \? " community-dashboard-feed" : ""\)\}/);
   assert.doesNotMatch(page, /friendsCount:\s*125|unreadMessagesCount=\{3\}/);
 });
 
