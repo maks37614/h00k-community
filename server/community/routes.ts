@@ -651,6 +651,12 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
         );
         if (!conversation.rows[0]?.is_group)
           fail("Додавати учасників можна лише до групової розмови", 403);
+        const operator = await tx.query(
+          "SELECT role FROM hc_members WHERE conversation_id=$1 AND user_id=$2",
+          [id, _a.id],
+        );
+        if (!["owner","admin"].includes(operator.rows[0]?.role))
+          fail("Недостатньо прав для запрошення", 403);
         const living = await tx.query(
           "SELECT id FROM hc_users WHERE id=$1 AND deleted_at IS NULL FOR SHARE", [target],
         );
@@ -712,16 +718,27 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
       if (!member) fail("Розмова недоступна", 404);
       if (target !== a.id && !["owner", "admin"].includes(member.role))
         fail("Недостатньо прав", 403);
-      const current = await db.query(
-        "SELECT role FROM hc_members WHERE conversation_id=$1 AND user_id=$2",
-        [id, target],
-      );
-      if (current.rows[0]?.role === "owner")
-        fail("Власник має спочатку передати групу");
-      await db.query(
-        "DELETE FROM hc_members WHERE conversation_id=$1 AND user_id=$2",
-        [id, target],
-      );
+      await db.transaction(async (tx) => {
+        await tx.query("SELECT id FROM hc_conversations WHERE id=$1 FOR UPDATE", [id]);
+        const operator = await tx.query(
+          "SELECT role FROM hc_members WHERE conversation_id=$1 AND user_id=$2",
+          [id,a.id],
+        );
+        if (!operator.rows.length) fail("Розмова недоступна", 404);
+        if (target !== a.id && !["owner","admin"].includes(operator.rows[0].role))
+          fail("Недостатньо прав", 403);
+        const current = await tx.query(
+          "SELECT role FROM hc_members WHERE conversation_id=$1 AND user_id=$2",
+          [id,target],
+        );
+        if (!current.rows.length) fail("Учасника не знайдено", 404);
+        if (current.rows[0].role === "owner")
+          fail("Власник має спочатку передати групу");
+        await tx.query(
+          "DELETE FROM hc_members WHERE conversation_id=$1 AND user_id=$2",
+          [id, target],
+        );
+      });
       res.json({ success: true });
     },
   );
