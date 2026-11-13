@@ -1,0 +1,403 @@
+/* h00k Community: real post/editor interfaces, styled from social.
+   No mock posts, market streams or changes to server permissions. */
+
+.community-workspace .community-composer {
+  overflow: hidden;
+  border-color: #234657;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #102433, #0e1829 78%);
+  box-shadow: 0 14px 32px #0003;
+}
+.community-workspace .community-composer-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #244057;
+}
+.community-workspace .community-composer-avatar {
+  display: grid;
+  place-items: center;
+  width: 43px;
+  height: 43px;
+  flex: 0 0 43px;
+  border: 1px solid #268c7c;
+  border-radius: 14px;
+  background: linear-gradient(130deg, #157d74, #1b4462);
+  color: #e5fff9;
+  font-size: 19px;
+  font-weight: 850;
+}
+.community-workspace .community-composer-head > div {
+  min-width: 0;
+  flex: 1;
+}
+.community-workspace .community-composer-head strong {
+  display: block;
+  color: #eef7ff;
+  font-size: 14px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+.community-workspace .community-composer-head small {
+  display: block;
+  padding-top: 3px;
+  color: #99afc5;
+  font-size: 11px;
+}
+.community-workspace .community-composer-kind {
+  padding: 6px 9px;
+  border: 1px solid #236659;
+  border-radius: 9px;
+  color: #8af7df;
+  background: #123c37;
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.community-workspace .community-composer-context {
+  margin-bottom: 11px;
+}
+.community-workspace .community-composer textarea {
+  display: block;
+  width: 100%;
+  min-height: 110px;
+  padding: 14px 15px;
+  border: 1px solid #2b425b;
+  border-radius: 13px;
+  background: #0a1524;
+  color: #edf6ff;
+  font-size: 16px;
+  line-height: 1.65;
+}
+.community-workspace .community-composer-message textarea {
+  min-height: 77px;
+}
+.community-workspace .community-composer-comment textarea {
+  min-height: 84px;
+}
+.community-workspace .community-composer textarea:focus {
+  border-color: #1ebaa0;
+  outline: 2px solid #009d8b70;
+  outline-offset: 0;
+}
+.community-workspace .community-composer-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 8px 1px 2px;
+  color: #9bb4c7;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.community-workspace .community-composer-meta span:first-child {
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+.community-workspace .community-composer-meta span:last-child {
+  flex: 0 0 auto;
+  color: #7e9ab4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.community-workspace .community-composer-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #253951;
+}
+.community-workspace .community-composer-attachments {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.community-workspace .community-composer-tools .community-composer-tool,
+.community-workspace .community-composer-tools .community-composer-file {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 41px;
+  padding: 8px 11px;
+  border: 1px solid #304c60;
+  border-radius: 11px;
+  background: #112638;
+  color: #c9d9e8;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.community-workspace .community-composer-tools .community-composer-file {
+  position: relative;
+  overflow: hidden;
+}
+.community-workspace .community-composer-file input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0;
+}
+.community-workspace .community-composer-file:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: .45;
+}
+.community-workspace .community-composer-tool:hover:not(:disabled),
+.community-workspace .community-composer-file:hover:not(:has(input:disabled)) {
+  border-color: #249b85;
+  color: #eafffa;
+  background: #163d3e;
+}
+.community-workspace .community-composer-audience {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #a8bcd0;
+  font-size: 11px;
+  font-weight: 700;
+}
+.community-workspace .community-composer-audience select {
+  min-height: 40px;
+  max-width: 160px;
+  border: 1px solid #36566a;
+  border-radius: 10px;
+  padding: 7px 10px;
+  background: #0a1d2d;
+  color: #ecf6ff;
+  font-size: 13px;
+}
+.community-workspace .community-composer-tools .community-composer-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 41px;
+  padding: 9px 15px;
+  border-radius: 11px;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 800;
+}
+.community-workspace .community-composer-emojis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 10px;
+  border: 1px solid #2b4856;
+  border-radius: 12px;
+  background: #0a1a2a;
+}
+.community-workspace .community-composer-emojis button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: #14293b;
+  font-size: 19px;
+}
+.community-workspace .community-composer-emojis button:hover {
+  border-color: #287968;
+  background: #17423e;
+}
+.community-workspace .community-composer-error {
+  margin: 11px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #9b4d56;
+  border-radius: 10px;
+  color: #ffd0d6;
+  background: #3a1b2b;
+  font-size: 12px;
+}
+.community-workspace .community-composer-uploaded {
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid #263e53;
+}
+.community-workspace .community-composer-uploaded > span {
+  display: block;
+  margin-bottom: 8px;
+  color: #b3c9d8;
+  font-size: 11px;
+}
+.community-workspace .community-composer-photo {
+  position: relative;
+  flex: 0 0 auto;
+  overflow: hidden;
+  width: 96px;
+  height: 82px;
+  padding: 0;
+  border: 1px solid #3a546b;
+  border-radius: 10px;
+  background: #081423;
+}
+.community-workspace .community-composer-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.community-workspace .community-composer-photo > span {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  right: 4px;
+  top: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  color: #fff;
+  background: #8b233ecf;
+  font-size: 17px;
+}
+.community-workspace .community-post-card > header {
+  align-items: center;
+}
+.community-workspace .community-card-actions button,
+.community-workspace .community-card-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 8px 11px;
+  font-size: 12px;
+}
+.community-workspace .community-card-actions .community-post-copy {
+  border-color: #2a5f5b;
+  color: #a5eddf;
+}
+.community-workspace .community-copy-error {
+  display: inline-flex;
+  align-items: center;
+  color: #ffc3cb;
+  font-size: 12px;
+}
+.community-workspace .community-comment {
+  border: 1px solid #233e4d;
+  padding: 14px;
+  border-radius: 14px;
+  background: #0c1b2b;
+}
+.community-workspace .community-comment-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 11px;
+  min-width: 0;
+}
+.community-workspace .community-comment-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #278478;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #145b55, #254a69);
+  color: #e8fff9;
+  font-size: 15px;
+  font-weight: 800;
+}
+.community-workspace .community-comment-identity {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.community-workspace .community-comment-identity strong {
+  color: #f0f8ff;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.community-workspace .community-comment-identity time {
+  color: #89a6b7;
+  font-size: 11px;
+}
+.community-workspace .community-comment-head > button {
+  flex: 0 0 auto;
+  padding: 7px 9px;
+  font-size: 11px;
+  border-radius: 9px;
+}
+.community-workspace .community-comment > p {
+  color: #d8e6f2;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  line-height: 1.65;
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .community-workspace .community-composer {
+    padding: 14px;
+    border-radius: 14px;
+  }
+  .community-workspace .community-composer-kind { display: none; }
+  .community-workspace .community-composer-head { gap: 10px; padding-bottom: 11px; margin-bottom: 11px; }
+  .community-workspace .community-composer-avatar {
+    width: 38px; height: 38px; flex-basis: 38px;
+    border-radius: 12px;
+  }
+  .community-workspace .community-composer-meta { font-size: 10px; }
+  .community-workspace .community-composer-tools {
+    gap: 9px; align-items: stretch;
+  }
+  .community-workspace .community-composer-attachments {
+    flex-basis: 100%;
+    justify-content: space-between;
+  }
+  .community-workspace .community-composer-attachments > * {
+    flex: 1 1 0;
+  }
+  .community-workspace .community-composer-audience {
+    flex: 1 1 auto;
+  }
+  .community-workspace .community-composer-tools .community-composer-send {
+    flex: 0 1 auto;
+    min-width: 120px;
+  }
+  .community-workspace .community-composer textarea,
+  .community-workspace .community-composer-audience select {
+    font-size: 16px; /* Prevent Safari focus zoom on iOS. */
+  }
+  .community-workspace .community-card-actions {
+    gap: 6px;
+  }
+  .community-workspace .community-comment { padding: 11px; }
+}
+@media (max-width: 410px) {
+  .community-workspace .community-composer-attachments {
+    gap: 5px;
+  }
+  .community-workspace .community-composer-tools .community-composer-tool,
+  .community-workspace .community-composer-tools .community-composer-file {
+    padding: 8px;
+    font-size: 11px;
+    gap: 5px;
+  }
+  .community-workspace .community-composer-audience { flex-basis: 100%; justify-content: space-between; }
+  .community-workspace .community-composer-audience select { flex: 1 1 auto; max-width: 100%; }
+  .community-workspace .community-composer-tools .community-composer-send { flex: 1 1 100%; }
+  .community-workspace .community-composer-meta span:last-child { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .community-workspace .community-composer *,
+  .community-workspace .community-post-card * {
+    scroll-behavior: auto;
+  }
+}
