@@ -1,6 +1,7 @@
 import { AccountSecuritySettings } from "./AccountSecuritySettings";
 import { PublicProfileSettings } from "./PublicProfileSettings";
 import { CommunityNotificationCenter } from "./CommunityNotificationCenter";
+import { CommunityTradingSessions } from "./CommunityTradingSessions";
 import { STRATEGY_PRESETS } from "../hookchart/strategyEngine";
 import { saveChartArchive } from "../../community/archiveChart";
 import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, useId } from "react";
@@ -9,6 +10,7 @@ import {
   ShieldCheck,
   MessageCircle,
   CalendarCheck,
+  Clock3,
   BookOpen,
   Settings,
   X,
@@ -50,6 +52,7 @@ const SharedHookChart = lazy(() => import("./SharedHookChart"));
 type Tab =
   | "feed"
   | "day"
+  | "sessions"
   | "strategies"
   | "trades"
   | "learning"
@@ -257,6 +260,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
   const nav: [Tab, string, React.ReactNode][] = [
     ["feed", "Стрічка", <Users size={16} />],
     ["day", "Мій день", <CalendarCheck size={16} />],
+    ["sessions", "Торгові сесії", <Clock3 size={16} />],
     ["strategies", "Стратегії", <BookOpen size={16} />],
     ["trades", "Угоди та статистика", <ShieldCheck size={16} />],
     ["learning", "Навчання", <BookOpen size={16} />],
@@ -358,6 +362,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
             }}
           />
         )}
+        {tab === "sessions" && <CommunityTradingSessions variant="page" />}
         {tab === "day" && (
           <Workspace
             kind="plan"
@@ -427,6 +432,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
         </div>
         {tab === "feed" && (
           <aside className="community-context-rail" aria-label="Швидкі переходи Community">
+            <CommunityTradingSessions variant="sidebar" />
             <div className="community-context-card">
               <span className="community-page-kicker">СПІЛЬНОТА</span>
               <h3>Ваш простір трейдера</h3>
