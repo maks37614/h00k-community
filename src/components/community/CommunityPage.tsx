@@ -32,6 +32,7 @@ import { ChartPreview } from "./ChartPreview";
 import "./community.css";
 import "./social-friends-settings.css";
 import "./social-chat-workspace.css";
+import { filterConversations } from "./chatModel";
 import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from "./friendsModel";
 const SharedHookChart = lazy(() => import("./SharedHookChart"));
 type Tab =
@@ -1732,10 +1733,7 @@ function Chats({
   activeId.current = id;
   latestMessages.current = messages;
   const conversations: any[] = Array.isArray(list.data?.items) ? list.data.items : [];
-  const filteredConversations = conversations.filter((c) =>
-    String(c.title ?? "").toLocaleLowerCase("uk-UA")
-      .includes(chatSearch.trim().toLocaleLowerCase("uk-UA")),
-  );
+  const filteredConversations = filterConversations(conversations, chatSearch);
   const currentConversation = conversations.find((c) => c.id === id);
   const currentTitle = currentConversation?.title ||
     (currentConversation?.is_group ? "Групова розмова" : "Особистий діалог");
