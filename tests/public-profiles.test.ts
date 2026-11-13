@@ -496,3 +496,19 @@ test("public award counts require an explicit owner toggle", async () => {
   assert.equal(hidden.res.status, 200);
   assert.equal((await call(url)).data.profile.awards, null);
 });
+
+test("public post categories are filtered by the server before pagination", async () => {
+  const owner = await named("classified-posts-test");
+  const idea = await post(owner, { text: "Idea article", category: "idea" });
+  const analysis = await post(owner, { text: "Analysis article", category: "analysis" });
+  await post(owner, { text: "Not open", category: "idea" }, "private");
+  const url = "/api/public/profiles/classified-posts-test/posts";
+  const ideas = await call(url + "?category=idea");
+  assert.equal(ideas.res.status, 200);
+  assert.deepEqual(ideas.data.items.map((item: any) => item.id), [idea]);
+  assert.equal(ideas.data.items[0].category, "idea");
+  const analyses = await call(url + "?category=analysis");
+  assert.deepEqual(analyses.data.items.map((item: any) => item.id), [analysis]);
+  assert.equal((await call(url + "?category=bogus")).res.status, 400);
+  assert.deepEqual((await call(url + "?category=education")).data.items, []);
+});
