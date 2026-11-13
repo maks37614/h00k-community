@@ -1,8 +1,8 @@
 import React, { lazy, Suspense, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  ArrowUpRight, BookOpenText, CalendarDays, Check, Copy, MessageCircle,
-  ShieldCheck, TrendingUp, UsersRound,
+  ArrowUpRight, Award, BookOpenText, CalendarDays, Check, Copy, MessageCircle,
+  ShieldCheck, TrendingUp, UsersRound, UserPlus, ChartNoAxesCombined,
 } from "lucide-react";
 import { ChartPreview } from "../components/community/ChartPreview";
 import type { ChartDocument } from "./chartDocument";
@@ -11,6 +11,7 @@ import {
   publicProfileDate, visibleReactionSummary,
   type PublicReactionSummary,
 } from "./publicProfileViewModel";
+import { publicClosedOrderOverview, publicProfileSetups } from "./publicProfileSocialModel";
 import "./publicProfile.css";
 
 type PublicStats = {
@@ -66,7 +67,7 @@ type CommentState = {
   loading: boolean;
   error: string;
 };
-type PublicTab = "wall" | "statistics" | "about";
+type PublicTab = "wall" | "setups" | "statistics" | "about";
 
 const HookChart = lazy(() => import("../components/community/SharedHookChart"));
 async function read(url: string, signal?: AbortSignal) {
@@ -182,6 +183,17 @@ export function PublicProfile() {
     setExpandedComments(id);
     if (!comments[id]) void loadComments(id);
   };
+  useEffect(() => {
+    if (!focusedPost || !profile) return;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById("post-" + focusedPost.id)?.scrollIntoView({
+        behavior: "auto",
+        block: "start",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focusedPost?.id, profile?.id]);
+
   const copy = async (value: string, id: string) => {
     try {
       await navigator.clipboard.writeText(value);
@@ -191,11 +203,27 @@ export function PublicProfile() {
     }
   };
 
+  const sharePost = async (id: string) => {
+    if (!profile) return;
+    const url = publicPostUrl(profile.url, id);
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: profile.displayName + " · h00k Community", url });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+    await copy(url, id);
+  };
+
   const communityUrl = profile ? profile.communityOrigin + "/#community?section=profile&owner=" + encodeURIComponent(profile.id) : null;
   const wall = focusedPost && !items.some(item => item.id === focusedPost.id)
     ? [focusedPost, ...items] : items;
   const profileJoinDate = publicProfileDate(profile?.joinedAt);
   const totalClosures = profile?.statistics?.totals.reduce((sum, currency) => sum + currency.count, 0) ?? 0;
+  const overview = publicClosedOrderOverview(profile?.statistics?.totals ?? []);
+  const visibleWall = tab === "setups" ? publicProfileSetups(wall) : wall;
 
   return <main className="public-profile" data-network-mode="public-snapshot">
     <header className="public-profile-top">
@@ -227,18 +255,72 @@ export function PublicProfile() {
             {profileJoinDate && <span className="public-profile-joined"><CalendarDays size={15} aria-hidden="true" /> У спільноті з {profileJoinDate}</span>}
           </div>
           <div className="public-profile-hero-actions">
-            <a className="public-profile-action" href={communityUrl!}><UsersRound size={16} aria-hidden="true" /> Відкрити у Community</a>
+            <a className="public-profile-action public-profile-connect" href={communityUrl!} title="Запити дружби доступні після входу в Community"><UserPlus size={16} aria-hidden="true" /> Додати в друзі</a>
+            <a className="public-profile-chat" href={communityUrl!} title="Повідомлення доступні підтвердженим друзям у Community"><MessageCircle size={16} aria-hidden="true" /> Повідомлення</a>
+            <a className="public-profile-community-link" href={communityUrl!}><UsersRound size={16} aria-hidden="true" /> Відкрити у Community</a>
             <button type="button" className="public-profile-copy" onClick={() => void copy(profile.url, "profile")}>
               {copied === "profile" ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
               {copied === "profile" ? "Скопійовано" : "Копіювати адресу"}
             </button>
           </div>
         </div>
+        <div className="public-profile-hero-detail">
+          {profile.bio && <p className="public-profile-hero-bio">{profile.bio}</p>}
+          <p className="public-profile-connect-hint">Запити дружби та приватні повідомлення доступні після входу у Community. Для листування потрібна підтверджена дружба.</p>
+        </div>
         {copied === "error:profile" && <p className="public-profile-copy-error" role="status">Не вдалося скопіювати. Адреса: {profile.url}</p>}
         <div className="public-profile-hero-facts">
           <span><ShieldCheck size={16} aria-hidden="true" /> Власник керує видимістю</span>
           {profile.statistics && <span><TrendingUp size={16} aria-hidden="true" /> {totalClosures} імпортованих закриттів</span>}
           <span><BookOpenText size={16} aria-hidden="true" /> Публікації лише з дозволу автора</span>
+        </div>
+      </section>
+
+      <section className="public-profile-overview public-profile-panel" aria-labelledby="public-profile-overview-title">
+        <div className="public-profile-overview-header">
+          <div>
+            <span className="public-profile-kicker">ІМПОРТОВАНІ ДАНІ БІРЖІ</span>
+            <h2 id="public-profile-overview-title"><TrendingUp size={19} aria-hidden="true" /> Трейдерська статистика та результати</h2>
+          </div>
+          <span className="public-profile-overview-basis">Bybit linear · закриті ордери · доступний період</span>
+        </div>
+        {profile.statistics ? (
+          <>
+            <div className="public-profile-kpi-grid">
+              <div className="public-profile-kpi"><span>Закриттів</span><strong>{overview.count}</strong><small>Імпортовані закриті ордери</small></div>
+              <div className="public-profile-kpi public-profile-kpi-positive"><span>Win rate</span><strong>{overview.winRate === null ? "—" : overview.winRate.toFixed(1) + "%"}</strong><small>Беззбиткові не враховуються</small></div>
+              <div className="public-profile-kpi"><span>Прибуткові</span><strong>{overview.wins}</strong><small>Закриття з прибутком</small></div>
+              <div className="public-profile-kpi"><span>Збиткові</span><strong>{overview.losses}</strong><small>Закриття зі збитком</small></div>
+              <div className="public-profile-kpi"><span>Беззбиткові</span><strong>{overview.flat}</strong><small>Закриття з нульовим PnL</small></div>
+              {overview.pnl !== null && <div className="public-profile-kpi public-profile-kpi-pnl"><span>Сумарний PnL</span><strong>{overview.pnl} {overview.currency}</strong><small>У межах однієї валюти</small></div>}
+            </div>
+            <div className="public-profile-overview-foot">
+              <p>Ці дані не є повною прибутковістю рахунку. Суми показуються лише з окремого дозволу власника. Показники різних валют не підсумовуються.</p>
+              <button type="button" onClick={() => { setTab("statistics"); document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>Детальна статистика <ArrowUpRight size={15} aria-hidden="true" /></button>
+            </div>
+          </>
+        ) : (
+          <div className="public-profile-overview-private">
+            <ShieldCheck size={22} aria-hidden="true" />
+            <p>Трейдер не відкрив торгову статистику. Показники не розраховуються й не підміняються демонстраційними числами.</p>
+          </div>
+        )}
+      </section>
+
+      <section className="public-profile-achievements public-profile-panel" aria-label="Заслуги та участь">
+        <div className="public-profile-achievements-heading">
+          <h2><Award size={19} aria-hidden="true" /> Заслуги та нагороди трейдера</h2>
+          <span>Спільнота h00k</span>
+        </div>
+        <div className="public-profile-achievement-grid">
+          {profileJoinDate && <div className="public-profile-achievement-card">
+            <span className="public-profile-achievement-icon"><UsersRound size={23} aria-hidden="true" /></span>
+            <div><strong>Учасник Community</strong><small>Дата приєднання: {profileJoinDate}</small></div>
+          </div>}
+          <div className="public-profile-achievement-empty">
+            <Award size={20} aria-hidden="true" />
+            <span>Підтверджені нагороди й торгові відзнаки ще не опубліковані. Бейджі не вигадуються на підставі PnL чи активності.</span>
+          </div>
         </div>
       </section>
 
@@ -262,19 +344,20 @@ export function PublicProfile() {
           </section>
         </aside>
         <div className="public-profile-main">
-          <nav className="public-profile-tabs" aria-label="Розділи профілю">
-            <button type="button" aria-current={tab === "wall" ? "page" : undefined} onClick={() => setTab("wall")}><BookOpenText size={16} aria-hidden="true" /> Стіна</button>
+          <nav id="public-profile-tabs" className="public-profile-tabs" aria-label="Розділи профілю">
+            <button type="button" aria-current={tab === "wall" ? "page" : undefined} onClick={() => setTab("wall")}><BookOpenText size={16} aria-hidden="true" /> Стіна профілю</button>
+            <button type="button" aria-current={tab === "setups" ? "page" : undefined} onClick={() => setTab("setups")}><ChartNoAxesCombined size={16} aria-hidden="true" /> Розбори HookChart</button>
             {profile.statistics && <button type="button" aria-current={tab === "statistics" ? "page" : undefined} onClick={() => setTab("statistics")}><TrendingUp size={16} aria-hidden="true" /> Результати</button>}
             <button type="button" aria-current={tab === "about" ? "page" : undefined} onClick={() => setTab("about")}><UsersRound size={16} aria-hidden="true" /> Про трейдера</button>
           </nav>
 
-          {tab === "wall" && <section aria-label="Публічна стіна" className="public-profile-wall">
+          {(tab === "wall" || tab === "setups") && <section aria-label="Публічна стіна" className="public-profile-wall">
             <div className="public-profile-wall-heading">
-              <div><p className="public-profile-kicker">СТІНА ТРЕЙДЕРА</p><h2>Публікації</h2></div>
-              <span>Лише публічні матеріали автора</span>
+              <div><p className="public-profile-kicker">{tab === "setups" ? "ЗБЕРЕЖЕНІ ГРАФІКИ" : "СТІНА ТРЕЙДЕРА"}</p><h2>{tab === "setups" ? "Публічні розбори HookChart" : "Публікації"}</h2></div>
+              <span>{tab === "setups" ? "Лише публічні дописи зі збереженим графіком" : "Лише публічні матеріали автора"}</span>
             </div>
             {postError && <p className="public-profile-error" role="status">Допис за посиланням недоступний: {postError}</p>}
-            {wall.map(item => <article className="public-profile-panel public-profile-post" key={item.id} id={"post-" + item.id}>
+            {visibleWall.map(item => <article className="public-profile-panel public-profile-post" key={item.id} id={"post-" + item.id}>
               {focusedPost?.id === item.id && <span className="public-profile-featured">Допис за посиланням</span>}
               <div className="public-profile-post-author">
                 <span className="public-profile-post-avatar" aria-hidden="true">
@@ -298,7 +381,7 @@ export function PublicProfile() {
                   aria-controls={"public-comments-" + item.id}
                   onClick={() => toggleComments(item.id)}
                 ><MessageCircle size={16} aria-hidden="true" /> {expandedComments === item.id ? "Сховати обговорення" : "Публічні коментарі"}</button>
-                <button type="button" onClick={() => void copy(publicPostUrl(profile.url, item.id), item.id)}>
+                <button type="button" onClick={() => void sharePost(item.id)}>
                   {copied === item.id ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
                   {copied === item.id ? "Скопійовано" : "Поділитися"}
                 </button>
@@ -333,7 +416,7 @@ export function PublicProfile() {
                 <a className="public-profile-comment-cta" href={communityPostUrl(profile.communityOrigin, item.id)}>Увійти, щоб відповісти <ArrowUpRight size={14} aria-hidden="true" /></a>
               </div>}
             </article>)}
-            {!wall.length && <p className="public-profile-muted public-profile-empty">Публічних публікацій поки немає.</p>}
+            {!visibleWall.length && <p className="public-profile-muted public-profile-empty">{tab === "setups" ? "Серед завантажених дописів немає публічних розборів. Перегляньте наступні публікації, якщо вони є." : "Публічних публікацій поки немає."}</p>}
             {next && <button type="button" className="public-profile-more" disabled={busy} onClick={() => void more()}>Ще публікації</button>}
           </section>}
 

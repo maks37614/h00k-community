@@ -43,13 +43,15 @@ test("social public profile renders tabs, real API discussion, actions and no pl
   const view = readFileSync(new URL("../src/community/publicProfile.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../src/community/publicProfile.css", import.meta.url), "utf8");
   const api = readFileSync(new URL("../server/community/publicProfiles.ts", import.meta.url), "utf8");
-  assert.match(view, /type PublicTab = "wall" \| "statistics" \| "about"/);
+  assert.match(view, /type PublicTab = "wall" \| "setups" \| "statistics" \| "about"/);
   assert.match(view, /className="public-profile-tabs"/);
   assert.match(view, /className="public-profile-post-actions"/);
   assert.match(view, /aria-expanded=\{expandedComments === item\.id\}/);
   assert.match(view, /const toggleComments =/);
   assert.match(view, /navigator\.clipboard\.writeText/);
-  assert.match(view, /publicPostUrl\(profile\.url, item\.id\)/);
+  assert.match(view, /publicPostUrl\(profile\.url, id\)/);
+  assert.match(view, /navigator\.share/);
+  assert.match(view, /const sharePost = async/);
   assert.match(view, /communityPostUrl\(profile\.communityOrigin, item\.id\)/);
   assert.match(view, /base \+ "\/posts\/" \+ encodeURIComponent\(linkedPostId\)/);
   assert.match(view, /credentials: "omit", cache: "no-store"/);
