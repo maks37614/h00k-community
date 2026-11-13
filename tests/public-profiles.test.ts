@@ -74,7 +74,7 @@ test.before(async () => {
   process.env.COMMUNITY_STANDALONE_ENABLED = "1";
   process.env.COMMUNITY_ENCRYPTION_KEY = randomBytes(32).toString("base64");
   process.env.COMMUNITY_MEDIA_DIR = directory;
-  await fs.writeFile(path.join(directory, "profile.html"), "<!doctype html><div id='profile-root'>public entry</div>");
+  await fs.writeFile(path.join(directory, "profile.html"), '<!doctype html><html><head><title>Generic</title><meta name="description" content="Generic"></head><body><div id="profile-root">public entry</div></body></html>');
   await fs.writeFile(path.join(directory, "community.html"), "<!doctype html><div id='community-root'>community entry</div>");
   await fs.mkdir(path.join(directory, "assets"));
   await fs.writeFile(path.join(directory, "assets", "fixture-123456.js"), "/* public build asset */");
@@ -162,6 +162,12 @@ test("anonymous profile is a whitelist and independent opt-in; partial privacy u
   assert.equal(result.res.status, 200); assert.equal(result.data.profile.lifestyle, "public routine");
   assert.equal(result.data.profile.bio, ""); assert.equal(result.data.profile.interests, ""); assert.equal(result.data.profile.telegram, "");
   assert.equal(result.data.profile.status, ""); assert.equal(result.data.profile.statistics, null);
+  const shareHtml = await call("/u/privacy-person");
+  assert.equal(shareHtml.res.status, 200);
+  assert.match(shareHtml.text, /property="og:type" content="profile"/);
+  assert.match(shareHtml.text, /name="twitter:card" content="summary"/);
+  assert.match(shareHtml.text, /rel="canonical" href="https:\/\/privacy-person.h00k.test\/"/);
+  assert.doesNotMatch(shareHtml.text, /PRIVATE_|private biography|friends interests|private_channel|@example.test|password_hash|mfa_secret/);
   assert.doesNotMatch(result.text, /PRIVATE_|private biography|friends interests|private_channel|@example.test|password_hash|mfa_secret/);
   assert.equal(result.res.headers.get("cache-control"), "private, no-store"); assert.equal(result.res.headers.getSetCookie().length, 0);
   assert.equal((await call("/api/account/me", a)).data.profile.community.publicProfileEnabled, true);
@@ -171,8 +177,18 @@ test("anonymous profile is a whitelist and independent opt-in; partial privacy u
 
 test("public wall excludes private/friends material and does not serialize arbitrary body fields", async () => {
   const a = await named("wall-owner");
-  const visible = await post(a, { text: "public text", unknownPrivateField: "DO_NOT_SERIALIZE" });
-  await post(a, { text: "friends post" }, "friends"); await post(a, { text: "private post" }, "private");
+  const visible = await post(a, { text: "public text <script>alert(1)</script>", unknownPrivateField: "DO_NOT_SERIALIZE" });
+  const friends = await post(a, { text: "friends post" }, "friends"); await post(a, { text: "private post" }, "private");
+  const share = await call("/u/wall-owner?post=" + visible);
+  assert.equal(share.res.status, 200);
+  assert.match(share.text, /property="og:type" content="article"/);
+  assert.match(share.text, /name="description" content="public text &lt;script&gt;alert\(1\)&lt;\/script&gt;"/);
+  assert.match(share.text, /rel="canonical" href="https:\/\/wall-owner.h00k.test\/\?post=/);
+  assert.doesNotMatch(share.text, /<script>alert\(1\)<\/script>|DO_NOT_SERIALIZE/);
+  const privateLink = await call("/u/wall-owner?post=" + friends);
+  assert.equal(privateLink.res.status, 200);
+  assert.match(privateLink.text, /property="og:type" content="profile"/);
+  assert.doesNotMatch(privateLink.text, /friends post|private post|DO_NOT_SERIALIZE/);
   const result = await call("/api/public/profiles/wall-owner/posts");
   assert.deepEqual(result.data.items.map((i: any) => i.id), [visible]);
   assert.doesNotMatch(result.text, /DO_NOT_SERIALIZE|friends post|private post|owner_id|revision/);

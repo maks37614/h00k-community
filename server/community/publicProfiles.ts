@@ -6,6 +6,7 @@ import { fail, RequestLimits, uuid } from "./security";
 import { getChart, type Item, type Policy } from "./content";
 import { communityOrigin, nameFromHost, profileDomain, profileName, publicProfileUrl } from "./profileNames";
 import { mediaRoot } from "./accountData";
+import { injectPublicShareMetadata, safePublicShareText, type PublicShareMetadata } from "./publicProfileMeta";
 
 /** Anonymous readers never inherit an owner's private/friend/session permissions. */
 export function publicProfilePolicy(db: Database): Policy {
@@ -63,6 +64,37 @@ async function publicPost(db: Database, rules: Policy, owner: string, id: string
   return row;
 }
 
+/** SEO and social preview metadata come from the same public-only authorization as /u/. */
+async function publicShareMeta(db: Database, owner: any, possiblePost: unknown): Promise<PublicShareMetadata> {
+  const c = owner.profile?.community ?? {};
+  const displayName = safePublicShareText(owner.profile?.displayName, 100) || "Трейдер";
+  const bio = (c.bioAudience ?? "public") === "public" ? safePublicShareText(c.bio, 170) : "";
+  const fallback: PublicShareMetadata = {
+    title: displayName + " (@" + owner.username + ") · h00k Community",
+    description: bio || "Публічний профіль трейдера @" + owner.username + " у h00k Community. Власник сам обирає, чим ділитися.",
+    canonicalUrl: publicProfileUrl(owner.username),
+    type: "profile",
+  };
+  if (typeof possiblePost !== "string" || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(possiblePost))
+    return fallback;
+  let post: Item;
+  try {
+    post = await publicPost(db, publicProfilePolicy(db), owner.id, possiblePost);
+  } catch (error: any) {
+    if (error?.status === 404) return fallback;
+    throw error;
+  }
+  const link = new URL(fallback.canonicalUrl);
+  link.searchParams.set("post", post.id);
+  const postTitle = safePublicShareText(post.body?.title, 110);
+  return {
+    title: (postTitle || "Публікація " + displayName) + " · h00k Community",
+    description: safePublicShareText(post.body?.text, 170) || "Публічний розбір трейдера @" + owner.username + " у h00k Community.",
+    canonicalUrl: link.toString(),
+    type: "article",
+  };
+}
+
 /** Public wall exposes a fixed set of fields; never serialize body or actor data. */
 async function publicPostCard(db: Database, rules: Policy, row: Item) {
   const reactions = await db.query(
@@ -104,9 +136,13 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
       else res.status(error.status ?? 503).json({ success: false, error: error.status ? error.message : "Профіль тимчасово недоступний" });
     } finally { if (slot) active--; }
   };
-  const page = async (res: Response, file: string) => {
-    try { res.type("html").send(await fs.readFile(path.join(root, file), "utf8")); }
-    catch { res.status(503).type("text").send("Інтерфейс ще не зібрано. Виконайте npm run build."); }
+  const page = async (res: Response, file: string, meta?: PublicShareMetadata) => {
+    try {
+      const html = await fs.readFile(path.join(root, file), "utf8");
+      res.type("html").send(meta ? injectPublicShareMetadata(html, meta) : html);
+    } catch {
+      res.status(503).type("text").send("Інтерфейс ще не зібрано. Виконайте npm run build.");
+    }
   };
   // Personal hosts are read-only. They cannot log in, set sessions or call private APIs.
   app.use((req, res, next) => {
@@ -120,7 +156,10 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
     if (!name) { res.status(404).end(); return; }
     if (!["GET", "HEAD"].includes(req.method)) { res.set("Allow", "GET, HEAD").status(405).end(); return; }
     if (req.path === "/") {
-      void read(req, res, async () => { await publicOwner(getDb(), name); await page(res, "profile.html"); });
+      void read(req, res, async () => {
+        const db = getDb(), owner = await publicOwner(db, name);
+        await page(res, "profile.html", await publicShareMeta(db, owner, req.query.post));
+      });
       return;
     }
     if (req.path.startsWith("/profile-assets/assets/") ||
@@ -135,7 +174,10 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
     },
   }));
   app.get("/u/:username", (req, res) => {
-    void read(req, res, async () => { await publicOwner(getDb(), req.params.username); await page(res, "profile.html"); });
+    void read(req, res, async () => {
+      const db = getDb(), owner = await publicOwner(db, req.params.username);
+      await page(res, "profile.html", await publicShareMeta(db, owner, req.query.post));
+    });
   });
   app.get("/", (req, res, next) => {
     if (process.env.COMMUNITY_STANDALONE_ENABLED !== "1" ||
