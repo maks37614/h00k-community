@@ -1170,7 +1170,7 @@ function ItemCard({
                     />
                   ))}
                 </div>
-              </div>
+              </article>
             ),
           )}
           {nextComment && (
