@@ -13,6 +13,12 @@ import {
   X,
   Plus,
   ArrowLeft,
+  ImagePlus,
+  Smile,
+  Send,
+  ChartNoAxesCombined,
+  Copy,
+  Check,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useArchive } from "../../context/ArchiveContext";
@@ -34,6 +40,8 @@ import "./social-friends-settings.css";
 import "./social-chat-workspace.css";
 import { filterConversations } from "./chatModel";
 import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from "./friendsModel";
+import { canSendCommunityContent, communityAudienceHint, validateCommunityPhoto, MAX_COMMUNITY_PHOTOS } from "./composerPolicy";
+import "./social-composer-posts.css";
 const SharedHookChart = lazy(() => import("./SharedHookChart"));
 type Tab =
   | "feed"
@@ -511,33 +519,94 @@ function Composer({
   onSent: () => void;
   run: Run;
 }) {
-  const [text, setText] = useState(""),
-    [audience, setAudience] = useState("private"),
-    [photos, setPhotos] = useState<string[]>([]),
-    [busy, setBusy] = useState(false),
-    clientId = useRef(crypto.randomUUID());
+  const { user, profile } = useAuth();
+  const [text, setText] = useState("");
+  const [audience, setAudience] = useState("private");
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [showEmojis, setShowEmojis] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const inFlight = useRef(false);
+  const clientId = useRef(crypto.randomUUID());
+  const canSubmit = canSendCommunityContent(text, photos.length, busy);
+  const kindLabel = target.kind === "post" ? "Нова публікація" :
+    target.kind === "comment" ? "Написати коментар" : "Нове повідомлення";
+
+  function send(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (inFlight.current || !canSendCommunityContent(text, photos.length, false)) return;
+    inFlight.current = true;
+    setBusy(true);
+    setPhotoError("");
+    void run(async () => {
+      await post(api + "/items", {
+        kind: target.kind,
+        parentId: target.parentId,
+        conversationId: target.conversationId,
+        audience,
+        clientId: clientId.current,
+        body: { text, photos },
+      });
+      setText("");
+      setPhotos([]);
+      setShowEmojis(false);
+      clientId.current = crypto.randomUUID();
+      onSent();
+    }).finally(() => {
+      inFlight.current = false;
+      setBusy(false);
+    });
+  }
+
+  function uploadPhoto(file: File) {
+    const error = validateCommunityPhoto(file, photos.length);
+    if (error) {
+      setPhotoError(error);
+      return;
+    }
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    setPhotoError("");
+    void run(async () => {
+      const data = await apiJson(api + "/media", {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (typeof data.id !== "string" || !data.id) {
+        throw new Error("Не вдалося додати фото до публікації");
+      }
+      setPhotos((prev) => [...prev, data.id]);
+    }).finally(() => {
+      inFlight.current = false;
+      setBusy(false);
+    });
+  }
+
   return (
     <form
       className={"community-composer community-composer-" + target.kind}
-      onSubmit={(e) => {
-        e.preventDefault();
-        setBusy(true);
-        void run(async () => {
-          await post(api + "/items", {
-            kind: target.kind,
-            parentId: target.parentId,
-            conversationId: target.conversationId,
-            audience,
-            clientId: clientId.current,
-            body: { text, photos },
-          });
-          setText("");
-          setPhotos([]);
-          clientId.current = crypto.randomUUID();
-          onSent();
-        }).finally(() => setBusy(false));
-      }}
+      onSubmit={send}
+      aria-label={kindLabel}
     >
+      {target.kind === "post" && (
+        <header className="community-composer-head">
+          <span className="community-composer-avatar" aria-hidden="true">
+            {(profile?.displayName ?? user?.displayName ?? "Т").trim().slice(0, 1).toUpperCase()}
+          </span>
+          <div>
+            <strong>{profile?.displayName ?? user?.displayName ?? "Трейдер"}</strong>
+            <small>Поділіться ідеєю з обраною аудиторією</small>
+          </div>
+          <span className="community-composer-kind">h00k Community</span>
+        </header>
+      )}
+      {target.kind !== "post" && (
+        <div className="community-composer-context">
+          <span className="community-page-kicker">{kindLabel}</span>
+        </div>
+      )}
       <textarea
         aria-label={
           target.kind === "comment"
@@ -548,79 +617,109 @@ function Composer({
         }
         placeholder={
           target.kind === "post"
-            ? "Якою ситуацією або висновком поділитеся?"
-            : "Ваша відповідь…"
+            ? "Поділіться формацією, аналізом ринку або торговою ідеєю…"
+            : target.kind === "comment"
+              ? "Ваша відповідь на публікацію…"
+              : "Ваше повідомлення…"
         }
         value={text}
         maxLength={20_000}
-        onChange={(e) => setText(e.target.value)}
+        disabled={busy}
+        onChange={(event) => setText(event.target.value)}
         required={!photos.length}
       />
+      <div className="community-composer-meta">
+        <span>{communityAudienceHint(target.kind, audience)}</span>
+        <span>{text.length.toLocaleString("uk-UA")} / 20 000</span>
+      </div>
       <div className="community-composer-tools">
-        <div>
+        <div className="community-composer-attachments">
+          <button
+            type="button"
+            className="community-composer-tool"
+            disabled={busy}
+            aria-label="Обрати графік із збережень"
+            onClick={() => onPick(target)}
+          >
+            <ChartNoAxesCombined size={17} aria-hidden="true" /> <span>Графік</span>
+          </button>
+          <label className="community-file community-composer-file">
+            <ImagePlus size={17} aria-hidden="true" /> <span>Фото</span>
+            <input
+              aria-label="Додати фото"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={photos.length >= MAX_COMMUNITY_PHOTOS || busy}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) uploadPhoto(file);
+                event.target.value = "";
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="community-composer-tool"
+            disabled={busy}
+            aria-expanded={showEmojis}
+            aria-controls="community-emoji-panel"
+            onClick={() => setShowEmojis((value) => !value)}
+          >
+            <Smile size={17} aria-hidden="true" /> <span>Емодзі</span>
+          </button>
+        </div>
+        {target.kind !== "message" && (
+          <div className="community-composer-audience">
+            <label htmlFor={"community-audience-" + target.kind + "-" + (target.parentId ?? "root")}>
+              Аудиторія
+            </label>
+            <Audience value={audience} onChange={setAudience} />
+          </div>
+        )}
+        <button type="submit" className="community-primary community-composer-send" disabled={!canSubmit}>
+          <Send size={16} aria-hidden="true" />
+          {busy ? "Зберігаємо…" : target.kind === "post" ? "Опублікувати" : "Надіслати"}
+        </button>
+      </div>
+      {showEmojis && (
+        <div className="community-composer-emojis" id="community-emoji-panel" aria-label="Вибір емодзі">
           {emojis.map((emoji) => (
             <button
               type="button"
               key={emoji}
+              disabled={busy}
               aria-label={`Додати ${emoji}`}
-              onClick={() => setText((t) => t + emoji)}
+              onClick={() => setText((value) => value + emoji)}
             >
               {emoji}
             </button>
           ))}
         </div>
-        <button type="button" onClick={() => onPick(target)}>
-          + Графік зі збережень
-        </button>
-        <label className="community-file">
-          + Фото
-          <input
-            aria-label="Додати фото"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            disabled={photos.length >= 4 || busy}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                setBusy(true);
-                void run(async () => {
-                  const d = await apiJson(api + "/media", {
-                    method: "POST",
-                    headers: { "Content-Type": file.type },
-                    body: file,
-                  });
-                  setPhotos((p) => [...p, d.id]);
-                }).finally(() => setBusy(false));
-              }
-              e.target.value = "";
-            }}
-          />
-        </label>
-        {target.kind !== "message" && (
-          <Audience value={audience} onChange={setAudience} />
-        )}
-        <button type="submit" className="community-primary" disabled={busy}>
-          {busy ? "Збереження…" : "Надіслати"}
-        </button>
-      </div>
+      )}
+      {photoError && <p className="community-composer-error" role="alert">{photoError}</p>}
       {!!photos.length && (
-        <div className="community-photo-strip">
-          {photos.map((id) => (
-            <button
-              type="button"
-              key={id}
-              title="Видалити фото"
-              onClick={() => setPhotos((p) => p.filter((v) => v !== id))}
-            >
-              <img alt="Фото для публікації" src={api + "/media/" + id} />
-            </button>
-          ))}
+        <div className="community-composer-uploaded" aria-label="Завантажені фото">
+          <span>{photos.length} з {MAX_COMMUNITY_PHOTOS} фото</span>
+          <div className="community-photo-strip">
+            {photos.map((id) => (
+              <button
+                type="button"
+                key={id}
+                className="community-composer-photo"
+                aria-label="Прибрати фото з публікації"
+                disabled={busy}
+                onClick={() => setPhotos((prev) => prev.filter((item) => item !== id))}
+              >
+                <img alt="Завантажене фото" src={api + "/media/" + id} />
+                <span aria-hidden="true">×</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </form>
   );
 }
-
 function Feed({
   onPick,
   onChart,
