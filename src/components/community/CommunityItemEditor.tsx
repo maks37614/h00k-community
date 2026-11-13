@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Check, X } from "lucide-react";
 import { apiJson } from "../../utils/apiFetch";
 import {
@@ -34,14 +34,14 @@ export function CommunityItemEditor({
   const [audience, setAudience] = useState<CommunityItemAudience>(item.audience);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [savingGuard, setSavingGuard] = useState(false);
-  const canSubmit = canSaveEditedContent(text, item.body ?? {}, busy || savingGuard);
+  const inFlight = useRef(false);
+  const canSubmit = canSaveEditedContent(text, item.body ?? {}, busy);
   const audienceOptions = allowedEditAudiences(item.audience);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || savingGuard || !canSubmit) return;
-    setSavingGuard(true);
+    if (inFlight.current || !canSubmit) return;
+    inFlight.current = true;
     setBusy(true);
     setError("");
     try {
@@ -56,7 +56,7 @@ export function CommunityItemEditor({
       setError(message);
     } finally {
       setBusy(false);
-      setSavingGuard(false);
+      inFlight.current = false;
     }
   }
 
