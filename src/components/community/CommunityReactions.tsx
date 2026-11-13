@@ -22,7 +22,7 @@ export function CommunityReactions({
   reactions?: CommunityReaction[];
   run: (action: () => Promise<unknown>) => Promise<void>;
   refresh: () => void;
-  variant?: "post" | "comment";
+  variant?: "post" | "comment" | "message";
 }) {
   const [busy, setBusy] = useState(false);
   const selected = reactions?.find((reaction) => reaction.mine)?.emoji;
@@ -43,7 +43,7 @@ export function CommunityReactions({
     <div
       className={"community-reaction-bar community-reaction-bar-" + variant}
       role="group"
-      aria-label={variant === "comment" ? "Реакції на коментар" : "Реакції на публікацію"}
+      aria-label={variant === "comment" ? "Реакції на коментар" : variant === "message" ? "Реакції на повідомлення" : "Реакції на публікацію"}
     >
       {COMMUNITY_REACTION_CHOICES.map((emoji) => {
         const count = reactions?.find((reaction) => reaction.emoji === emoji)?.count ?? 0;
