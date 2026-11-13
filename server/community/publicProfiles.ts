@@ -69,10 +69,22 @@ async function publicShareMeta(db: Database, owner: any, possiblePost: unknown):
   const c = owner.profile?.community ?? {};
   const displayName = safePublicShareText(owner.profile?.displayName, 100) || "Трейдер";
   const bio = (c.bioAudience ?? "public") === "public" ? safePublicShareText(c.bio, 170) : "";
+  let imageUrl: string | undefined;
+  for (const kind of ["cover", "avatar"] as const) {
+    const candidate = c[kind + "MediaId"];
+    if (c[kind + "Audience"] !== "public" || typeof candidate !== "string") continue;
+    let id: string;
+    try { id = uuid(candidate); } catch { continue; }
+    const media = await db.query("SELECT id FROM hc_media WHERE id=$1 AND owner_id=$2", [id, owner.id]);
+    if (!media.rows.length) continue;
+    imageUrl = new URL("/api/public/profiles/" + owner.username + "/" + kind, publicProfileUrl(owner.username)).toString();
+    break;
+  }
   const fallback: PublicShareMetadata = {
     title: displayName + " (@" + owner.username + ") · h00k Community",
     description: bio || "Публічний профіль трейдера @" + owner.username + " у h00k Community. Власник сам обирає, чим ділитися.",
     canonicalUrl: publicProfileUrl(owner.username),
+    ...(imageUrl ? { imageUrl } : {}),
     type: "profile",
   };
   if (typeof possiblePost !== "string" || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(possiblePost))
@@ -91,6 +103,7 @@ async function publicShareMeta(db: Database, owner: any, possiblePost: unknown):
     title: (postTitle || "Публікація " + displayName) + " · h00k Community",
     description: safePublicShareText(post.body?.text, 170) || "Публічний розбір трейдера @" + owner.username + " у h00k Community.",
     canonicalUrl: link.toString(),
+    ...(imageUrl ? { imageUrl } : {}),
     type: "article",
   };
 }
@@ -220,8 +233,29 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
       lifestyle: c.lifestyleAudience === "public" ? text(c.lifestyle, 2000) : "",
       telegram: c.telegramAudience === "public" && /^https:\/\/t\.me\/[A-Za-z0-9_]+$/.test(c.telegram ?? "") ? c.telegram : "",
       status, statistics,
+      avatarUrl: c.avatarAudience === "public" && typeof c.avatarMediaId === "string"
+        ? "/api/public/profiles/" + owner.username + "/avatar" : null,
+      coverUrl: c.coverAudience === "public" && typeof c.coverMediaId === "string"
+        ? "/api/public/profiles/" + owner.username + "/cover" : null,
     } });
   });
+  // Avatar and cover are explicit opt-in media. No other files become public.
+  for (const kind of ["avatar", "cover"] as const) {
+    route("/" + kind, async (_req, res, db, owner) => {
+      const c = owner.profile?.community ?? {};
+      const id = c[kind + "MediaId"];
+      if (c[kind + "Audience"] !== "public" || typeof id !== "string")
+        fail("Зображення недоступне", 404);
+      const mediaId = uuid(id);
+      const rows = await db.query(
+        "SELECT id FROM hc_media WHERE id=$1 AND owner_id=$2",
+        [mediaId, owner.id],
+      );
+      if (!rows.rows.length) fail("Зображення недоступне", 404);
+      try { res.type("image/webp").send(await fs.readFile(path.join(mediaRoot(), mediaId + ".webp"))); }
+      catch { fail("Зображення недоступне", 404); }
+    });
+  }
   route("/posts", async (req, res, db, owner, rules) => {
     const before = req.query.before ? uuid(req.query.before) : null;
     const { rows } = await db.query<Item>(

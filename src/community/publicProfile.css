@@ -526,3 +526,30 @@ body{margin:0}*{box-sizing:border-box}.public-profile{max-width:1000px;margin:0 
 @media (prefers-reduced-motion: reduce) {
   .public-profile * { scroll-behavior: auto !important; }
 }
+
+
+/* Uploaded profile imagery uses only same-origin, explicitly public media. */
+.public-profile-cover { position: relative; isolation: isolate; }
+.public-profile-cover-image {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; opacity: .68; z-index: 0;
+}
+.public-profile-cover::after {
+  position: absolute; content: ""; inset: 0; z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(0deg, #0e1829cc, transparent 72%);
+}
+.public-profile-cover > span { position: relative; z-index: 1; }
+.public-profile-avatar { position: relative; overflow: hidden; }
+.public-profile-avatar-image {
+  position: absolute; inset: 5px; width: calc(100% - 10px); height: calc(100% - 10px);
+  object-fit: cover; border-radius: 19px; background: #102533;
+}
+.public-profile-post-avatar { position: relative; overflow: hidden; }
+.public-profile-post-avatar img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; border-radius: inherit; background: #102533;
+}
+@media (max-width: 640px) {
+  .public-profile-avatar-image { border-radius: 13px; inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); }
+}

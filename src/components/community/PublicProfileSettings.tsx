@@ -6,6 +6,7 @@ import {
   type ProfileAddressInfo,
 } from "./profileAddressState";
 import "./profile-address.css";
+import { PublicProfileMediaSettings } from "./PublicProfileMediaSettings";
 
 type AddressNotice = { kind: "error" | "success" | "info"; text: string };
 
@@ -245,6 +246,7 @@ export function PublicProfileSettings() {
         </p>
       </div>
 
+      <PublicProfileMediaSettings />
       {notice && (
         <p
           className={"community-profile-address-notice community-address-notice-" + notice.kind}

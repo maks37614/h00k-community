@@ -37,6 +37,8 @@ type PublicTrader = {
   interests: string;
   lifestyle: string;
   telegram: string;
+  avatarUrl: string | null;
+  coverUrl: string | null;
   statistics: PublicStats | null;
 };
 type PublicPost = {
@@ -208,10 +210,14 @@ export function PublicProfile() {
     {!profile && !error && <p role="status" className="public-profile-loading">Завантажуємо профіль…</p>}
     {profile && <>
       <section className="public-profile-hero">
-        <div className="public-profile-cover" aria-hidden="true"><span>h00k / COMMUNITY</span></div>
+        <div className="public-profile-cover" aria-hidden="true">
+          {profile.coverUrl && <img className="public-profile-cover-image" src={profile.coverUrl} alt="" onError={e => { e.currentTarget.hidden = true; }} />}
+          <span>h00k / COMMUNITY</span>
+        </div>
         <div className="public-profile-identity">
           <div className="public-profile-avatar" aria-hidden="true">
             {(profile.displayName || "Т").slice(0, 1).toUpperCase()}
+            {profile.avatarUrl && <img className="public-profile-avatar-image" src={profile.avatarUrl} alt="" onError={e => { e.currentTarget.hidden = true; }} />}
           </div>
           <div className="public-profile-hero-text">
             <p className="public-profile-kicker">ПРОФІЛЬ ТРЕЙДЕРА</p>
@@ -271,7 +277,10 @@ export function PublicProfile() {
             {wall.map(item => <article className="public-profile-panel public-profile-post" key={item.id} id={"post-" + item.id}>
               {focusedPost?.id === item.id && <span className="public-profile-featured">Допис за посиланням</span>}
               <div className="public-profile-post-author">
-                <span className="public-profile-post-avatar" aria-hidden="true">{profile.displayName.slice(0, 1).toUpperCase()}</span>
+                <span className="public-profile-post-avatar" aria-hidden="true">
+                  {profile.displayName.slice(0, 1).toUpperCase()}
+                  {profile.avatarUrl && <img src={profile.avatarUrl} alt="" onError={e => { e.currentTarget.hidden = true; }} />}
+                </span>
                 <div><strong>{profile.displayName}</strong><time dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString("uk-UA")}</time></div>
                 <span className="public-profile-post-public">Публічно</span>
               </div>

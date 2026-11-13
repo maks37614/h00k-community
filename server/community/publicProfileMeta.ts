@@ -3,6 +3,7 @@ export type PublicShareMetadata = {
   title: string;
   description: string;
   canonicalUrl: string;
+  imageUrl?: string;
   type: "profile" | "article";
 };
 
@@ -27,6 +28,14 @@ export function injectPublicShareMetadata(html: string, data: PublicShareMetadat
   if (!["https:", "http:"].includes(url.protocol) || url.username || url.password)
     throw new Error("Некоректна канонічна адреса");
   const canonical = escapePublicHtml(url.toString());
+  let image: string | null = null;
+  if (data.imageUrl) {
+    const mediaUrl = new URL(data.imageUrl);
+    if (!["https:", "http:"].includes(mediaUrl.protocol) || mediaUrl.username || mediaUrl.password ||
+        mediaUrl.origin !== url.origin)
+      throw new Error("Некоректна адреса зображення");
+    image = escapePublicHtml(mediaUrl.toString());
+  }
   const original = html.replace(/<title>[\s\S]*?<\/title>/i, "").replace(/<meta\s+name=["']description["'][^>]*>/i, "");
   const tags = [
     `<title>${title}</title>`,
@@ -37,7 +46,9 @@ export function injectPublicShareMetadata(html: string, data: PublicShareMetadat
     `<meta property="og:title" content="${title}" />`,
     `<meta property="og:description" content="${description}" />`,
     `<meta property="og:url" content="${canonical}" />`,
-    `<meta name="twitter:card" content="summary" />`,
+    ...(image ? [`<meta property="og:image" content="${image}" />`] : []),
+    `<meta name="twitter:card" content="${image ? "summary_large_image" : "summary"}" />`,
+    ...(image ? [`<meta name="twitter:image" content="${image}" />`] : []),
     `<meta name="twitter:title" content="${title}" />`,
     `<meta name="twitter:description" content="${description}" />`,
   ].join("\n");

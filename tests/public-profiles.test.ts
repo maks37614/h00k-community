@@ -296,6 +296,74 @@ test("public photos require both a visible post and its owner's media, checked o
   assert.equal((await call(url + media)).res.status, 404);
 });
 
+test("public /u/ avatar and cover require same-owner media and explicit public consent", async () => {
+  const owner = await named("portrait-owner"), other = await named("portrait-other");
+  const avatar = randomUUID(), cover = randomUUID(), foreign = randomUUID();
+  await db.query(
+    "INSERT INTO hc_media(id,owner_id,bytes) VALUES($1,$3,4),($2,$3,4)",
+    [avatar, cover, owner.id],
+  );
+  await db.query("INSERT INTO hc_media(id,owner_id,bytes) VALUES($1,$2,4)", [foreign, other.id]);
+  for (const id of [avatar, cover, foreign])
+    await fs.writeFile(path.join(directory, id + ".webp"), Buffer.from("RIFF"));
+
+  const foreignAttempt = await call("/api/account/profile", owner, "PATCH", {
+    community: { avatarMediaId: foreign, avatarAudience: "public" },
+  });
+  assert.equal(foreignAttempt.res.status, 403, foreignAttempt.text);
+  assert.equal((await call("/api/account/me", owner)).data.profile.community.avatarMediaId, undefined);
+  assert.equal((await call("/api/account/profile", owner, "PATCH", {
+    community: { coverMediaId: "not-a-uuid" },
+  })).res.status, 400);
+
+  const saved = await call("/api/account/profile", owner, "PATCH", {
+    community: { avatarMediaId: avatar, coverMediaId: cover },
+  });
+  assert.equal(saved.res.status, 200, saved.text);
+  const prefix = "/api/public/profiles/portrait-owner";
+  const privateProfile = await call(prefix);
+  assert.equal(privateProfile.data.profile.avatarUrl, null);
+  assert.equal(privateProfile.data.profile.coverUrl, null);
+  assert.equal((await call(prefix + "/avatar")).res.status, 404);
+  assert.equal((await call(prefix + "/cover")).res.status, 404);
+
+  const exposed = await call("/api/account/profile", owner, "PATCH", {
+    community: { avatarAudience: "public", coverAudience: "public" },
+  });
+  assert.equal(exposed.res.status, 200, exposed.text);
+  const publicProfile = await call(prefix);
+  assert.equal(publicProfile.data.profile.avatarUrl, prefix + "/avatar");
+  assert.equal(publicProfile.data.profile.coverUrl, prefix + "/cover");
+  assert.doesNotMatch(publicProfile.text, new RegExp(avatar + "|" + cover + "|" + foreign));
+
+  const avatarImage = await call(prefix + "/avatar");
+  assert.equal(avatarImage.res.status, 200);
+  assert.match(avatarImage.res.headers.get("content-type") || "", /image\/webp/);
+  assert.equal(avatarImage.res.headers.get("cache-control"), "private, no-store");
+  assert.equal(avatarImage.res.headers.getSetCookie().length, 0);
+  assert.equal((await call(prefix + "/cover")).res.status, 200);
+  const withCover = await call("/u/portrait-owner");
+  assert.match(withCover.text, /property="og:image" content="https:\/\/portrait-owner.h00k.test\/api\/public\/profiles\/portrait-owner\/cover"/);
+  assert.match(withCover.text, /name="twitter:card" content="summary_large_image"/);
+  assert.equal((await call(prefix + "/avatar", undefined, "GET", undefined, {
+    Host: "portrait-owner.h00k.test",
+  })).res.status, 200);
+
+  await call("/api/account/profile", owner, "PATCH", { community: { coverAudience: "private" } });
+  assert.equal((await call(prefix + "/cover")).res.status, 404);
+  assert.equal((await call(prefix + "/avatar")).res.status, 200);
+  assert.match((await call("/u/portrait-owner")).text, /property="og:image" content="https:\/\/portrait-owner.h00k.test\/api\/public\/profiles\/portrait-owner\/avatar"/);
+
+  await call("/api/account/profile", owner, "PATCH", { community: { avatarMediaId: null } });
+  assert.equal((await call(prefix + "/avatar")).res.status, 404);
+  assert.doesNotMatch((await call("/u/portrait-owner")).text, /property="og:image"/);
+
+  await call("/api/account/profile", owner, "PATCH", { community: { coverAudience: "public" } });
+  await enable(owner, { publicProfileEnabled: false });
+  assert.equal((await call(prefix + "/cover")).res.status, 404);
+  assert.equal((await call(prefix)).res.status, 404);
+});
+
 test("statistics and amounts have independent opt-ins, with no trade rows, notes or account credentials", async () => {
   const a = await named("stats-person"), connection = randomUUID();
   await db.query("INSERT INTO hc_connections(id,owner_id,exchange,account_hash,credential) VALUES($1,$2,'bybit',$3,'SECRET_CREDENTIAL')", [connection, a.id, randomUUID()]);

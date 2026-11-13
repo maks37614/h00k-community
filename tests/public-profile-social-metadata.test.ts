@@ -25,6 +25,30 @@ test("social OG metadata escapes dangerous text and never adds arbitrary scripts
   assert.match(output, /id="profile-root"/);
 });
 
+test("public image preview is accepted only from the profile's own origin", () => {
+  const preview = injectPublicShareMetadata(html, {
+    title: "Published trader", description: "Open account",
+    canonicalUrl: "https://ivan.h00k.top",
+    imageUrl: "https://ivan.h00k.top/api/public/profiles/ivan/cover",
+    type: "profile",
+  });
+  assert.match(preview, /property="og:image" content="https:\/\/ivan.h00k.top\/api\/public\/profiles\/ivan\/cover"/);
+  assert.match(preview, /name="twitter:image" content="https:\/\/ivan.h00k.top/);
+  assert.match(preview, /name="twitter:card" content="summary_large_image"/);
+  assert.throws(() => injectPublicShareMetadata(html, {
+    title: "Attack", description: "",
+    canonicalUrl: "https://ivan.h00k.top",
+    imageUrl: "https://example.evil.test/photo.jpg",
+    type: "profile",
+  }));
+  assert.throws(() => injectPublicShareMetadata(html, {
+    title: "Attack", description: "",
+    canonicalUrl: "https://ivan.h00k.top",
+    imageUrl: "javascript:alert(1)",
+    type: "profile",
+  }));
+});
+
 test("metadata helper rejects unsafe URLs and omits private-like control characters", () => {
   assert.equal(escapePublicHtml("a&b<c>d\"e'f"), "a&amp;b&lt;c&gt;d&quot;e&#39;f");
   assert.equal(safePublicShareText(" A\n   B\tC ", 100), "A B C");

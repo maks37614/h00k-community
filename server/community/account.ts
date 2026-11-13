@@ -465,11 +465,20 @@ export function installAccountRoutes(
         "tradesAudience",
         "amountsAudience",
         "notesAudience",
+        "avatarAudience",
+        "coverAudience",
       ]) {
         if (raw[key] !== undefined) {
           if (!["private", "friends", "public"].includes(raw[key]))
             fail("Некоректна аудиторія");
           clean[key] = raw[key];
+        }
+      }
+      for (const field of ["avatarMediaId", "coverMediaId"]) {
+        if (raw[field] !== undefined) {
+          if (raw[field] !== null && typeof raw[field] !== "string")
+            fail("Некоректне зображення профілю");
+          clean[field] = raw[field] === null ? null : uuid(raw[field]);
         }
       }
       if (raw.tradingSessionIds !== undefined) {
@@ -520,6 +529,14 @@ export function installAccountRoutes(
       if (patch.community?.publicProfileEnabled === true) {
         const name = await tx.query("SELECT username FROM hc_profile_names WHERE owner_id=$1", [a!.id]);
         if (!name.rows.length) fail("Спочатку зарезервуйте персональну адресу", 409);
+      }
+      for (const field of ["avatarMediaId", "coverMediaId"]) {
+        const id = patch.community?.[field];
+        if (typeof id !== "string") continue;
+        const media = await tx.query(
+          "SELECT id FROM hc_media WHERE id=$1 AND owner_id=$2", [id, a!.id],
+        );
+        if (!media.rows.length) fail("Зображення не належить цьому акаунту", 403);
       }
       const merged = mergeProfileUpdate(
         { ...rows[0].profile, uid: a!.id },
