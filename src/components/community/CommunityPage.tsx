@@ -86,7 +86,7 @@ function Audience({
   allowedValues = ["private", "friends", "public"],
 }: {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: CommentAudience) => void;
   id?: string;
   allowedValues?: readonly CommentAudience[];
 }) {
