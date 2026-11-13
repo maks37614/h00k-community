@@ -53,11 +53,11 @@ test("muted chats keep their unread bubbles but are excluded from notification a
   assert.match(routes, /SET muted=\$3/);
   assert.match(routes, /muted_until=CASE WHEN \$4::integer IS NULL/);
   assert.match(routes, /WHERE conversation_id=\$1 AND user_id=\$2/);
-  assert.match(routes, /RETURNING \(muted OR muted_until>NOW\(\)\) AS muted/);
+  assert.match(routes, /RETURNING \(muted OR COALESCE\(muted_until>NOW\(\),false\)\) AS muted/);
   assert.match(routes, /AND NOT m\.muted/);
   assert.match(routes, /m\.muted_until IS NULL OR m\.muted_until<=NOW\(\)/);
   assert.match(routes, /SELECT c\.\*,m\.role/);
-  assert.match(routes, /m\.muted OR m\.muted_until>NOW\(\)/);
+  assert.match(routes, /m\.muted OR COALESCE\(m\.muted_until>NOW\(\),false\)/);
   assert.match(page, /className="community-chat-mute-toggle"/);
   assert.match(page, /currentConversation\.muted === true/);
   assert.match(page, /community:chat-muted/);
