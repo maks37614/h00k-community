@@ -168,3 +168,21 @@ CREATE TABLE IF NOT EXISTS hc_profile_names (
 );
 CREATE INDEX IF NOT EXISTS hc_public_wall ON hc_items(owner_id,created_at DESC,id DESC)
   WHERE kind='post' AND audience='public' AND conversation_id IS NULL AND NOT deleted;
+
+-- Community awards: reputation earns credits; giving awards spends credits without
+-- altering immutable reputation events. The wallet row serializes concurrent gifts.
+CREATE TABLE IF NOT EXISTS hc_award_wallets (
+  owner_id uuid PRIMARY KEY REFERENCES hc_users(id) ON DELETE CASCADE,
+  spent integer NOT NULL DEFAULT 0 CHECK(spent >= 0)
+);
+CREATE TABLE IF NOT EXISTS hc_award_gifts (
+  id uuid PRIMARY KEY,
+  sender_id uuid NOT NULL REFERENCES hc_users(id) ON DELETE CASCADE,
+  recipient_id uuid NOT NULL REFERENCES hc_users(id) ON DELETE CASCADE,
+  award_type text NOT NULL CHECK(award_type IN ('thanks','analysis','top_trader')),
+  cost integer NOT NULL CHECK(cost IN (20,50)),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CHECK(sender_id <> recipient_id)
+);
+CREATE INDEX IF NOT EXISTS hc_awards_received ON hc_award_gifts(recipient_id,created_at DESC);
+CREATE INDEX IF NOT EXISTS hc_awards_sent ON hc_award_gifts(sender_id,created_at DESC);
