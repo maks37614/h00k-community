@@ -92,7 +92,7 @@ test("notification inbox is an on-demand authenticated UI and uses existing pers
   assert.match(component, /apiJson\("\/api\/community\/notifications"\)/);
   assert.match(component, /onClick=\{toggle\}/);
   assert.match(component, /void refresh\(\)/);
-  assert.match(component, /filterCommunityNotices\(items, filter\)/);
+  assert.match(component, /visibleCommunityNotices\(items, filter, showSocialNotices\)/);
   assert.match(component, /aria-pressed=\{filter === "unread"\}/);
   assert.match(component, /apiJson\("\/api\/community\/notifications\/" \+ encodeURIComponent\(id\) \+ "\/read"/);
   assert.match(component, /method: "POST"/);
