@@ -401,3 +401,82 @@
     scroll-behavior: auto;
   }
 }
+
+
+/* Quoted replies use the original post's comment API and inherited privacy. */
+.community-workspace .community-comment-quoted,
+.community-workspace .community-reply-composer-quote {
+  max-width: 100%;
+  margin: 10px 0 13px;
+  padding: 10px 13px;
+  border: 1px solid #25554f;
+  border-left: 3px solid #00d8b9;
+  border-radius: 10px;
+  background: #102c30;
+  color: #c4e5de;
+  overflow-wrap: anywhere;
+}
+.community-workspace .community-comment-quoted > span,
+.community-workspace .community-reply-composer-quote > span {
+  display: block;
+  margin-bottom: 6px;
+  color: #57f0d4;
+  font-size: 12px;
+  font-weight: 750;
+}
+.community-workspace .community-comment-quoted > p,
+.community-workspace .community-reply-composer-quote > p {
+  margin: 0;
+  color: #c8d9e6;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.community-workspace .community-reply-composer-quote > small {
+  display: block;
+  margin-top: 7px;
+  color: #8faeb3;
+  font-size: 11px;
+}
+.community-workspace .community-comment-reply-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 11px;
+  border-top: 1px solid #24354b;
+  padding-top: 8px;
+}
+.community-workspace .community-comment-reply-actions > button {
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid #286e64;
+  border-radius: 9px;
+  background: #143732;
+  color: #bdfff0;
+  font-size: 12px;
+  font-weight: 750;
+}
+.community-workspace .community-comment-reply-actions > button:hover,
+.community-workspace .community-comment-reply-actions > button[aria-expanded="true"] {
+  border-color: #00bb9e;
+  background: #17514a;
+}
+.community-workspace .community-comment > .community-composer-comment {
+  margin: 12px 0 0;
+  padding: 12px;
+  border-color: #286356;
+  border-radius: 13px;
+  background: #0d242a;
+}
+@media (max-width: 700px) {
+  .community-workspace .community-comment > .community-composer-comment {
+    padding: 10px;
+  }
+  .community-workspace .community-comment-quoted,
+  .community-workspace .community-reply-composer-quote {
+    padding: 9px 10px;
+  }
+  .community-workspace .community-comment-reply-actions > button {
+    min-height: 42px;
+  }
+}
