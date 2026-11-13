@@ -547,7 +547,15 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
   });
   route("get", "/conversations", async (_req, res, db, a) => {
     const { rows } = await db.query(
-      "SELECT c.*,m.role FROM hc_conversations c JOIN hc_members m ON m.conversation_id=c.id WHERE m.user_id=$1 ORDER BY c.created_at DESC LIMIT 100",
+      `SELECT c.*,m.role,
+        CASE WHEN c.is_group THEN NULL ELSE (
+          SELECT COALESCE(NULLIF(peer.profile->>'displayName',''),'Трейдер')
+          FROM hc_members others JOIN hc_users peer ON peer.id=others.user_id
+          WHERE others.conversation_id=c.id AND others.user_id<>$1 AND peer.deleted_at IS NULL
+          ORDER BY others.joined_at, others.user_id LIMIT 1
+        ) END AS peer_name
+        FROM hc_conversations c JOIN hc_members m ON m.conversation_id=c.id
+        WHERE m.user_id=$1 ORDER BY c.created_at DESC LIMIT 100`,
       [a.id],
     );
     res.json({ success: true, items: rows });
