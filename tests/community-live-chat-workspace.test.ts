@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { filterConversations } from "../src/components/community/chatModel";
+import { filterConversations, conversationDisplayTitle } from "../src/components/community/chatModel";
 
 const page = readFileSync(new URL("../src/components/community/CommunityPage.tsx", import.meta.url), "utf8");
 const style = readFileSync(new URL("../src/components/community/social-chat-workspace.css", import.meta.url), "utf8");
@@ -19,6 +19,16 @@ test("conversation search is local, case insensitive and does not mutate convers
   assert.deepEqual(conversations.map((v) => v.id), ["1", "2", "3"]);
 });
 
+test("a direct chat displays the other participant and searches that name", () => {
+  const mine = { id: "a", title: "Діалог із самим собою", peer_name: "Олена", is_group: false };
+  const group = { id: "b", title: "Мої друзі", is_group: true, peer_name: "Помилкове ім’я" };
+  assert.equal(conversationDisplayTitle(mine), "Олена");
+  assert.equal(conversationDisplayTitle(group), "Мої друзі");
+  assert.deepEqual(filterConversations([mine, group], "олена"), [mine]);
+  assert.deepEqual(filterConversations([mine, group], "ДРУЗІ"), [group]);
+  assert.equal(conversationDisplayTitle({ id: "c" }), "Особистий діалог");
+});
+
 test("live chat UI keeps authenticated conversations and API-backed messages", () => {
   const chat = page.split("function Chats({")[1]?.split("function Trades(")[0] ?? "";
   assert.ok(chat, "Chats component must exist");
@@ -26,6 +36,8 @@ test("live chat UI keeps authenticated conversations and API-backed messages", (
   assert.match(chat, /api \+\s*"\/conversations\/" \+/);
   assert.match(chat, /post\(api \+ "\/conversations"/);
   assert.match(chat, /filterConversations\(conversations, chatSearch\)/);
+  assert.match(chat, /conversationDisplayTitle\(currentConversation\)/);
+  assert.match(chat, /conversationDisplayTitle\(c\)/);
   assert.match(chat, /aria-label="Список розмов"/);
   assert.match(chat, /aria-label="Повідомлення розмови"/);
   assert.match(chat, /className="community-chat-active-header"/);
