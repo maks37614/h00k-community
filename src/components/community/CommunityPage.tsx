@@ -30,6 +30,7 @@ import type {
 } from "../../types";
 import { ChartPreview } from "./ChartPreview";
 import "./community.css";
+import "./social-friends-settings.css";
 const SharedHookChart = lazy(() => import("./SharedHookChart"));
 type Tab =
   | "feed"
