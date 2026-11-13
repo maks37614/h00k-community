@@ -12,7 +12,8 @@ test('social feed visuals preserve live public/friends requests, real posts and 
   assert.match(page, /community-composer-"\s*\+\s*target\.kind/);
   assert.match(page, /onClick=\{\(\) => setMode\("friends"\)\}/);
   assert.match(page, /onClick=\{\(\) => setMode\("public"\)\}/);
-  assert.match(page, /api \+\s*"\/feed\?"/);
+  assert.match(page, /mode === "saved" \? "\/saved\?" : "\/feed\?"/);
+  assert.match(page, /onClick=\{\(\) => \{ setCategory\("all"\); setMode\("saved"\); \}\}/);
   assert.match(page, /<CommunityReactions/);
   assert.match(page, /item\.body\?\.text/);
   assert.match(page, /item\.author\?\.displayName/);
