@@ -465,3 +465,34 @@ test("Community session selections persist per-account and stay out of the anony
   assert.equal(clear.res.status, 200, clear.text);
   assert.deepEqual(clear.data.profile.community.tradingSessionIds, []);
 });
+
+test("public award counts require an explicit owner toggle", async () => {
+  const owner = await named("rewards-visible-test");
+  const sender = await actor();
+  const url = "/api/public/profiles/rewards-visible-test";
+  await db.query(
+    "INSERT INTO hc_award_gifts(id,sender_id,recipient_id,award_type,cost) VALUES($1,$2,$3,$4,$5)",
+    [randomUUID(), sender.id, owner.id, "thanks", 20],
+  );
+  const defaultView = await call(url);
+  assert.equal(defaultView.res.status, 200);
+  assert.equal(defaultView.data.profile.awards, null);
+
+  const rejected = await call("/api/account/profile", owner, "PATCH", {
+    community: { publicAwardsEnabled: "yes" },
+  });
+  assert.equal(rejected.res.status, 400);
+  const allowed = await call("/api/account/profile", owner, "PATCH", {
+    community: { publicAwardsEnabled: true },
+  });
+  assert.equal(allowed.res.status, 200);
+  const publicView = await call(url);
+  assert.deepEqual(publicView.data.profile.awards, {
+    received: 1, thanks: 1, analysis: 0, topTrader: 0,
+  });
+  const hidden = await call("/api/account/profile", owner, "PATCH", {
+    community: { publicAwardsEnabled: false },
+  });
+  assert.equal(hidden.res.status, 200);
+  assert.equal((await call(url)).data.profile.awards, null);
+});
