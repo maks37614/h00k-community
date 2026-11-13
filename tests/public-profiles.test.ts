@@ -242,7 +242,21 @@ test("guest /u/ wall shows only opt-in public comments, post deep links and aggr
   assert.equal(discussion.data.items.length, 2);
   assert.deepEqual(discussion.data.items.map((item: any) => item.text), ["Відкритий коментар", "Дякую за аналіз"]);
   assert.equal(discussion.data.items[1].quote, "Відкритий коментар");
+  assert.equal(discussion.data.items[0].replyToId, null);
+  assert.equal(discussion.data.items[1].replyToId, visible.data.id);
   assert.doesNotMatch(discussion.text, /SECRET_COMMENT|НЕ ПУБЛІКУВАТИ|НЕ ЗГОДЕН|owner_id|cookie|email|internalNote/);
+
+  // The data model intentionally keeps all comments attached to the post.
+  // Nested discussion is represented by a privacy-checked sourceItemId.
+  const nested = await call("/api/community/items", writer, "POST", {
+    kind: "comment", audience: "public", parentId: id,
+    body: { text: "Друга відповідь у гілці", sourceItemId: quoted.data.id },
+  });
+  assert.equal(nested.res.status, 201, nested.text);
+  const grouped = await call(root + "/comments");
+  assert.equal(grouped.data.items.length, 3);
+  assert.equal(grouped.data.items[2].replyToId, quoted.data.id);
+  assert.doesNotMatch(grouped.text, /SECRET_COMMENT|НЕ ПУБЛІКУВАТИ|НЕ ЗГОДЕН|email|password_hash/);
 
   await enable(writer, { publicProfileEnabled: false });
   const revoked = await call(root + "/comments");
