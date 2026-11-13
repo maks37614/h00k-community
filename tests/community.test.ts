@@ -100,9 +100,10 @@ test('a feed mount reads snapshots without exchange network requests; public and
 });
 
 test('quoted comment replies respect source audience and stay attached to the original post', async () => {
-  const author = await register('QuoteAuthor');
-  const peer = await register('QuotePeer');
-  const outsider = await register('QuoteOutsider');
+  // Reuse preexisting actors: avoid bypassing registration rate limits in tests.
+  const author = alice;
+  const peer = eve;
+  const outsider = bob;
   assert.equal((await call(api + '/friends/' + peer.id, author, 'POST', {})).res.status, 200);
   assert.equal((await call(api + '/friends/' + author.id, peer, 'POST', {})).res.status, 200);
 
