@@ -284,6 +284,14 @@ function bodyFor(raw: any, kind: string) {
     delete clean[field];
   clean.text = bounded(clean.text ?? "", 20_000);
   clean.title = bounded(clean.title ?? "", 200);
+  if (kind === "post") {
+    const category = bounded(clean.category ?? "general", 16);
+    if (!["general", "idea", "analysis", "education"].includes(category))
+      fail("Некоректна категорія публікації");
+    clean.category = category;
+  } else {
+    delete clean.category;
+  }
   if (clean.sourceItemId) uuid(clean.sourceItemId);
   if (clean.strategyId) uuid(clean.strategyId);
   if (clean.photos) {
