@@ -23,6 +23,7 @@ import { TF_SECONDS } from "../../src/community/chartDocument";
 import { amount, evaluateRisk } from "./risk";
 import { connectBybit, syncBybit } from "./bybit";
 import { publicProfileUrl } from "./profileNames";
+import { extractMentionHandles } from "./mentions";
 
 export function installCommunityRoutes(app: Express, getDb: () => Database) {
   const limits = new RequestLimits();
@@ -211,6 +212,30 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
     async (req, res, db, a, p) => {
       limits.take("publish:" + a.id, 20);
       const id = await createItem(db, p, req.body);
+      // Index only verified group members with reserved @profile-name handles.
+      // No separate message notification rows or untrusted recipient IDs.
+      if (req.body?.kind === "message" &&
+          typeof req.body?.body?.text === "string" &&
+          req.body.body.text.includes("@")) {
+        const convId = uuid(req.body.conversationId);
+        const stored = await db.query(
+          "SELECT body->>'text' AS text FROM hc_items WHERE id=$1 AND owner_id=$2 AND conversation_id=$3 AND kind='message' AND NOT deleted",
+          [id,a.id,convId],
+        );
+        const handles = extractMentionHandles(stored.rows[0]?.text);
+        if (handles.length) {
+          await db.query(
+            `INSERT INTO hc_message_mentions(message_id,user_id)
+              SELECT $1,pn.owner_id
+              FROM hc_profile_names pn
+              JOIN hc_members m ON m.user_id=pn.owner_id AND m.conversation_id=$2
+              JOIN hc_conversations c ON c.id=m.conversation_id AND c.is_group=true
+              WHERE pn.username=ANY($3::text[]) AND pn.owner_id<>$4
+              ON CONFLICT DO NOTHING`,
+            [id,convId,handles,a.id],
+          );
+        }
+      }
       // At most two small inbox records for an original PUBLIC comment on
       // a PUBLIC post. Never include comment text, charts or private fields.
       // Friend-only and private comment events must not leak to another user.
@@ -600,6 +625,11 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
   const unreadPredicate = `msg.kind='message' AND NOT msg.deleted AND msg.owner_id<>$1
     AND msg.created_at>=m.joined_at
     AND (marker.id IS NULL OR (msg.created_at,msg.id)>(marker.created_at,marker.id))`;
+  // Mention rows contain only server-verified recipients, never message content.
+  const mentionPredicate = `(NOT m.mentions_only OR EXISTS (
+    SELECT 1 FROM hc_message_mentions mm
+    WHERE mm.message_id=msg.id AND mm.user_id=m.user_id
+  ))`;
   route("get", "/conversations/unread", async (_req, res, db, a) => {
     const { rows } = await db.query(
       `SELECT count(*)::integer AS unread FROM (
@@ -608,7 +638,8 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
          JOIN hc_items msg ON msg.conversation_id=m.conversation_id
          WHERE m.user_id=$1 AND NOT m.muted
            AND (m.muted_until IS NULL OR m.muted_until<=NOW())
-           AND ${unreadPredicate} LIMIT 100
+           AND ${unreadPredicate}
+           AND ${mentionPredicate} LIMIT 100
        ) notices`,
       [a.id],
     );
@@ -616,7 +647,7 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
   });
   route("get", "/conversations", async (_req, res, db, a) => {
     const { rows } = await db.query(
-      `SELECT c.*,m.role,
+      `SELECT c.*,m.role,m.mentions_only,
         (m.muted OR COALESCE(m.muted_until>NOW(),false)) AS muted,
         m.muted_until,
         CASE WHEN c.is_group THEN NULL ELSE (
@@ -625,16 +656,24 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
           WHERE others.conversation_id=c.id AND others.user_id<>$1 AND peer.deleted_at IS NULL
           ORDER BY others.joined_at, others.user_id LIMIT 1
         ) END AS peer_name,
-        (
-          SELECT count(*)::integer FROM (
-            SELECT 1 FROM hc_items msg
-            WHERE msg.conversation_id=c.id AND ${unreadPredicate}
-            ORDER BY msg.created_at DESC,msg.id DESC LIMIT 100
-          ) recent_unread
-        ) AS unread_count
+        COALESCE(counts.unread_count,0) AS unread_count,
+        CASE WHEN m.muted OR COALESCE(m.muted_until>NOW(),false) THEN 0
+          ELSE COALESCE(counts.alert_unread_count,0) END AS alert_unread_count
         FROM hc_conversations c
         JOIN hc_members m ON m.conversation_id=c.id
         LEFT JOIN hc_items marker ON marker.id=m.last_read_message_id AND marker.conversation_id=c.id
+        LEFT JOIN LATERAL (
+          SELECT count(*)::integer AS unread_count,
+            count(*) FILTER (WHERE NOT m.mentions_only OR EXISTS (
+              SELECT 1 FROM hc_message_mentions mm
+              WHERE mm.message_id=msg.id AND mm.user_id=m.user_id
+            ))::integer AS alert_unread_count
+          FROM (
+            SELECT msg.id FROM hc_items msg
+            WHERE msg.conversation_id=c.id AND ${unreadPredicate}
+            ORDER BY msg.created_at DESC,msg.id DESC LIMIT 100
+          ) msg
+        ) counts ON true
         WHERE m.user_id=$1 ORDER BY c.created_at DESC LIMIT 100`,
       [a.id],
     );
@@ -758,13 +797,30 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
     if (!rows.length) fail("Розмова недоступна", 404);
     res.json({ success: true, muted: rows[0].muted, muted_until: rows[0].muted_until });
   }, 30);
+  // Mention-only alerts are a private option for current group members.
+  route("post", "/conversations/:id/mentions-only", async (req, res, db, a) => {
+    const id = uuid(req.params.id);
+    if (typeof req.body?.enabled !== "boolean")
+      fail("Оберіть режим сповіщень групи");
+    const { rows } = await db.query(
+      `UPDATE hc_members m SET mentions_only=$3
+       FROM hc_conversations c
+       WHERE m.conversation_id=$1 AND m.user_id=$2
+         AND c.id=m.conversation_id AND c.is_group=true
+       RETURNING m.mentions_only`,
+      [id,a.id,req.body.enabled],
+    );
+    if (!rows.length) fail("Групова розмова недоступна", 404);
+    res.json({ success: true, mentions_only: rows[0].mentions_only });
+  }, 30);
   route("get", "/conversations/:id/members", async (req, res, db, _a, p) => {
     const id = uuid(req.params.id);
     if (!p.member.has(id)) fail("Розмова недоступна", 404);
     const { rows } = await db.query(
-      `SELECT m.user_id AS id, m.role, m.joined_at,
+      `SELECT m.user_id AS id, m.role, m.joined_at,n.username,
               COALESCE(NULLIF(u.profile->>'displayName',''),'Трейдер') AS "displayName"
          FROM hc_members m JOIN hc_users u ON u.id=m.user_id
+         LEFT JOIN hc_profile_names n ON n.owner_id=m.user_id
         WHERE m.conversation_id=$1 AND u.deleted_at IS NULL
         ORDER BY (m.role='owner') DESC,m.joined_at,m.user_id`,
       [id],

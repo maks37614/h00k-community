@@ -204,3 +204,13 @@ CREATE INDEX IF NOT EXISTS hc_messages_unread
 ALTER TABLE hc_members ADD COLUMN IF NOT EXISTS muted boolean NOT NULL DEFAULT false;
 -- Expiring per-member mutes are evaluated at read time; no scheduler is required.
 ALTER TABLE hc_members ADD COLUMN IF NOT EXISTS muted_until timestamptz;
+-- Only explicit @profile-name mentions of current group members are indexed.
+-- Sender-provided recipient IDs are never trusted.
+ALTER TABLE hc_members ADD COLUMN IF NOT EXISTS mentions_only boolean NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS hc_message_mentions (
+  message_id uuid NOT NULL REFERENCES hc_items(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES hc_users(id) ON DELETE CASCADE,
+  PRIMARY KEY (message_id,user_id)
+);
+CREATE INDEX IF NOT EXISTS hc_message_mentions_recipient
+  ON hc_message_mentions(user_id,message_id);

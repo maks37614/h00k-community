@@ -540,3 +540,27 @@
     left:0;right:auto;min-width:156px;max-width:calc(100vw - 30px);
   }
 }
+
+
+/* Group-only mentions; all messages remain available in the room. */
+.community-workspace .community-chat-mentions-toggle {
+  min-height:37px;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:7px 11px;border:1px solid #316474;border-radius:10px;
+  background:#112e3b;color:#c3eceb;font-size:11px;font-weight:750;
+  white-space:normal;text-align:center;
+}
+.community-workspace .community-chat-mentions-toggle[aria-pressed="true"] {
+  border-color:#22c7ad;background:#125650;color:#dcfff4;
+}
+.community-workspace .community-chat-mention-hint {
+  margin:0;padding:10px 15px;border-bottom:1px solid #27766a;
+  background:#123b3e;color:#bdece0;font-size:11px;line-height:1.55;
+}
+.community-workspace .community-chat-mention-handle {
+  display:block;color:#55dac9;font-size:11px;font-weight:700;
+  overflow-wrap:anywhere;
+}
+@media(max-width:700px) {
+  .community-workspace .community-chat-mentions-toggle {min-height:40px;}
+  .community-workspace .community-chat-mention-hint {padding:9px 12px;}
+}

@@ -2261,7 +2261,7 @@ function Chats({
       ? apiJson(api + "/conversations/" + encodeURIComponent(id) + "/members")
       : Promise.resolve({ items: [] }),
   );
-  const currentMembers: Array<{ id:string; displayName:string; role:string; joined_at:string }> =
+  const currentMembers: Array<{ id:string; displayName:string; role:string; joined_at:string; username?:string|null }> =
     Array.isArray(groupMembers.data?.items) ? groupMembers.data.items : [];
   const memberIds = new Set(currentMembers.map(member => member.id));
   const eligibleFriends: Array<{ id:string; displayName:string }> =
@@ -2521,6 +2521,21 @@ function Chats({
                   </div>
                 )}
                 {currentConversation?.is_group && (
+                  <button type="button"
+                    className="community-chat-mentions-toggle"
+                    aria-pressed={currentConversation.mentions_only === true}
+                    title="Отримувати сповіщення тільки коли інший учасник напише @ваша-адреса-профілю"
+                    onClick={() => void run(async () => {
+                      const next = currentConversation.mentions_only !== true;
+                      await post(api + "/conversations/" + encodeURIComponent(currentConversation.id) + "/mentions-only",
+                        { enabled: next });
+                      list.refresh();
+                      window.dispatchEvent(new Event("community:chat-muted"));
+                    })}>
+                    @ {currentConversation.mentions_only === true ? "Лише згадки" : "Усі повідомлення"}
+                  </button>
+                )}
+                {currentConversation?.is_group && (
                   <button type="button" className="community-chat-members-toggle" aria-expanded={groupOpen}
                     onClick={() => setGroupOpen(open => !open)}>
                     <Users size={15} aria-hidden="true" /> {groupOpen ? "Сховати учасників" : "Учасники групи"}
@@ -2538,6 +2553,11 @@ function Chats({
                   До останніх
                 </button>
               </header>
+              {currentConversation?.is_group && currentConversation.mentions_only === true && (
+                <p className="community-chat-mention-hint" role="status">
+                  <strong>Лише @згадки.</strong> Загальні повідомлення залишаються у чаті, але не збільшують лічильник сповіщень. Для згадки потрібна зарезервована адреса профілю.
+                </p>
+              )}
               {groupOpen && currentConversation?.is_group && (
                 <section className="community-chat-members-panel" aria-label="Учасники групової розмови">
                   <div className="community-chat-members-title">
@@ -2553,6 +2573,7 @@ function Chats({
                         <span className="community-chat-member-info">
                           <strong>{member.displayName}</strong>
                           <small>{member.role === "owner" ? "Власник" : member.role === "admin" ? "Адміністратор" : "Учасник"}</small>
+                          {member.username && <small className="community-chat-mention-handle">@{member.username}</small>}
                         </span>
                         {myRole === "owner" && member.id !== user?.uid && (
                           <button type="button" onClick={() => {
@@ -2605,6 +2626,9 @@ function Chats({
                       });
                     }}>Вийти з групи</button>
                   )}
+                  <p className="community-chat-members-hint">
+                    Для згадки учасника напишіть його адресу профілю через @, наприклад @ivan. Тільки точний збіг активної адреси учасника створить сповіщення.
+                  </p>
                   {myRole === "owner" && <p className="community-chat-members-hint">Щоб вийти з групи, спочатку передайте права іншому учаснику.</p>}
                 </section>
               )}

@@ -23,6 +23,8 @@ export type ChatNotice = {
   peer_name?: string | null;
   is_group?: boolean;
   unread_count?: number | string | null;
+  alert_unread_count?: number | string | null;
+  mentions_only?: boolean;
   muted?: boolean;
 };
 const CHAT_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -40,7 +42,9 @@ export function unreadChatNotices(items: unknown, limit = 8): Array<ChatNotice &
     item !== null && typeof item === "object" &&
     item.muted !== true && CHAT_UUID.test(String(item.id ?? "")))
     .map(item => {
-      const count = Number(item.unread_count);
+      // The server filters alert counts for this member's mentions-only mode.
+      // Full unread_count still appears inside the conversation list.
+      const count = Number(item.alert_unread_count ?? item.unread_count);
       return {
         id: item.id,
         is_group: item.is_group === true,
