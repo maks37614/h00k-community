@@ -1,0 +1,191 @@
+/* Real profile navigation. Other trader fields are already filtered by Community API. */
+.community-workspace .community-profile-tabs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0 0 18px;
+  padding: 8px;
+  min-width: 0;
+  border: 1px solid #283e50;
+  border-radius: 15px;
+  background: #0e1b2b;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+.community-workspace .community-profile-tabs button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  min-height: 43px;
+  flex: 1 0 auto;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: #111f30;
+  color: #bdcedf;
+  font-size: 13px;
+  font-weight: 750;
+  text-align: center;
+  white-space: nowrap;
+}
+.community-workspace .community-profile-tabs button[aria-pressed="true"] {
+  border-color: #219c88;
+  background: linear-gradient(120deg, #104c43, #153a47);
+  color: #c9fff3;
+  box-shadow: inset 0 -3px #00e2be;
+}
+.community-workspace .community-profile-tabs button:hover:not([aria-pressed="true"]) {
+  border-color: #37566c;
+  background: #183143;
+  color: #eaf4fc;
+}
+.community-workspace .community-profile-about,
+.community-workspace .community-profile-trades,
+.community-workspace .community-profile-wall {
+  min-width: 0;
+  animation: none;
+}
+.community-workspace .community-profile-about > .community-section-heading,
+.community-workspace .community-profile-trades > .community-section-heading,
+.community-workspace .community-profile-wall > .community-section-heading {
+  margin: 0 0 17px;
+  padding: 0 2px 13px;
+  border-bottom: 1px solid #263f51;
+}
+.community-workspace .community-profile-about > .community-section-heading h3,
+.community-workspace .community-profile-trades > .community-section-heading h3,
+.community-workspace .community-profile-wall > .community-section-heading h3 {
+  margin: 5px 0 0;
+  font-size: clamp(20px, 2.3vw, 26px);
+  color: #f1f8ff;
+  letter-spacing: -.025em;
+}
+.community-workspace .community-profile-trades .community-hint {
+  max-width: 730px;
+  margin: 9px 0 0;
+  color: #9ab5c8;
+  line-height: 1.65;
+}
+.community-workspace .community-profile-readonly {
+  padding: clamp(18px, 2.3vw, 27px);
+  border-color: #284656;
+  background: linear-gradient(145deg, #101f2f, #0e1928);
+}
+.community-workspace .community-profile-readonly > p:not(.community-hint) {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 17px 0;
+  border-bottom: 1px solid #263b4b;
+  overflow-wrap: anywhere;
+}
+.community-workspace .community-profile-readonly > p:last-child {
+  border-bottom: 0;
+}
+.community-workspace .community-profile-readonly b {
+  color: #84edda;
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.community-workspace .community-profile-readonly span {
+  color: #e0edf7;
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.community-workspace .community-profile-about .community-profile-editor {
+  max-width: none;
+  border-color: #294958;
+  background: linear-gradient(140deg, #10272f, #0d1828);
+}
+.community-workspace .community-profile-editor h3 {
+  margin: 1px 0 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #304b59;
+  color: #e9f8ff;
+  font-size: 18px;
+}
+.community-workspace .community-profile-editor > label {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid #233849;
+  font-size: 13px;
+  font-weight: 700;
+}
+.community-workspace .community-profile-editor textarea {
+  min-height: 80px;
+  line-height: 1.5;
+  font-weight: 450;
+  border-radius: 10px;
+  background: #0a1625;
+}
+.community-workspace .community-profile-editor input {
+  min-height: 45px;
+  border-radius: 10px;
+  background: #0a1625;
+}
+.community-workspace .community-profile-editor select {
+  width: fit-content;
+  min-width: 175px;
+  min-height: 39px;
+  border: 1px solid #385765;
+  border-radius: 9px;
+  background: #11263a;
+  color: #d6e5ef;
+  font-size: 13px;
+}
+.community-workspace .community-profile-editor > button.community-primary {
+  justify-self: start;
+  min-height: 43px;
+  padding: 10px 19px;
+  border-radius: 11px;
+  font-weight: 800;
+}
+.community-workspace .community-profile-about .community-profile-editor + * {
+  margin-top: 18px;
+}
+.community-workspace .community-profile-trades .community-stats {
+  min-width: 0;
+}
+@media (max-width: 760px) {
+  .community-workspace .community-profile-tabs {
+    gap: 5px;
+    padding: 6px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+  }
+  .community-workspace .community-profile-tabs button {
+    min-height: 42px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  .community-workspace .community-profile-editor {
+    padding: 14px;
+  }
+  .community-workspace .community-profile-editor input,
+  .community-workspace .community-profile-editor textarea,
+  .community-workspace .community-profile-editor select {
+    font-size: 16px; /* Prevent Safari zoom when focusing a field. */
+  }
+  .community-workspace .community-profile-readonly {
+    padding: 16px;
+  }
+}
+@media (max-width: 390px) {
+  .community-workspace .community-profile-tabs {
+    gap: 5px;
+  }
+  .community-workspace .community-profile-tabs button {
+    font-size: 11px;
+    padding: 10px;
+  }
+  .community-workspace .community-profile-editor select {
+    width: 100%;
+  }
+}
