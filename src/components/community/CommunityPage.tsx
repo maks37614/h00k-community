@@ -46,6 +46,7 @@ import { filterConversations } from "./chatModel";
 import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from "./friendsModel";
 import { canSendCommunityContent, communityAudienceHint, validateCommunityPhoto, MAX_COMMUNITY_PHOTOS } from "./composerPolicy";
 import "./social-composer-posts.css";
+import "./social-edit-items.css";
 import "./social-profile-actions.css";
 import "./social-profile-tabs.css";
 import "./social-resource-library.css";
