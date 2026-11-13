@@ -74,7 +74,7 @@ test("post cards keep real reactions, threaded replies and copied links only for
   assert.match(page, /community-comment-head/);
   assert.match(page, /dateTime=\{comment\.created_at\}/);
   assert.match(page, /comment\.chart &&/);
-  assert.match(page, /comment\.body\.photos\?\.map/);
+  assert.match(page, /ids=\{comment\.body\.photos\}/);
   assert.match(page, /community-post-copy/);
   assert.match(css, /\.community-workspace \.community-composer/);
   assert.match(css, /@media \(max-width: 410px\)/);
