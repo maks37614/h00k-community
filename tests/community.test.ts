@@ -153,6 +153,46 @@ test('quoted comment replies respect source audience and stay attached to the or
   assert.equal(readable.data.item.source.text, 'Загальнодоступний коментар');
 });
 
+test('reaction toggle works on posts and comments, with viewer-specific selected state and privacy', async () => {
+  const post = await call(api + '/items', alice, 'POST', {
+    kind: 'post', audience: 'public', body: { text: 'Пост для перевірки реакцій' },
+  });
+  assert.equal(post.res.status, 201, JSON.stringify(post.data));
+
+  const react = (actor: Actor, id: string, emoji: string) =>
+    call(api + '/items/' + id + '/reaction', actor, 'POST', { emoji });
+
+  const first = await react(eve, post.data.id, '👍');
+  assert.equal(first.res.status, 200, JSON.stringify(first.data));
+  assert.equal(first.data.active, true);
+
+  const mine = await call(api + '/items/' + post.data.id, eve);
+  assert.deepEqual(mine.data.item.reactions, [{ emoji: '👍', count: 1, mine: true }]);
+  const other = await call(api + '/items/' + post.data.id, alice);
+  assert.deepEqual(other.data.item.reactions, [{ emoji: '👍', count: 1, mine: false }]);
+
+  const removed = await react(eve, post.data.id, '👍');
+  assert.equal(removed.res.status, 200);
+  assert.equal(removed.data.active, false);
+  assert.deepEqual((await call(api + '/items/' + post.data.id, eve)).data.item.reactions, []);
+
+  assert.equal((await react(eve, post.data.id, '❤️')).data.active, true);
+  assert.equal((await react(eve, post.data.id, '🔥')).data.active, true);
+  assert.deepEqual((await call(api + '/items/' + post.data.id, eve)).data.item.reactions,
+    [{ emoji: '🔥', count: 1, mine: true }]);
+
+  const secret = await call(api + '/items', alice, 'POST', {
+    kind: 'comment', parentId: post.data.id, audience: 'private',
+    body: { text: 'Цей коментар доступний лише автору' },
+  });
+  assert.equal(secret.res.status, 201, JSON.stringify(secret.data));
+  assert.equal((await react(eve, secret.data.id, '👍')).res.status, 404);
+
+  assert.equal((await react(alice, secret.data.id, '👏')).res.status, 200);
+  const myComment = await call(api + '/items/' + secret.data.id, alice);
+  assert.deepEqual(myComment.data.item.reactions, [{ emoji: '👏', count: 1, mine: true }]);
+});
+
 test('group membership, message idempotence and block policy apply to direct links too',async()=>{
   await call(api+'/friends/'+bob.id,alice,'POST',{});await call(api+'/friends/'+alice.id,bob,'POST',{});
   const group=await call(api+'/conversations',alice,'POST',{title:'Спільний тест',members:[bob.id]});assert.equal(group.res.status,201,JSON.stringify(group.data));const conversationId=group.data.id;
