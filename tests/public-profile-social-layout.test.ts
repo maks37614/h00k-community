@@ -42,8 +42,8 @@ test("real HookChart breakdowns never substitute mock articles or unpublished se
   assert.deepEqual(publicProfileSetups(rows).map(x => x.id), ["public-chart", "another-chart"]);
   assert.deepEqual(publicProfileSetups([]), []);
   assert.match(view, /type PublicTab = "wall" \| "setups" \| "statistics" \| "about"/);
-  assert.match(view, /visibleWall = tab === "setups" \? publicProfileSetups\(wall\) : wall/);
-  assert.match(view, /Розбори HookChart/);
+  assert.match(view, /visibleWall = tab === "setups" \? publicProfileSetups\(wall\) : categorizedWall/);
+  assert.match(view, /Публічні розбори HookChart/);
   assert.doesNotMatch(view, /MOCK_ARTICLE|fakeFollowers|hardcodedBadge|PNL_30D/);
 });
 
