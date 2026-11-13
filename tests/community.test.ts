@@ -315,19 +315,19 @@ test('categorized public feed and real award spending preserve ownership and pri
     recipientId: alice.id, awardType: 'thanks',
   })).res.status, 403);
   assert.equal((await call(api + '/awards', alice, 'POST', {
-    recipientId: bob.id, awardType: 'unknown',
+    recipientId: eve.id, awardType: 'unknown',
   })).res.status, 400);
 
-  const recipientBefore = await call(api + '/awards', bob);
+  const recipientBefore = await call(api + '/awards', eve);
   const send = await call(api + '/awards', alice, 'POST', {
-    recipientId: bob.id, awardType: 'thanks',
+    recipientId: eve.id, awardType: 'thanks',
   });
   assert.equal(send.res.status, 201, JSON.stringify(send.data));
   const after = await call(api + '/awards', alice);
   assert.equal(after.data.balance, before.data.balance - 20);
   assert.equal(after.data.gifted, before.data.gifted + 1);
-  const recipientAfter = await call(api + '/awards', bob);
+  const recipientAfter = await call(api + '/awards', eve);
   assert.equal(recipientAfter.data.received, recipientBefore.data.received + 1);
-  const notice = await call(api + '/notifications', bob);
+  const notice = await call(api + '/notifications', eve);
   assert.ok(notice.data.items.some((item: any) => item.type === 'award' && item.body.awardType === 'thanks'));
 });
