@@ -12,16 +12,17 @@ const awards: { id: AwardType; label: string; price: number; icon: React.ReactNo
 
 /** Only server-confirmed awards are shown; demo balances from social are never used. */
 export function CommunityAwardPanel({
-  recipient, onGifted, onFriends, onClear,
+  recipient, onGifted, onClear,
 }: {
   recipient: { id: string; name: string } | null;
   onGifted: () => void;
-  onFriends: () => void;
   onClear: () => void;
 }) {
   const { user } = useAuth();
   const [wallet, setWallet] = useState<{ balance: number; received: number; gifted: number } | null>(null);
   const [selection, setSelection] = useState<AwardType>("analysis");
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<Array<{ id:string; direction:string; awardType:string; cost:number; date:string; person:string }>>([]);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [version, setVersion] = useState(0);
@@ -36,6 +37,11 @@ export function CommunityAwardPanel({
     return () => { live = false; };
   }, [user?.uid, version]);
   const selected = awards.find(a => a.id === selection)!;
+  const openHistory = () => {
+    if (showHistory) { setShowHistory(false); return; }
+    setShowHistory(true);
+    void apiJson("/api/community/awards/history").then(data => setHistory(data.items ?? [])).catch(error => setFeedback(error instanceof Error ? error.message : "Історія недоступна"));
+  };
   const send = async () => {
     if (!recipient || !wallet || busy || wallet.balance < selected.price) return;
     if (!window.confirm("Подарувати «" + selected.label + "» користувачу " + recipient.name + " за " + selected.price + " балів?")) return;
@@ -78,9 +84,16 @@ export function CommunityAwardPanel({
       </button>
       {recipient && wallet && wallet.balance < selected.price && <p role="status">Недостатньо балів для цієї нагороди.</p>}
       {feedback && <p role="status">{feedback}</p>}
-      <button type="button" className="community-concept-wallet" onClick={onFriends}>
+      <button type="button" className="community-concept-wallet" onClick={openHistory} aria-expanded={showHistory}>
         <Star size={17} /> Ваш баланс балів: <strong>{wallet ? wallet.balance : "—"}</strong><ChevronRight size={16} />
       </button>
+      {showHistory && <div className="community-concept-history" aria-label="Історія ваших нагород">
+        <h4>Історія нагород</h4>
+        {history.length ? history.map(entry => <div className="community-concept-history-row" key={entry.id}>
+          <span>{entry.direction === "sent" ? "Подаровано" : "Отримано"}: {awards.find(a => a.id === entry.awardType)?.label ?? "Нагорода"}</span>
+          <small>{entry.person || "Трейдер"} · {new Date(entry.date).toLocaleDateString("uk-UA")}</small>
+        </div>) : <p>Нагород поки немає.</p>}
+      </div>}
     </section>
   );
 }
