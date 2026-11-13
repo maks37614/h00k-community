@@ -42,6 +42,7 @@ import { filterConversations } from "./chatModel";
 import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from "./friendsModel";
 import { canSendCommunityContent, communityAudienceHint, validateCommunityPhoto, MAX_COMMUNITY_PHOTOS } from "./composerPolicy";
 import "./social-composer-posts.css";
+import "./social-profile-actions.css";
 const SharedHookChart = lazy(() => import("./SharedHookChart"));
 type Tab =
   | "feed"
@@ -64,6 +65,7 @@ type DraftChart = {
   historyId?: string;
   target: Target;
 };
+type ChatInvite = { id: string; name: string };
 const emojis = ["👍", "🔥", "🤔", "📈", "📉", "✅", "💡", "🙂"];
 function Audience({
   value,
@@ -127,6 +129,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
     [notice, setNotice] = useState(""),
     [picker, setPicker] = useState<Target | null>(null),
     [draft, setDraft] = useState<DraftChart | null>(null);
+  const [chatInvite, setChatInvite] = useState<ChatInvite | null>(null);
   const [viewProfile, setViewProfile] = useState<string | null>(() => {
     const owner = new URLSearchParams(location.hash.split("?")[1] ?? "").get("owner");
     return owner && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(owner) ? owner : null;
@@ -382,6 +385,8 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
             onPick={setPicker}
             onChart={openChart}
             run={run}
+            inviteTarget={chatInvite}
+            onInviteHandled={() => setChatInvite(null)}
           />
         )}
         {tab === "friends" && (
@@ -399,6 +404,10 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
             onChart={openChart}
             onPick={setPicker}
             run={run}
+            onChatInvite={(id, name) => {
+              setChatInvite({ id, name });
+              setTab("chats");
+            }}
           />
         )}
         {tab === "settings" && <CommunitySettings run={run} />}
@@ -1856,11 +1865,15 @@ function Chats({
   onPick,
   onChart,
   run,
+  inviteTarget,
+  onInviteHandled,
 }: {
   revision: number;
   onPick: (t: Target) => void;
   onChart: (item: any, target?: Target) => Promise<void>;
   run: Run;
+  inviteTarget: ChatInvite | null;
+  onInviteHandled: () => void;
 }) {
   const list = useResource("chats:" + revision, () =>
       apiJson(api + "/conversations"),
@@ -1872,6 +1885,11 @@ function Chats({
     [messages, setMessages] = useState<any[]>([]),
     [before, setBefore] = useState<string | null>(null),
     [chatSearch, setChatSearch] = useState("");
+  useEffect(() => {
+    if (!inviteTarget) return;
+    setMembers([inviteTarget.id]);
+    setName("Діалог із " + inviteTarget.name);
+  }, [inviteTarget?.id, inviteTarget?.name]);
   const activeId = useRef(id);
   const latestMessages = useRef(messages);
   const threadRef = useRef<HTMLDivElement>(null);
@@ -1953,8 +1971,13 @@ function Chats({
           <h2>Приватні та групові розмови</h2>
         </div>
       </div>
-      <details className="community-card community-chat-create">
+      <details className="community-card community-chat-create" defaultOpen={Boolean(inviteTarget)}>
         <summary>Створити розмову</summary>
+        {inviteTarget && (
+          <p className="community-chat-invite-notice" role="status">
+            Обрано трейдера {inviteTarget.name}. Підтвердіть створення розмови — вона не відкривається автоматично.
+          </p>
+        )}
         <input
           aria-label="Назва розмови"
           placeholder="Назва групи або розмови"
@@ -1994,6 +2017,7 @@ function Chats({
               setMembers([]);
               setName("");
               setChatSearch("");
+              onInviteHandled();
             })
           }
         >
@@ -2281,15 +2305,20 @@ function Profile({
   onChart,
   onPick,
   run,
+  onChatInvite,
 }: {
   id: string;
   onChart: (item: any, target?: Target) => Promise<void>;
   onPick: (t: Target) => void;
   run: Run;
+  onChatInvite: (id: string, name: string) => void;
 }) {
   const { user, profile, updateProfileData } = useAuth();
   const resource = useResource("profile:" + id, () =>
     apiJson(api + "/profiles/" + id),
+  );
+  const friendships = useResource("profile-friends:" + id + ":" + user?.uid, () =>
+    user?.uid === id ? Promise.resolve({ people: [] }) : apiJson(api + "/friends"),
   );
   const [showTrades, setShowTrades] = useState(false);
   const [form, setForm] = useState<any>({ ...profile?.community }),
@@ -2298,6 +2327,19 @@ function Profile({
     apiJson(api + "/feed?mode=wall&owner=" + id),
   );
   const p = resource.data?.profile;
+  const friends: CommunityFriend[] | undefined = friendships.data?.people;
+  const relation = friends?.find((person) => person.id === id);
+  function changeFriend(action: "send" | "accept" | "cancel" | "remove") {
+    if (action === "remove" && !window.confirm("Видалити цього трейдера з друзів?")) return;
+    void run(async () => {
+      if (action === "cancel" || action === "remove") {
+        await apiJson(api + "/friends/" + id, { method: "DELETE" });
+      } else {
+        await post(api + "/friends/" + id, {});
+      }
+      friendships.refresh();
+    });
+  }
   return (
     <>
       {resource.error && <p role="status">{resource.error}</p>}
@@ -2339,6 +2381,50 @@ function Profile({
             </div>
           </div>
         </article>
+      )}
+      {id !== user?.uid && p && (
+        <section className="community-profile-connect" aria-label="Зв'язок із трейдером">
+          {friendships.error ? (
+            <p role="status">{friendships.error}</p>
+          ) : !friends ? (
+            <p role="status">Перевіряємо запити дружби…</p>
+          ) : (
+            <>
+              <span className="community-page-kicker">КОНТАКТИ</span>
+              {relation?.accepted ? (
+                <>
+                  <span className="community-profile-friend-status">Ви друзі</span>
+                  <button
+                    className="community-primary"
+                    type="button"
+                    onClick={() => onChatInvite(id, p.displayName ?? "Трейдер")}
+                  >
+                    <MessageCircle size={16} aria-hidden="true" />
+                    Написати повідомлення
+                  </button>
+                  <button type="button" onClick={() => changeFriend("remove")}>Видалити з друзів</button>
+                </>
+              ) : relation?.incoming ? (
+                <>
+                  <span className="community-profile-request-status">Вхідний запит дружби</span>
+                  <button className="community-primary" type="button" onClick={() => changeFriend("accept")}>
+                    Прийняти запит
+                  </button>
+                </>
+              ) : relation ? (
+                <>
+                  <span className="community-profile-request-status">Очікується відповідь</span>
+                  <button type="button" onClick={() => changeFriend("cancel")}>Відкликати запит</button>
+                </>
+              ) : (
+                <button className="community-primary" type="button" onClick={() => changeFriend("send")}>
+                  <Users size={16} aria-hidden="true" />
+                  Додати в друзі
+                </button>
+              )}
+            </>
+          )}
+        </section>
       )}
       {id === user?.uid && (
         <form
