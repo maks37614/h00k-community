@@ -503,6 +503,10 @@ export function installAccountRoutes(
         if (typeof raw.publicAwardsEnabled !== "boolean") fail("Некоректна видимість нагород");
         clean.publicAwardsEnabled = raw.publicAwardsEnabled;
       }
+      if (raw.publicSessionsEnabled !== undefined) {
+        if (typeof raw.publicSessionsEnabled !== "boolean") fail("Некоректна видимість торгових сесій");
+        clean.publicSessionsEnabled = raw.publicSessionsEnabled;
+      }
       if (raw.status !== undefined) {
         if (
           !raw.status ||

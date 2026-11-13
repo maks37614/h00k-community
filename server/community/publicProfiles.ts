@@ -250,6 +250,10 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
       lifestyle: c.lifestyleAudience === "public" ? text(c.lifestyle, 2000) : "",
       telegram: c.telegramAudience === "public" && /^https:\/\/t\.me\/[A-Za-z0-9_]+$/.test(c.telegram ?? "") ? c.telegram : "",
       status, statistics, awards,
+      sessions: c.publicSessionsEnabled === true && Array.isArray(c.tradingSessionIds)
+        ? c.tradingSessionIds.filter((value: unknown) => typeof value === "string" &&
+          ["sydney", "tokyo", "london", "new-york"].includes(value)).slice(0, 4)
+        : null,
       avatarUrl: c.avatarAudience === "public" && typeof c.avatarMediaId === "string"
         ? "/api/public/profiles/" + owner.username + "/avatar" : null,
       coverUrl: c.coverAudience === "public" && typeof c.coverMediaId === "string"
@@ -312,7 +316,8 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
     for (const row of rows.slice(0, 20)) {
       if (!(await rules.visible(row)) || (row.chart_id && !(await rules.canReadChart(row.chart_id)))) continue;
       const source = row.body?.sourceItemId ? await rules.item(row.body.sourceItemId) : null;
-      const quoted = source && (await rules.visible(source)) ? text(source.body?.text, 180) : "";
+      const visibleSource = source && (await rules.visible(source)) ? source : null;
+      const quoted = visibleSource ? text(visibleSource.body?.text, 180) : "";
       const reactions = await db.query(
         "SELECT emoji,count(*)::integer AS count FROM hc_reactions WHERE item_id=$1 GROUP BY emoji ORDER BY emoji",
         [row.id],
@@ -323,6 +328,10 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
         author: text(row.author_profile?.displayName, 100) || "Трейдер",
         text: text(row.body?.text, 20_000),
         quote: quoted,
+        // Replies share the post as parent, but quote another comment from this post.
+        // Expose only IDs of visible comment sources on the same public post.
+        replyToId: visibleSource?.kind === "comment" && visibleSource.parent_id === parent.id
+          ? visibleSource.id : null,
         photosCount: Array.isArray(row.body?.photos) ? Math.min(row.body.photos.length, 4) : 0,
         hasChart: Boolean(row.chart_id),
         reactions: reactions.rows,
