@@ -279,7 +279,7 @@ export function PublicProfile() {
       <section className="public-profile-overview public-profile-panel" aria-labelledby="public-profile-overview-title">
         <div className="public-profile-overview-header">
           <div>
-            <span className="public-profile-kicker">ПІДТВЕРДЖЕНІ ДЖЕРЕЛОМ ДАНІ</span>
+            <span className="public-profile-kicker">ІМПОРТОВАНІ ДАНІ БІРЖІ</span>
             <h2 id="public-profile-overview-title"><TrendingUp size={19} aria-hidden="true" /> Трейдерська статистика та результати</h2>
           </div>
           <span className="public-profile-overview-basis">Bybit linear · закриті ордери · доступний період</span>
