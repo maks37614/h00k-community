@@ -449,7 +449,6 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
               recipient={awardRecipient}
               onClear={() => setAwardRecipient(null)}
               onGifted={changed}
-              onFriends={() => setTab("friends")}
             />
             <div className="community-context-card">
               <span className="community-page-kicker">СПІЛЬНОТА</span>
