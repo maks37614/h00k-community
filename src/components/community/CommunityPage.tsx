@@ -466,7 +466,7 @@ function Composer({
     clientId = useRef(crypto.randomUUID());
   return (
     <form
-      className="community-composer"
+      className={"community-composer community-composer-" + target.kind}
       onSubmit={(e) => {
         e.preventDefault();
         setBusy(true);
@@ -649,9 +649,12 @@ function Feed({
     localStorage.setItem("h00k-community-feed:" + user?.uid, mode);
   }, [mode, user?.uid]);
   return (
-    <>
-      <div className="community-section-heading">
-        <h2>Стрічка</h2>
+    <section className="community-feed-view" aria-label="Стрічка спільноти">
+      <div className="community-section-heading community-feed-heading">
+        <div className="community-feed-title">
+          <span className="community-page-kicker">ТРЕЙДЕРСЬКА СПІЛЬНОТА</span>
+          <h2>Стрічка</h2>
+        </div>
         <div className="community-segment">
           <button
             type="button"
@@ -730,7 +733,7 @@ function Feed({
           Завантажити ще
         </button>
       )}
-    </>
+    </section>
   );
 }
 
@@ -767,7 +770,7 @@ function ItemCard({
       ? { kind: "message", conversationId: item.conversation_id }
       : { kind: "comment", parentId: item.id };
   return (
-    <article className="community-card">
+    <article className={"community-card community-post-card" + (item.kind === "message" ? " community-message-card" : "")}>
       <header>
         <button
           type="button"
@@ -1629,8 +1632,13 @@ function Chats({
   }, [id, revision]);
   return (
     <>
-      <h2>Приватні та групові розмови</h2>
-      <details className="community-card">
+      <div className="community-section-heading community-chat-heading">
+        <div>
+          <span className="community-page-kicker">СПІЛКУВАННЯ</span>
+          <h2>Приватні та групові розмови</h2>
+        </div>
+      </div>
+      <details className="community-card community-chat-create">
         <summary>Створити розмову</summary>
         <input
           aria-label="Назва розмови"
@@ -1676,7 +1684,8 @@ function Chats({
         </button>
       </details>
       <div className="community-chat-layout">
-        <aside>
+        <aside className="community-chat-list" aria-label="Список розмов">
+          <h3>Ваші розмови</h3>
           {list.error && <p>{list.error}</p>}
           {list.data?.items?.map((c: any) => (
             <button
@@ -1689,7 +1698,7 @@ function Chats({
             </button>
           ))}
         </aside>
-        <div>
+        <div className="community-chat-panel">
           {id ? (
             <>
               {before && (
@@ -1905,27 +1914,49 @@ function Profile({
   const p = resource.data?.profile;
   return (
     <>
-      <h2>{p?.displayName ?? "Профіль"}</h2>
-      {resource.error && <p>{resource.error}</p>}
+      {resource.error && <p role="status">{resource.error}</p>}
+      {!p && <h2>Профіль трейдера</h2>}
       {p && (
-        <article className="community-card">
-          {p.publicUrl && <p><a href={p.publicUrl} target="_blank" rel="noopener noreferrer">Персональна сторінка ↗</a></p>}
-          <p>{p.bio}</p>
-          {p.status && <p>{p.status.text}</p>}
-          <p>{p.interests}</p>
-          <p>{p.lifestyle}</p>
-          <p>Досягнення участі: {p.points} · це не торговий рейтинг</p>
-          {p.telegram &&
-            /^https:\/\/t\.me\/[A-Za-z0-9_]+$/.test(p.telegram) && (
-              <a href={p.telegram} target="_blank" rel="noopener noreferrer">
-                Telegram-канал ↗
+        <article className="community-card community-profile-hero">
+          <div className="community-profile-cover" aria-hidden="true">
+            <span>h00k Community</span>
+          </div>
+          <div className="community-profile-identity">
+            <span className="community-profile-avatar" aria-hidden="true">
+              {(p.displayName ?? "Т").trim().slice(0, 1).toUpperCase()}
+            </span>
+            <div className="community-profile-heading">
+              <span className="community-page-kicker">ПРОФІЛЬ ТРЕЙДЕРА</span>
+              <h2>{p.displayName ?? "Трейдер"}</h2>
+              {p.status?.text && <p className="community-profile-status">{p.status.text}</p>}
+            </div>
+            {p.publicUrl && (
+              <a className="community-profile-link" href={p.publicUrl} target="_blank" rel="noopener noreferrer">
+                Персональна сторінка ↗
               </a>
             )}
+          </div>
+          <div className="community-profile-description">
+            {p.bio && <p className="community-profile-bio">{p.bio}</p>}
+            {p.interests && <p><b>Інтереси:</b> {p.interests}</p>}
+            {p.lifestyle && <p><b>Про себе:</b> {p.lifestyle}</p>}
+            <div className="community-profile-meta">
+              {typeof p.points === "number" && (
+                <span>Досягнення участі: {p.points} · не торговий рейтинг</span>
+              )}
+              {p.telegram &&
+                /^https:\/\/t\.me\/[A-Za-z0-9_]+$/.test(p.telegram) && (
+                  <a href={p.telegram} target="_blank" rel="noopener noreferrer">
+                    Telegram-канал ↗
+                  </a>
+                )}
+            </div>
+          </div>
         </article>
       )}
       {id === user?.uid && (
         <form
-          className="community-card community-form"
+          className="community-card community-form community-profile-editor"
           onSubmit={(e) => {
             e.preventDefault();
             void run(async () => {
@@ -2007,7 +2038,10 @@ function Profile({
       </button>
       {id === user?.uid && <PublicProfileSettings />}
       {showTrades && <Trades owner={id} run={run} />}
-      <h3>Стіна</h3>
+      <div className="community-profile-wall">
+        <div className="community-section-heading">
+          <h3>Стіна</h3>
+        </div>
       {id === user?.uid && (
         <Composer
           target={{ kind: "post" }}
@@ -2028,6 +2062,7 @@ function Profile({
             refresh={wall.refresh}
           />
         ))}
+      </div>
     </>
   );
 }
