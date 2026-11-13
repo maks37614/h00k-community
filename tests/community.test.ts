@@ -331,3 +331,27 @@ test('categorized public feed and real award spending preserve ownership and pri
   const notice = await call(api + '/notifications', eve);
   assert.ok(notice.data.items.some((item: any) => item.type === 'award' && item.body.awardType === 'thanks'));
 });
+
+
+test('bookmarks persist per user, toggle and never disclose private posts', async () => {
+  const article = await call(api + '/items', eve, 'POST', {
+    kind: 'post', audience: 'public', body: { text: 'Торговий приклад для закладки', category: 'analysis' },
+  });
+  assert.equal(article.res.status, 201, JSON.stringify(article.data));
+  const save = await call(api + '/items/' + article.data.id + '/save', alice, 'POST', {});
+  assert.equal(save.res.status, 200, JSON.stringify(save.data));
+  assert.equal(save.data.saved, true);
+  const ownSaved = await call(api + '/saved', alice);
+  assert.equal(ownSaved.res.status, 200);
+  assert.ok(ownSaved.data.items.some((item: any) => item.id === article.data.id && item.saved === true));
+  assert.ok(!(await call(api + '/saved', bob)).data.items.some((item: any) => item.id === article.data.id));
+  const remove = await call(api + '/items/' + article.data.id + '/save', alice, 'POST', {});
+  assert.equal(remove.data.saved, false);
+  assert.ok(!(await call(api + '/saved', alice)).data.items.some((item: any) => item.id === article.data.id));
+
+  const secret = await call(api + '/items', eve, 'POST', {
+    kind: 'post', audience: 'private', body: { text: 'Приватні матеріали' },
+  });
+  assert.equal(secret.res.status, 201);
+  assert.equal((await call(api + '/items/' + secret.data.id + '/save', alice, 'POST', {})).res.status, 404);
+});
