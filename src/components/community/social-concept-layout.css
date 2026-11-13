@@ -220,7 +220,7 @@
 
 /* Public /u/ deep links may open a profile at its real contact actions.
    Focus is a navigation affordance, never an automatic friend request or DM. */
-.community-workspace .community-profile-contact-highlight {
+.community-workspace .community-profile-connect[data-contact-focus="true"] {
   scroll-margin-top: 30px;
   border-color: #26958b;
   box-shadow: 0 0 0 1px #1d6e69, 0 0 18px #0cd5be1a;
