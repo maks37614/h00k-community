@@ -1,0 +1,139 @@
+/* Attached photos remain backed by the same authenticated Community media API. */
+.community-workspace .community-photo-gallery {
+  min-width: 0;
+}
+.community-workspace .community-photo-gallery .community-photo-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.community-workspace .community-photo-gallery-thumb {
+  position: relative;
+  display: block;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  width: clamp(82px, 15vw, 146px);
+  aspect-ratio: 4 / 3;
+  border: 1px solid #2b4e5c;
+  border-radius: 11px;
+  background: #091727;
+  cursor: zoom-in;
+}
+.community-workspace .community-photo-gallery-thumb:hover,
+.community-workspace .community-photo-gallery-thumb:focus-visible {
+  border-color: #20d6b6;
+  outline: 2px solid #20d6b655;
+}
+.community-workspace .community-photo-gallery-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.community-workspace .community-photo-dialog {
+  position: fixed;
+  inset: 0;
+  width: min(1000px, calc(100vw - 24px));
+  max-width: 1000px;
+  max-height: min(94dvh, 950px);
+  margin: auto;
+  padding: 0;
+  color: #e8f7fc;
+  border: 1px solid #36776d;
+  border-radius: 16px;
+  background: #0a1422;
+  box-shadow: 0 30px 70px #000b;
+}
+.community-workspace .community-photo-dialog::backdrop {
+  background: rgba(2, 8, 16, .85);
+  backdrop-filter: blur(5px);
+}
+.community-workspace .community-photo-dialog-content {
+  display: grid;
+  grid-template-rows: auto minmax(0,1fr) auto;
+  height: min(94dvh, 900px);
+  min-height: 220px;
+}
+.community-workspace .community-photo-dialog-header,
+.community-workspace .community-photo-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  color: #c5deea;
+  background: #0d1c2b;
+  font-size: 12px;
+}
+.community-workspace .community-photo-dialog-header {
+  border-bottom: 1px solid #28475a;
+}
+.community-workspace .community-photo-dialog-header button,
+.community-workspace .community-photo-dialog-footer button,
+.community-workspace .community-photo-dialog-footer a {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid #295658;
+  border-radius: 10px;
+  color: #bffceb;
+  background: #14352f;
+  text-decoration: none;
+  font-weight: 650;
+  cursor: pointer;
+}
+.community-workspace .community-photo-dialog-header button:focus-visible,
+.community-workspace .community-photo-dialog-footer button:focus-visible {
+  outline: 2px solid #2bf3cd;
+  outline-offset: 2px;
+}
+.community-workspace .community-photo-dialog-image {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px;
+  background: #07101d;
+}
+.community-workspace .community-photo-dialog-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+.community-workspace .community-photo-dialog-footer {
+  border-top: 1px solid #28475a;
+}
+.community-workspace .community-photo-dialog-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .community-workspace .community-photo-dialog {
+    width: calc(100vw - 12px);
+    max-height: 96dvh;
+    border-radius: 12px;
+  }
+  .community-workspace .community-photo-dialog-content {
+    height: 92dvh;
+  }
+  .community-workspace .community-photo-dialog-header,
+  .community-workspace .community-photo-dialog-footer {
+    padding: 8px;
+  }
+  .community-workspace .community-photo-dialog-footer a {
+    padding: 8px;
+    font-size: 12px;
+  }
+  .community-workspace .community-photo-gallery-thumb {
+    width: clamp(90px, 28vw, 126px);
+  }
+}
