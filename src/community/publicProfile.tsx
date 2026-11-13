@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   ArrowUpRight, Award, BookOpenText, CalendarDays, Check, Copy, MessageCircle,
   ShieldCheck, TrendingUp, UsersRound, UserPlus, ChartNoAxesCombined,
-  Globe2, Sparkles, Layers3, Lightbulb, GraduationCap,
+  Globe2, Sparkles, Layers3, Lightbulb, GraduationCap, Trophy, Star,
 } from "lucide-react";
 import { ChartPreview } from "../components/community/ChartPreview";
 import type { ChartDocument } from "./chartDocument";
@@ -43,6 +43,7 @@ type PublicTrader = {
   avatarUrl: string | null;
   coverUrl: string | null;
   statistics: PublicStats | null;
+  awards: { received: number; thanks: number; analysis: number; topTrader: number } | null;
 };
 type PublicPost = {
   id: string;
@@ -517,10 +518,26 @@ export function PublicProfile() {
             <span className="public-profile-achievement-icon"><UsersRound size={23} aria-hidden="true" /></span>
             <div><strong>Учасник Community</strong><small>Дата приєднання: {profileJoinDate}</small></div>
           </div>}
-          <div className="public-profile-achievement-empty">
-            <Award size={20} aria-hidden="true" />
-            <span>Підтверджені нагороди й торгові відзнаки ще не опубліковані. Бейджі не вигадуються на підставі PnL чи активності.</span>
-          </div>
+          {profile.awards ? (
+            <div className="public-profile-awards-summary">
+              <div className="public-profile-awards-total">
+                <Trophy size={25} aria-hidden="true" />
+                <strong>{profile.awards.received}</strong>
+                <span>Отримано нагород</span>
+              </div>
+              <div className="public-profile-awards-breakdown">
+                <span><Trophy size={15} aria-hidden="true" /> Подяка <strong>{profile.awards.thanks}</strong></span>
+                <span><Star size={15} aria-hidden="true" /> Крутий аналіз <strong>{profile.awards.analysis}</strong></span>
+                <span><Award size={15} aria-hidden="true" /> Топ трейдер <strong>{profile.awards.topTrader}</strong></span>
+              </div>
+              <small>Підтверджені подарунки Community. Автор добровільно відкрив лише сукупні кількості.</small>
+            </div>
+          ) : (
+            <div className="public-profile-achievement-empty">
+              <Award size={20} aria-hidden="true" />
+              <span>Підтверджені нагороди ще не опубліковані для гостей. Власник може окремо увімкнути їх показ у налаштуваннях.</span>
+            </div>
+          )}
         </div>
       </section>
 
