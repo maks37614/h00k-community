@@ -583,3 +583,31 @@ test('social notices are real, deduplicated, private and limited to public discu
   assert.ok((await call(api + '/notifications', ihor)).data.items.find(
     (entry: any) => entry.id === recipientReply[0].id).read_at);
 });
+
+test('Community inbox preferences persist per-account without leaking to another profile', async () => {
+  const original = await call('/api/account/me', alice);
+  assert.equal(original.res.status, 200);
+  const updated = await call('/api/account/profile', alice, 'PATCH', {
+    community: { notificationChatInbox: false, notificationSocialInbox: false },
+  });
+  assert.equal(updated.res.status, 200, JSON.stringify(updated.data));
+  assert.equal(updated.data.profile.community.notificationChatInbox, false);
+  assert.equal(updated.data.profile.community.notificationSocialInbox, false);
+  const persisted = await call('/api/account/me', alice);
+  assert.equal(persisted.data.profile.community.notificationChatInbox, false);
+  assert.equal(persisted.data.profile.community.notificationSocialInbox, false);
+  const other = await call('/api/account/me', bob);
+  assert.notEqual(other.data.profile?.community?.notificationChatInbox, false);
+  assert.notEqual(other.data.profile?.community?.notificationSocialInbox, false);
+  for (const field of ['notificationChatInbox', 'notificationSocialInbox']) {
+    const rejected = await call('/api/account/profile', alice, 'PATCH', {
+      community: { [field]: 'false' },
+    });
+    assert.equal(rejected.res.status, 400, field);
+  }
+  const enabled = await call('/api/account/profile', alice, 'PATCH', {
+    community: { notificationChatInbox: true, notificationSocialInbox: true },
+  });
+  assert.equal(enabled.res.status, 200);
+  assert.equal((await call('/api/account/me', alice)).data.profile.community.notificationChatInbox, true);
+});
