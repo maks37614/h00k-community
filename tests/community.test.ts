@@ -288,3 +288,46 @@ test('native email verification and password recovery preserve MFA and revoke ol
   assert.equal((await call('/api/account/me',actor)).data.user,null);
   assert.equal((await call('/api/account/reset',undefined,'POST',{token,password:'another long password for test',code:nextCode()})).res.status,400);
 });
+
+
+test('categorized public feed and real award spending preserve ownership and privacy', async () => {
+  const idea = await call(api + '/items', eve, 'POST', {
+    kind: 'post', audience: 'public', body: { text: 'Перевірка категорії ідеї', category: 'idea' },
+  });
+  assert.equal(idea.res.status, 201, JSON.stringify(idea.data));
+  const ideaFeed = await call(api + '/feed?mode=public&category=idea', bob);
+  assert.equal(ideaFeed.res.status, 200);
+  assert.ok(ideaFeed.data.items.some((item: any) => item.id === idea.data.id));
+  const lessons = await call(api + '/feed?mode=public&category=education', bob);
+  assert.equal(lessons.res.status, 200);
+  assert.ok(!lessons.data.items.some((item: any) => item.id === idea.data.id));
+  assert.equal((await call(api + '/feed?category=wrong', alice)).res.status, 400);
+
+  const creditKey = 'gift-test:' + randomUUID();
+  await db.query(
+    'INSERT INTO hc_reputation(owner_id,event_key,points,reason) VALUES($1,$2,$3,$4)',
+    [alice.id, creditKey, 125, 'Award integration test'],
+  );
+  const before = await call(api + '/awards', alice);
+  assert.equal(before.res.status, 200);
+  assert.ok(before.data.balance >= 125);
+  assert.equal((await call(api + '/awards', alice, 'POST', {
+    recipientId: alice.id, awardType: 'thanks',
+  })).res.status, 403);
+  assert.equal((await call(api + '/awards', alice, 'POST', {
+    recipientId: bob.id, awardType: 'unknown',
+  })).res.status, 400);
+
+  const recipientBefore = await call(api + '/awards', bob);
+  const send = await call(api + '/awards', alice, 'POST', {
+    recipientId: bob.id, awardType: 'thanks',
+  });
+  assert.equal(send.res.status, 201, JSON.stringify(send.data));
+  const after = await call(api + '/awards', alice);
+  assert.equal(after.data.balance, before.data.balance - 20);
+  assert.equal(after.data.gifted, before.data.gifted + 1);
+  const recipientAfter = await call(api + '/awards', bob);
+  assert.equal(recipientAfter.data.received, recipientBefore.data.received + 1);
+  const notice = await call(api + '/notifications', bob);
+  assert.ok(notice.data.items.some((item: any) => item.type === 'award' && item.body.awardType === 'thanks'));
+});
