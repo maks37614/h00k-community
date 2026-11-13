@@ -1,0 +1,115 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import {
+  describeCommunityNotice,
+  filterCommunityNotices,
+  safeNoticeDate,
+  unreadNoticeCount,
+  type CommunityNotice,
+} from "../src/components/community/notificationModel";
+
+const alerts: CommunityNotice[] = [
+  {
+    id: "first",
+    type: "risk",
+    created_at: "2026-11-13T08:00:00Z",
+    read_at: null,
+    body: { window: "daily", used: "150", limit: "100", currency: "USDT" },
+  },
+  {
+    id: "second",
+    type: "security",
+    created_at: "2026-11-12T08:00:00Z",
+    read_at: "2026-11-12T09:00:00Z",
+    body: { text: "Перевірте доступ до акаунта." },
+  },
+  {
+    id: "third",
+    type: "update",
+    created_at: "not-a-date",
+    read_at: null,
+    body: { text: "Доступно нове повідомлення." },
+  },
+];
+
+test("personal inbox separates unread and read entries without mutating the server list", () => {
+  const original = alerts.slice();
+  assert.equal(unreadNoticeCount(alerts), 2);
+  assert.deepEqual(filterCommunityNotices(alerts, "unread").map((n) => n.id), ["first", "third"]);
+  assert.deepEqual(filterCommunityNotices(alerts, "all").map((n) => n.id), ["first", "second", "third"]);
+  assert.deepEqual(alerts, original);
+  assert.equal(unreadNoticeCount([]), 0);
+});
+
+test("risk events explain the actual personal limit, without promising exchange order blocking", () => {
+  const detail = describeCommunityNotice(alerts[0]);
+  assert.equal(detail.title, "Особистий ліміт збитку");
+  assert.equal(detail.isImportant, true);
+  assert.match(detail.description, /150 \/ 100 USDT/);
+  assert.match(detail.description, /не зупиняє торгівлю/);
+  const missing = describeCommunityNotice({
+    id: "no-details", type: "risk", created_at: "2026-11-13", body: null,
+  });
+  assert.match(missing.description, /Перевірте ліміти ризику/);
+});
+
+test("security and unknown events display only server-delivered user content", () => {
+  const security = describeCommunityNotice(alerts[1]);
+  assert.equal(security.title, "Безпека акаунта");
+  assert.equal(security.isImportant, true);
+  assert.equal(security.description, "Перевірте доступ до акаунта.");
+  const generic = describeCommunityNotice(alerts[2]);
+  assert.equal(generic.title, "Подія Community");
+  assert.equal(generic.description, "Доступно нове повідомлення.");
+  const malformed = describeCommunityNotice({
+    id: "bad", type: "other", created_at: "", body: { text: { secret: "hidden" } },
+  });
+  assert.equal(malformed.description, "Нове сповіщення у вашій спільноті.");
+});
+
+test("dates do not crash the inbox for malformed timestamps", () => {
+  assert.equal(safeNoticeDate("invalid"), "Час невідомий");
+  assert.notEqual(safeNoticeDate("2026-11-13T10:00:00Z"), "Час невідомий");
+});
+
+test("notification inbox is an on-demand authenticated UI and uses existing personal API", () => {
+  const component = readFileSync(
+    new URL("../src/components/community/CommunityNotificationCenter.tsx", import.meta.url),
+    "utf8",
+  );
+  const page = readFileSync(
+    new URL("../src/components/community/CommunityPage.tsx", import.meta.url),
+    "utf8",
+  );
+  const backend = readFileSync(
+    new URL("../server/community/routes.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(component, /apiJson\("\/api\/community\/notifications"\)/);
+  assert.match(component, /onClick=\{toggle\}/);
+  assert.match(component, /void refresh\(\)/);
+  assert.match(component, /filterCommunityNotices\(items, filter\)/);
+  assert.match(component, /aria-pressed=\{filter === "unread"\}/);
+  assert.match(component, /apiJson\("\/api\/community\/notifications\/" \+ encodeURIComponent\(id\) \+ "\/read"/);
+  assert.match(component, /method: "POST"/);
+  assert.match(component, /await apiJson\(/);
+  assert.match(component, /setItems\(\(old\) =>/);
+  assert.doesNotMatch(component, /setInterval\(|setTimeout\(|MOCK_NOTIFICATIONS|INITIAL_NOTICES/);
+  assert.match(page, /<CommunityNotificationCenter/);
+  assert.match(page, /key=\{user\.uid\}/);
+  assert.match(backend, /SELECT \* FROM hc_notifications WHERE owner_id=\$1/);
+  assert.match(backend, /UPDATE hc_notifications SET read_at=now\(\) WHERE id=\$1 AND owner_id=\$2/);
+});
+
+test("mobile and desktop notification panel is scoped to Community", () => {
+  const css = readFileSync(
+    new URL("../src/components/community/social-notification-center.css", import.meta.url),
+    "utf8",
+  );
+  assert.match(css, /\.community-workspace \.community-notification-panel/);
+  assert.match(css, /max-height: min\(74dvh, 680px\)/);
+  assert.match(css, /@media \(max-width: 700px\)/);
+  assert.match(css, /\.community-workspace \.community-notification-count/);
+  assert.doesNotMatch(css, /^(?:html|body|\*)\s*\{/m);
+});
