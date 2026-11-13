@@ -1,0 +1,335 @@
+/* Community social design — only the friends and settings views.
+   Existing routes, privacy enforcement and data stay unchanged. */
+
+.community-workspace .community-friends-view,
+.community-workspace .community-settings-view {
+  min-width: 0;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.community-workspace .community-friends-heading,
+.community-workspace .community-settings-heading {
+  margin: 0 0 18px;
+  padding: 4px 1px 17px;
+  border-bottom: 1px solid #23364b;
+}
+
+.community-workspace .community-friends-heading h2,
+.community-workspace .community-settings-heading h2 {
+  margin: 5px 0 6px;
+  color: #f2f7ff;
+  font-size: clamp(23px, 2.4vw, 30px);
+  letter-spacing: -.025em;
+}
+
+.community-workspace .community-friends-heading p,
+.community-workspace .community-settings-heading p {
+  max-width: 730px;
+  margin: 0;
+  color: #9bacbf;
+  font-size: 13px;
+}
+
+.community-workspace .community-friends-search {
+  margin: 0 0 16px;
+  padding: 17px;
+  border: 1px solid #244b4e;
+  border-radius: 17px;
+  background: linear-gradient(135deg, #102928, #0e1828 70%);
+}
+
+.community-workspace .community-friends-search > label {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 12px;
+  font-weight: 750;
+  color: #ccf8eb;
+}
+
+.community-workspace .community-friends-search-row {
+  display: flex;
+  align-items: stretch;
+  gap: 9px;
+  min-width: 0;
+}
+
+.community-workspace .community-friends-search-row input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding-inline: 14px;
+  border-radius: 11px;
+  font-size: 16px;
+}
+
+.community-workspace .community-friends-search-row button {
+  flex: 0 0 auto;
+  padding-inline: 17px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.community-workspace .community-friends-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 4px;
+  margin-bottom: 14px;
+}
+
+.community-workspace .community-friends-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid #273a51;
+  border-radius: 11px;
+  background: #101e30;
+  color: #b4c6dc;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.community-workspace .community-friends-tabs button[aria-pressed="true"] {
+  border-color: #229688;
+  background: #12443f;
+  color: #b7fff2;
+}
+
+.community-workspace .community-friends-tabs button span {
+  min-width: 20px;
+  padding: 2px 6px;
+  border-radius: 7px;
+  background: #233749;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  text-align: center;
+}
+
+.community-workspace .community-friends-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 12px;
+}
+
+.community-workspace .community-friend-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border-color: #23354e;
+  background: linear-gradient(145deg, #111d2e, #0c1726);
+  border-radius: 17px;
+}
+
+.community-workspace .community-friend-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding-bottom: 15px;
+}
+
+.community-workspace .community-friend-identity > div {
+  min-width: 0;
+}
+
+.community-workspace .community-friend-avatar {
+  flex: 0 0 49px;
+  display: grid;
+  place-items: center;
+  width: 49px;
+  height: 49px;
+  border: 1px solid #1c8b7f;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #13786e, #1c3e60);
+  color: #eafff8;
+  font-size: 20px;
+  font-weight: 850;
+}
+
+.community-workspace .community-friend-name {
+  display: block;
+  margin: 0 0 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #f0f7ff;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.community-workspace .community-friend-name:hover {
+  background: transparent;
+  color: #8bf9df;
+  text-decoration: underline;
+}
+
+.community-workspace .community-friend-state {
+  display: inline-flex;
+  max-width: 100%;
+  border: 1px solid #355069;
+  border-radius: 8px;
+  padding: 3px 8px;
+  color: #b6c5d8;
+  background: #1a2b41;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.community-workspace .community-friend-state-accepted {
+  color: #aaf7e7;
+  border-color: #286961;
+  background: #10362f;
+}
+
+.community-workspace .community-friend-state-incoming {
+  color: #ffdea7;
+  border-color: #71512d;
+  background: #3e2e1c;
+}
+
+.community-workspace .community-friend-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #203348;
+}
+
+.community-workspace .community-friend-actions button {
+  flex: 1 0 auto;
+  min-height: 40px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.community-workspace .community-friend-actions .community-friend-block {
+  flex: 0 0 auto;
+  color: #e1acb5;
+  border-color: #513b4c;
+  background: #281c2c;
+}
+
+.community-workspace .community-friend-actions .community-friend-block:hover {
+  background: #493042;
+}
+
+.community-workspace .community-friends-empty {
+  margin: 16px 0;
+}
+
+.community-workspace .community-friends-hint {
+  margin-top: 18px;
+  border: 1px solid #244351;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #10202c;
+  color: #a7bdcc;
+}
+
+.community-workspace .community-settings-view > .community-card,
+.community-workspace .community-settings-view > .community-form {
+  border-color: #23364c;
+  border-radius: 18px;
+  background: #0e1727;
+}
+
+.community-workspace .community-settings-view > .community-card h3,
+.community-workspace .community-settings-view > .community-form h3 {
+  color: #e7f7ff;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #24394d;
+  font-size: 17px;
+}
+
+.community-workspace .community-settings-intro {
+  border-color: #2c5b5d !important;
+  background: linear-gradient(135deg, #102d2d, #101a2a 75%) !important;
+}
+
+.community-workspace .community-settings-intro h3 {
+  color: #9bf3df !important;
+}
+
+.community-workspace .community-settings-view input:not([type="checkbox"]),
+.community-workspace .community-settings-view textarea,
+.community-workspace .community-settings-view select {
+  min-height: 43px;
+  border-color: #334960;
+  border-radius: 10px;
+  background: #091323;
+}
+
+.community-workspace .community-settings-view button {
+  min-height: 38px;
+  border-radius: 10px;
+}
+
+.community-workspace .community-settings-view .community-privacy-row {
+  gap: 9px;
+  border-bottom: 1px solid #1d2b41;
+  padding: 12px 0;
+}
+
+.community-workspace .community-settings-privacy .community-privacy-row:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 700px) {
+  .community-workspace .community-friends-search {
+    padding: 13px;
+  }
+
+  .community-workspace .community-friends-search-row {
+    flex-wrap: wrap;
+  }
+
+  .community-workspace .community-friends-search-row input {
+    flex: 1 0 100%;
+    font-size: 16px; /* prevents iOS Safari focus zoom */
+  }
+
+  .community-workspace .community-friends-search-row button {
+    flex: 1 1 auto;
+    min-height: 42px;
+  }
+
+  .community-workspace .community-friends-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .community-workspace .community-friends-tabs button {
+    flex: 0 0 auto;
+  }
+
+  .community-workspace .community-friend-card {
+    padding: 14px;
+  }
+
+  .community-workspace .community-settings-view input:not([type="checkbox"]),
+  .community-workspace .community-settings-view textarea,
+  .community-workspace .community-settings-view select {
+    font-size: 16px; /* prevent unwanted page zoom on iOS */
+  }
+
+  .community-workspace .community-settings-view .community-privacy-row {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
