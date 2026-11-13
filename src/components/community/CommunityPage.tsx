@@ -100,7 +100,10 @@ function Audience({
       id={id}
       aria-label="Аудиторія"
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => {
+        const next = e.target.value;
+        if (next === "private" || next === "friends" || next === "public") onChange(next);
+      }}
     >
       {allowedValues.map((scope) => (
         <option key={scope} value={scope}>{labels[scope]}</option>
