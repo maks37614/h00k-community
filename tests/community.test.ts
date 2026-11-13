@@ -369,6 +369,76 @@ test('muting a conversation is private, reversible, and never clears its unread 
   assert.equal((await call(api + '/conversations/unread', bob)).data.unread, before);
 });
 
+test('timed mute expires automatically for one member and restores alerts without clearing unread', async () => {
+  // Reuse the authenticated direct chat from the preceding mute test.
+  // Do not exhaust the production-like conversation creation rate limit.
+  const existing = await db.query(
+    "SELECT id FROM hc_conversations WHERE owner_id=$1 AND title=$2 LIMIT 1",
+    [alice.id, 'Діалог без звуку'],
+  );
+  assert.ok(existing.rows[0]?.id, 'a real previous conversation is available');
+  const id = existing.rows[0].id;
+  const message = await call(api + '/items', alice, 'POST', {
+    kind: 'message', conversationId: id, body: { text: 'Залишається непрочитаним' },
+  });
+  assert.equal(message.res.status, 201);
+  const summary = async (actor: Actor) =>
+    (await call(api + '/conversations', actor)).data.items.find((c: any) => c.id === id);
+  const baseline = (await call(api + '/conversations/unread', bob)).data.unread;
+  assert.equal((await summary(bob)).unread_count, 1);
+  assert.equal((await call(api + '/conversations/' + id + '/mute', eve, 'POST', {
+    muted: true, durationMinutes: 60,
+  })).res.status, 404);
+  for (const invalid of [0,30,61,481,-60,1.5,'60',null]) {
+    assert.equal((await call(api + '/conversations/' + id + '/mute', bob, 'POST', {
+      muted: true, durationMinutes: invalid,
+    })).res.status, 400, 'invalid duration ' + String(invalid));
+  }
+  assert.equal((await call(api + '/conversations/' + id + '/mute', bob, 'POST', {
+    muted: false, durationMinutes: 60,
+  })).res.status, 400);
+  const before = Date.now();
+  const hour = await call(api + '/conversations/' + id + '/mute', bob, 'POST', {
+    muted: true, durationMinutes: 60,
+  });
+  assert.equal(hour.res.status, 200, JSON.stringify(hour.data));
+  assert.equal(hour.data.muted, true);
+  assert.ok(new Date(hour.data.muted_until).getTime() >= before + 59 * 60_000);
+  assert.ok(new Date(hour.data.muted_until).getTime() <= Date.now() + 61 * 60_000);
+  assert.equal((await summary(bob)).muted, true);
+  assert.equal((await summary(bob)).unread_count, 1);
+  assert.equal((await summary(alice)).muted, false, 'another group member is never muted');
+  assert.equal((await call(api + '/conversations/unread', bob)).data.unread, baseline - 1);
+
+  const eightHours = await call(api + '/conversations/' + id + '/mute', bob, 'POST', {
+    muted: true, durationMinutes: 480,
+  });
+  assert.equal(eightHours.res.status, 200);
+  assert.ok(new Date(eightHours.data.muted_until).getTime() >= before + 479 * 60_000);
+  assert.equal((await call(api + '/conversations/unread', bob)).data.unread, baseline - 1);
+
+  // Simulate wall-clock expiry without a background worker or time.sleep.
+  await db.query(
+    "UPDATE hc_members SET muted_until=NOW()-INTERVAL '1 second' WHERE conversation_id=$1 AND user_id=$2",
+    [id,bob.id],
+  );
+  assert.equal((await summary(bob)).muted, false);
+  assert.equal((await summary(bob)).unread_count, 1);
+  assert.equal((await call(api + '/conversations/unread', bob)).data.unread, baseline);
+
+  const indefinite = await call(api + '/conversations/' + id + '/mute', bob, 'POST', { muted: true });
+  assert.equal(indefinite.res.status, 200);
+  assert.equal(indefinite.data.muted, true);
+  assert.equal(indefinite.data.muted_until, null);
+  assert.equal((await summary(bob)).muted, true);
+  const reset = await call(api + '/conversations/' + id + '/mute', bob, 'POST', { muted: false });
+  assert.equal(reset.res.status, 200);
+  assert.equal(reset.data.muted, false);
+  assert.equal(reset.data.muted_until, null);
+  assert.equal((await summary(bob)).unread_count, 1);
+  assert.equal((await call(api + '/conversations/unread', bob)).data.unread, baseline);
+});
+
 test('group membership, message idempotence and block policy apply to direct links too',async()=>{
   await call(api+'/friends/'+bob.id,alice,'POST',{});await call(api+'/friends/'+alice.id,bob,'POST',{});
   const group=await call(api+'/conversations',alice,'POST',{title:'Спільний тест',members:[bob.id]});assert.equal(group.res.status,201,JSON.stringify(group.data));const conversationId=group.data.id;

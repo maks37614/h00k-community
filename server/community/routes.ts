@@ -606,7 +606,9 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
          SELECT 1 FROM hc_members m
          LEFT JOIN hc_items marker ON marker.id=m.last_read_message_id AND marker.conversation_id=m.conversation_id
          JOIN hc_items msg ON msg.conversation_id=m.conversation_id
-         WHERE m.user_id=$1 AND NOT m.muted AND ${unreadPredicate} LIMIT 100
+         WHERE m.user_id=$1 AND NOT m.muted
+           AND (m.muted_until IS NULL OR m.muted_until<=NOW())
+           AND ${unreadPredicate} LIMIT 100
        ) notices`,
       [a.id],
     );
@@ -614,7 +616,9 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
   });
   route("get", "/conversations", async (_req, res, db, a) => {
     const { rows } = await db.query(
-      `SELECT c.*,m.role,m.muted,
+      `SELECT c.*,m.role,
+        (m.muted OR COALESCE(m.muted_until>NOW(),false)) AS muted,
+        m.muted_until,
         CASE WHEN c.is_group THEN NULL ELSE (
           SELECT COALESCE(NULLIF(peer.profile->>'displayName',''),'Трейдер')
           FROM hc_members others JOIN hc_users peer ON peer.id=others.user_id
@@ -737,13 +741,22 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
     const id = uuid(req.params.id);
     if (typeof req.body?.muted !== "boolean")
       fail("Оберіть, чи приглушити сповіщення розмови");
+    const duration = req.body.durationMinutes;
+    if (duration !== undefined && (req.body.muted !== true ||
+      !Number.isInteger(duration) || ![60,480].includes(duration)))
+      fail("Дозволено приглушити на 1 або 8 годин");
+    const permanently = req.body.muted === true && duration === undefined;
     const { rows } = await db.query(
-      `UPDATE hc_members SET muted=$3
-       WHERE conversation_id=$1 AND user_id=$2 RETURNING muted`,
-      [id,a.id,req.body.muted],
+      `UPDATE hc_members
+       SET muted=$3,
+           muted_until=CASE WHEN $4::integer IS NULL THEN NULL
+             ELSE NOW() + ($4::integer * INTERVAL '1 minute') END
+       WHERE conversation_id=$1 AND user_id=$2
+       RETURNING (muted OR COALESCE(muted_until>NOW(),false)) AS muted,muted_until`,
+      [id,a.id,permanently,duration ?? null],
     );
     if (!rows.length) fail("Розмова недоступна", 404);
-    res.json({ success: true, muted: rows[0].muted });
+    res.json({ success: true, muted: rows[0].muted, muted_until: rows[0].muted_until });
   }, 30);
   route("get", "/conversations/:id/members", async (req, res, db, _a, p) => {
     const id = uuid(req.params.id);
