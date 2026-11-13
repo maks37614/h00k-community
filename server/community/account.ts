@@ -499,6 +499,10 @@ export function installAccountRoutes(
         if (typeof raw.publicProfileEnabled !== "boolean") fail("Некоректна видимість профілю");
         clean.publicProfileEnabled = raw.publicProfileEnabled;
       }
+      if (raw.publicAwardsEnabled !== undefined) {
+        if (typeof raw.publicAwardsEnabled !== "boolean") fail("Некоректна видимість нагород");
+        clean.publicAwardsEnabled = raw.publicAwardsEnabled;
+      }
       if (raw.status !== undefined) {
         if (
           !raw.status ||
