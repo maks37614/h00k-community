@@ -342,6 +342,9 @@ test("public /u/ avatar and cover require same-owner media and explicit public c
   assert.equal(avatarImage.res.headers.get("cache-control"), "private, no-store");
   assert.equal(avatarImage.res.headers.getSetCookie().length, 0);
   assert.equal((await call(prefix + "/cover")).res.status, 200);
+  const withCover = await call("/u/portrait-owner");
+  assert.match(withCover.text, /property="og:image" content="https:\/\/portrait-owner.h00k.test\/api\/public\/profiles\/portrait-owner\/cover"/);
+  assert.match(withCover.text, /name="twitter:card" content="summary_large_image"/);
   assert.equal((await call(prefix + "/avatar", undefined, "GET", undefined, {
     Host: "portrait-owner.h00k.test",
   })).res.status, 200);
@@ -349,9 +352,11 @@ test("public /u/ avatar and cover require same-owner media and explicit public c
   await call("/api/account/profile", owner, "PATCH", { community: { coverAudience: "private" } });
   assert.equal((await call(prefix + "/cover")).res.status, 404);
   assert.equal((await call(prefix + "/avatar")).res.status, 200);
+  assert.match((await call("/u/portrait-owner")).text, /property="og:image" content="https:\/\/portrait-owner.h00k.test\/api\/public\/profiles\/portrait-owner\/avatar"/);
 
   await call("/api/account/profile", owner, "PATCH", { community: { avatarMediaId: null } });
   assert.equal((await call(prefix + "/avatar")).res.status, 404);
+  assert.doesNotMatch((await call("/u/portrait-owner")).text, /property="og:image"/);
 
   await call("/api/account/profile", owner, "PATCH", { community: { coverAudience: "public" } });
   await enable(owner, { publicProfileEnabled: false });
