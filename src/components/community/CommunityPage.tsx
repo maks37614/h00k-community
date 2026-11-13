@@ -44,6 +44,7 @@ import { canSendCommunityContent, communityAudienceHint, validateCommunityPhoto,
 import "./social-composer-posts.css";
 import "./social-profile-actions.css";
 import "./social-profile-tabs.css";
+import "./social-resource-library.css";
 const SharedHookChart = lazy(() => import("./SharedHookChart"));
 type Tab =
   | "feed"
