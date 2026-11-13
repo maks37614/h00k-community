@@ -48,7 +48,7 @@ import { CommunityPhotoGallery } from "./CommunityPhotoGallery";
 import "./community.css";
 import "./social-friends-settings.css";
 import "./social-chat-workspace.css";
-import { filterConversations } from "./chatModel";
+import { filterConversations, conversationDisplayTitle } from "./chatModel";
 import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from "./friendsModel";
 import { canSendCommunityContent, communityAudienceHint, validateCommunityPhoto, MAX_COMMUNITY_PHOTOS } from "./composerPolicy";
 import { canShareReplyWithAudience, normalizeReplyAudience, replyAudienceOptions, replyBody, replyPreviewText, type ReplySource, type CommentAudience } from "./commentReplyModel";
@@ -2151,8 +2151,7 @@ function Chats({
   const conversations: any[] = Array.isArray(list.data?.items) ? list.data.items : [];
   const filteredConversations = filterConversations(conversations, chatSearch);
   const currentConversation = conversations.find((c) => c.id === id);
-  const currentTitle = currentConversation?.title ||
-    (currentConversation?.is_group ? "Групова розмова" : "Особистий діалог");
+  const currentTitle = conversationDisplayTitle(currentConversation);
   const myRole = currentConversation?.role as "owner" | "admin" | "member" | undefined;
   const canManageGroup = currentConversation?.is_group && (myRole === "owner" || myRole === "admin");
   const groupMembers = useResource("chat-members:" + id + ":" + groupOpen, () =>
@@ -2339,7 +2338,7 @@ function Chats({
                   {c.is_group ? "👥" : "✉"}
                 </span>
                 <span className="community-chat-channel-label">
-                  <strong>{c.title || "Розмова без назви"}</strong>
+                  <strong>{conversationDisplayTitle(c)}</strong>
                   <small>{c.is_group ? "Групова розмова" : "Особистий діалог"}</small>
                 </span>
               </button>
