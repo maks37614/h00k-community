@@ -23,6 +23,7 @@ import { TF_SECONDS } from "../../src/community/chartDocument";
 import { amount, evaluateRisk } from "./risk";
 import { connectBybit, syncBybit } from "./bybit";
 import { publicProfileUrl } from "./profileNames";
+import { extractMentionHandles } from "./mentions";
 
 export function installCommunityRoutes(app: Express, getDb: () => Database) {
   const limits = new RequestLimits();
@@ -211,6 +212,30 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
     async (req, res, db, a, p) => {
       limits.take("publish:" + a.id, 20);
       const id = await createItem(db, p, req.body);
+      // Index only verified group members with reserved @profile-name handles.
+      // No separate message notification rows or untrusted recipient IDs.
+      if (req.body?.kind === "message" &&
+          typeof req.body?.body?.text === "string" &&
+          req.body.body.text.includes("@")) {
+        const convId = uuid(req.body.conversationId);
+        const stored = await db.query(
+          "SELECT body->>'text' AS text FROM hc_items WHERE id=$1 AND owner_id=$2 AND conversation_id=$3 AND kind='message' AND NOT deleted",
+          [id,a.id,convId],
+        );
+        const handles = extractMentionHandles(stored.rows[0]?.text);
+        if (handles.length) {
+          await db.query(
+            `INSERT INTO hc_message_mentions(message_id,user_id)
+              SELECT $1,pn.owner_id
+              FROM hc_profile_names pn
+              JOIN hc_members m ON m.user_id=pn.owner_id AND m.conversation_id=$2
+              JOIN hc_conversations c ON c.id=m.conversation_id AND c.is_group=true
+              WHERE pn.username=ANY($3::text[]) AND pn.owner_id<>$4
+              ON CONFLICT DO NOTHING`,
+            [id,convId,handles,a.id],
+          );
+        }
+      }
       // At most two small inbox records for an original PUBLIC comment on
       // a PUBLIC post. Never include comment text, charts or private fields.
       // Friend-only and private comment events must not leak to another user.
