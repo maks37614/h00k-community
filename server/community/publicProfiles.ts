@@ -228,6 +228,20 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
         ...(c.amountsAudience === "public" ? { pnl: row.pnl } : {}),
       })), coverage: coverage.rows };
     }
+    let awards = null;
+    if (c.publicAwardsEnabled === true) {
+      const rewardRows = await db.query(
+        "SELECT award_type,count(*)::integer AS count FROM hc_award_gifts WHERE recipient_id=$1 GROUP BY award_type",
+        [owner.id],
+      );
+      const types = { thanks: 0, analysis: 0, topTrader: 0 };
+      for (const row of rewardRows.rows) {
+        if (row.award_type === "thanks") types.thanks = Number(row.count);
+        if (row.award_type === "analysis") types.analysis = Number(row.count);
+        if (row.award_type === "top_trader") types.topTrader = Number(row.count);
+      }
+      awards = { received: types.thanks + types.analysis + types.topTrader, ...types };
+    }
     res.json({ success: true, profile: {
       id: owner.id, username: owner.username, displayName: text(p.displayName, 100) || "Трейдер",
       joinedAt: owner.created_at, url: publicProfileUrl(owner.username), communityOrigin: communityOrigin(),
@@ -235,7 +249,7 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
       interests: c.interestsAudience === "public" ? text(c.interests, 2000) : "",
       lifestyle: c.lifestyleAudience === "public" ? text(c.lifestyle, 2000) : "",
       telegram: c.telegramAudience === "public" && /^https:\/\/t\.me\/[A-Za-z0-9_]+$/.test(c.telegram ?? "") ? c.telegram : "",
-      status, statistics,
+      status, statistics, awards,
       avatarUrl: c.avatarAudience === "public" && typeof c.avatarMediaId === "string"
         ? "/api/public/profiles/" + owner.username + "/avatar" : null,
       coverUrl: c.coverAudience === "public" && typeof c.coverMediaId === "string"
