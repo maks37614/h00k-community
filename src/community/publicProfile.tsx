@@ -14,6 +14,7 @@ import {
 } from "./publicProfileViewModel";
 import { publicClosedOrderOverview, publicProfileSetups } from "./publicProfileSocialModel";
 import { groupPublicComments, publicTelegramShareUrl } from "./publicDiscussionModel";
+import { TRADING_SESSIONS, getSessionWindow, formatZonedTime, resolveTimeZone, sessionDateLabel } from "../utils/tradingSessions";
 import "./publicProfile.css";
 import "./publicProfileConcept.css";
 
@@ -45,6 +46,7 @@ type PublicTrader = {
   coverUrl: string | null;
   statistics: PublicStats | null;
   awards: { received: number; thanks: number; analysis: number; topTrader: number } | null;
+  sessions: string[] | null;
 };
 type PublicPost = {
   id: string;
@@ -130,6 +132,28 @@ function PublicCommentThreads({ items }: { items: PublicComment[] }) {
       </div>
     ))}
   </div>;
+}
+
+/** Opt-in session list. All dates are displayed in the *visitor's* timezone. */
+function PublicSessionPanel({ ids }: { ids: string[] }) {
+  const viewerZone = resolveTimeZone();
+  const now = new Date();
+  const selected = TRADING_SESSIONS.filter(s => ids.includes(s.id));
+  return <section className="public-profile-panel public-profile-public-sessions" aria-label="Вибрані торгові сесії">
+    <h2><Globe2 size={18} aria-hidden="true" /> Торгові сесії</h2>
+    <p className="public-profile-muted">Найближчі орієнтовні періоди активності у вашому часовому поясі: {viewerZone}</p>
+    {selected.map(session => {
+      const window = getSessionWindow(session, now);
+      return <div className="public-profile-public-session" key={session.id}>
+        <span><span aria-hidden="true">{session.flag}</span> {session.city}</span>
+        <time dateTime={window.startsAt.toISOString()}>
+          {sessionDateLabel(window.startsAt, window.endsAt, viewerZone)} · {formatZonedTime(window.startsAt, viewerZone)}–{formatZonedTime(window.endsAt, viewerZone)}
+        </time>
+      </div>;
+    })}
+    {!selected.length && <p className="public-profile-muted">Трейдер ще не обрав торгових сесій.</p>}
+    <p className="public-profile-muted">Це орієнтовний розклад активності, не підтвердження присутності онлайн.</p>
+  </section>;
 }
 
 export function PublicProfile() {
@@ -365,6 +389,7 @@ export function PublicProfile() {
             {profileJoinDate && <p className="public-profile-sidebar-joined"><CalendarDays size={14} aria-hidden="true" /> У спільноті з {profileJoinDate}</p>}
             <button type="button" onClick={() => { setTab("about"); document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>Детальніше про профіль <ArrowUpRight size={14} aria-hidden="true" /></button>
           </section>
+          {profile.sessions !== null && <PublicSessionPanel ids={profile.sessions} />}
           {(profile.interests || profile.lifestyle || profile.telegram) && <section className="public-profile-panel">
             {profile.interests && <><h2>Інтереси</h2><p>{profile.interests}</p></>}
             {profile.lifestyle && <><h2>Звички та спосіб життя</h2><p>{profile.lifestyle}</p></>}
