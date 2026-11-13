@@ -178,8 +178,17 @@ function Workspace() {
           </a>
           <nav className="community-standalone-header-actions" aria-label="Навігація">
             <a href="https://h00k.top" className="community-standalone-screener">
-              До скрінера <ArrowUpRight size={17} aria-hidden="true" />
+              <ChartNoAxesCombined size={17} aria-hidden="true" /> Скрінер
             </a>
+            <a href="https://h00k.top/#terminal" className="community-standalone-screener">HookChart</a>
+            {user && (
+              <>
+                <a className="community-standalone-active" href="#community?section=feed"><UsersRound size={17} /> Community</a>
+                <a href="#community?section=friends">Друзі</a>
+                <a href="#community?section=chats"><MessageCircle size={17} /> Повідомлення</a>
+                <a href="#community?section=profile">Профіль</a>
+              </>
+            )}
             {user ? (
               <button type="button" onClick={() => void logout().catch(e => setError(e.message))}>
                 Вийти

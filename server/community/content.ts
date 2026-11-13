@@ -241,10 +241,15 @@ export async function presentItem(db: Database, rules: Policy, row: Item) {
     row.owner_id,
   ]);
   const profile = rows[0]?.profile ?? {};
-  const reactions = await db.query(
-    "SELECT emoji,count(*)::integer AS count,bool_or(user_id=$2)::boolean AS mine FROM hc_reactions WHERE item_id=$1 GROUP BY emoji",
-    [row.id, rules.viewer],
-  );
+  const [reactions, saved] = await Promise.all([
+    db.query(
+      "SELECT emoji,count(*)::integer AS count,bool_or(user_id=$2)::boolean AS mine FROM hc_reactions WHERE item_id=$1 GROUP BY emoji",
+      [row.id, rules.viewer],
+    ),
+    row.kind === "post"
+      ? db.query("SELECT 1 FROM hc_saved_items WHERE owner_id=$1 AND item_id=$2", [rules.viewer, row.id])
+      : Promise.resolve({ rows: [] }),
+  ]);
   let source = null;
   if (row.body?.sourceItemId) {
     const original = await rules.item(row.body.sourceItemId);
@@ -260,6 +265,7 @@ export async function presentItem(db: Database, rules: Policy, row: Item) {
     author: { id: row.owner_id, displayName: profile.displayName ?? "Трейдер" },
     chart: row.chart_id ? await getChart(db, rules, row.chart_id, true) : null,
     reactions: reactions.rows,
+    saved: saved.rows.length > 0,
     source,
   };
 }
@@ -284,6 +290,14 @@ function bodyFor(raw: any, kind: string) {
     delete clean[field];
   clean.text = bounded(clean.text ?? "", 20_000);
   clean.title = bounded(clean.title ?? "", 200);
+  if (kind === "post") {
+    const category = bounded(clean.category ?? "general", 16);
+    if (!["general", "idea", "analysis", "education"].includes(category))
+      fail("Некоректна категорія публікації");
+    clean.category = category;
+  } else {
+    delete clean.category;
+  }
   if (clean.sourceItemId) uuid(clean.sourceItemId);
   if (clean.strategyId) uuid(clean.strategyId);
   if (clean.photos) {

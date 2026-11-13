@@ -93,12 +93,19 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
           ? "friends"
           : "public",
       wallOwner = req.query.owner ? uuid(req.query.owner) : null,
-      before = req.query.before ? uuid(req.query.before) : null;
+      before = req.query.before ? uuid(req.query.before) : null,
+      categoryRaw = req.query.category ? bounded(req.query.category, 16) : null;
+    if (categoryRaw && !["idea", "analysis", "education"].includes(categoryRaw))
+      fail("Некоректна категорія публікації");
     const { rows } = await db.query<Item>(
       `SELECT * FROM hc_items WHERE kind='post' AND NOT deleted
       AND ($1::uuid IS NULL OR (created_at,id)<(SELECT created_at,id FROM hc_items WHERE id=$1))
-      AND ($2<>'public' OR audience='public') AND ($3::uuid IS NULL OR owner_id=$3) ORDER BY created_at DESC,id DESC LIMIT 40`,
-      [before, mode, wallOwner],
+      AND ($2<>'public' OR audience='public')
+      AND ($3::uuid IS NULL OR owner_id=$3)
+      AND ($4::text IS NULL OR body->>'category'=$4)
+      AND ($2<>'friends' OR owner_id=$5 OR owner_id=ANY($6::uuid[]))
+      ORDER BY created_at DESC,id DESC LIMIT 40`,
+      [before, mode, wallOwner, categoryRaw, _a.id, [...p.accepted]],
     );
     const output = [];
     for (const row of rows) {
@@ -117,6 +124,40 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
       next: rows.length === 40 ? rows.at(-1)!.id : null,
     });
   });
+  route("get", "/saved", async (req, res, db, a, p) => {
+    const before = req.query.before ? uuid(req.query.before) : null;
+    const { rows } = await db.query<Item>(
+      `SELECT i.* FROM hc_saved_items s
+       JOIN hc_items i ON i.id=s.item_id
+       WHERE s.owner_id=$1 AND i.kind='post' AND NOT i.deleted
+       AND ($2::uuid IS NULL OR (s.created_at,s.item_id)<(SELECT created_at,item_id FROM hc_saved_items WHERE owner_id=$1 AND item_id=$2))
+       ORDER BY s.created_at DESC,s.item_id DESC LIMIT 40`,
+      [a.id, before],
+    );
+    const items = [];
+    for (const item of rows) {
+      const shown = await presentItem(db, p, item);
+      if (shown) items.push(shown);
+    }
+    res.json({ success: true, items, next: rows.length === 40 ? rows.at(-1)!.id : null });
+  });
+  route("post", "/items/:id/save", async (req, res, db, a, p) => {
+    const id = uuid(req.params.id), item = await p.item(id);
+    if (!item || item.kind !== "post" || !(await p.visible(item)) ||
+        (item.chart_id && !(await p.canReadChart(item.chart_id))))
+      fail("Публікація недоступна", 404);
+    const existing = await db.query(
+      "DELETE FROM hc_saved_items WHERE owner_id=$1 AND item_id=$2 RETURNING item_id", [a.id,id],
+    );
+    if (existing.rows.length) res.json({ success:true, saved:false });
+    else {
+      await db.query(
+        "INSERT INTO hc_saved_items(owner_id,item_id) VALUES($1,$2) ON CONFLICT DO NOTHING",
+        [a.id,id],
+      );
+      res.json({ success:true, saved:true });
+    }
+  }, 40);
   route("get", "/items", async (req, res, db, a, p) => {
     const kind = bounded(req.query.kind ?? "strategy", 20);
     if (!["strategy", "plan", "lesson", "test"].includes(kind))
@@ -639,6 +680,82 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
     );
     res.json({ success: true });
   });
+  // Earned reputation credits can be spent on transparent peer-to-peer awards.
+  // Spending uses a locked wallet row so two simultaneous gifts cannot overspend.
+  route("get", "/awards", async (_req, res, db, a) => {
+    const [earned, wallet, received, sent] = await Promise.all([
+      db.query("SELECT COALESCE(sum(points),0)::integer AS total FROM hc_reputation WHERE owner_id=$1", [a.id]),
+      db.query("SELECT spent FROM hc_award_wallets WHERE owner_id=$1", [a.id]),
+      db.query("SELECT count(*)::integer AS total FROM hc_award_gifts WHERE recipient_id=$1", [a.id]),
+      db.query("SELECT count(*)::integer AS total FROM hc_award_gifts WHERE sender_id=$1", [a.id]),
+    ]);
+    const credits = Number(earned.rows[0]?.total ?? 0);
+    const spent = Number(wallet.rows[0]?.spent ?? 0);
+    res.json({
+      success: true,
+      balance: Math.max(0, credits - spent),
+      earned: credits,
+      spent,
+      received: Number(received.rows[0]?.total ?? 0),
+      gifted: Number(sent.rows[0]?.total ?? 0),
+    });
+  });
+  route("get", "/awards/history", async (_req, res, db, a) => {
+    const { rows } = await db.query(
+      `SELECT g.id,g.sender_id,g.recipient_id,g.award_type,g.cost,g.created_at,
+              sender.profile->>'displayName' AS sender_name,
+              recipient.profile->>'displayName' AS recipient_name
+         FROM hc_award_gifts g
+         JOIN hc_users sender ON sender.id=g.sender_id
+         JOIN hc_users recipient ON recipient.id=g.recipient_id
+        WHERE g.sender_id=$1 OR g.recipient_id=$1
+        ORDER BY g.created_at DESC,g.id DESC LIMIT 50`,
+      [a.id],
+    );
+    res.json({ success:true, items:rows.map(row=>({
+      id:row.id, direction:row.sender_id===a.id?"sent":"received",
+      awardType:row.award_type, cost:row.cost, date:row.created_at,
+      person:row.sender_id===a.id?row.recipient_name:row.sender_name,
+    })) });
+  });
+  route("post", "/awards", async (req, res, db, a, p) => {
+    const recipientId = uuid(req.body?.recipientId);
+    const awardType = bounded(req.body?.awardType, 24);
+    const costs: Record<string, number> = { thanks: 20, analysis: 50, top_trader: 50 };
+    const cost = costs[awardType];
+    if (!cost) fail("Невідома нагорода");
+    if (recipientId === a.id || p.blocked.has(recipientId))
+      fail("Неможливо подарувати нагороду цьому користувачу", 403);
+    const giftId = randomUUID();
+    await db.transaction(async (tx) => {
+      const recipient = await tx.query(
+        "SELECT id FROM hc_users WHERE id=$1 AND deleted_at IS NULL FOR SHARE", [recipientId],
+      );
+      if (!recipient.rows.length) fail("Користувача не знайдено", 404);
+      await tx.query(
+        "INSERT INTO hc_award_wallets(owner_id) VALUES($1) ON CONFLICT DO NOTHING", [a.id],
+      );
+      const wallet = await tx.query(
+        "SELECT spent FROM hc_award_wallets WHERE owner_id=$1 FOR UPDATE", [a.id],
+      );
+      const earned = await tx.query(
+        "SELECT COALESCE(sum(points),0)::integer AS total FROM hc_reputation WHERE owner_id=$1", [a.id],
+      );
+      const balance = Number(earned.rows[0]?.total ?? 0) - Number(wallet.rows[0]?.spent ?? 0);
+      if (balance < cost) fail("Недостатньо балів для нагороди", 409);
+      await tx.query("UPDATE hc_award_wallets SET spent=spent+$2 WHERE owner_id=$1", [a.id, cost]);
+      await tx.query(
+        "INSERT INTO hc_award_gifts(id,sender_id,recipient_id,award_type,cost) VALUES($1,$2,$3,$4,$5)",
+        [giftId, a.id, recipientId, awardType, cost],
+      );
+      await tx.query(
+        `INSERT INTO hc_notifications(id,owner_id,type,body,dedup_key)
+         VALUES($1,$2,'award',$3,$4) ON CONFLICT(dedup_key) DO NOTHING`,
+        [randomUUID(), recipientId, JSON.stringify({ senderId: a.id, awardType, cost }), "award:" + giftId],
+      );
+    });
+    res.status(201).json({ success: true, id: giftId });
+  }, 12);
   route("get", "/rankings", async (req, res, db) => {
     const currency = req.query.currency === "USDC" ? "USDC" : "USDT";
     const { rows } = await db.query(

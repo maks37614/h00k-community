@@ -2,6 +2,8 @@ import { AccountSecuritySettings } from "./AccountSecuritySettings";
 import { PublicProfileSettings } from "./PublicProfileSettings";
 import { CommunityNotificationCenter } from "./CommunityNotificationCenter";
 import { CommunityTradingSessions } from "./CommunityTradingSessions";
+import { CommunityConceptProfile } from "./CommunityConceptProfile";
+import { CommunityAwardPanel } from "./CommunityAwardPanel";
 import { STRATEGY_PRESETS } from "../hookchart/strategyEngine";
 import { saveChartArchive } from "../../community/archiveChart";
 import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, useId } from "react";
@@ -22,6 +24,8 @@ import {
   ChartNoAxesCombined,
   Copy,
   Check,
+  Gift,
+  Bookmark,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useArchive } from "../../context/ArchiveContext";
@@ -54,6 +58,7 @@ import "./social-photo-gallery.css";
 import "./social-profile-actions.css";
 import "./social-profile-tabs.css";
 import "./social-resource-library.css";
+import "./social-concept-layout.css";
 const SharedHookChart = lazy(() => import("./SharedHookChart"));
 type Tab =
   | "feed"
@@ -68,6 +73,7 @@ type Tab =
   | "settings";
 type Target = {
   kind: "post" | "comment" | "message";
+  audience?: CommentAudience;
   parentId?: string;
   conversationId?: string;
   replyTo?: ReplySource;
@@ -143,16 +149,15 @@ const api = "/api/community";
 export function CommunityPage({ onReplay }: { onReplay: () => void }) {
   const { user, profile } = useAuth();
   const { archivedFormations } = useArchive();
-  const [tab, setTab] = useState<Tab>(() =>
-      new URLSearchParams(location.hash.split("?")[1] ?? "").get("section") ===
-      "settings"
-        ? "settings"
-        : new URLSearchParams(location.hash.split("?")[1] ?? "").get("section") === "profile" ? "profile" : "feed",
-    ),
+  const [tab, setTab] = useState<Tab>(() => {
+      const section = new URLSearchParams(location.hash.split("?")[1] ?? "").get("section");
+      return (["feed","day","sessions","strategies","trades","learning","chats","friends","profile","settings"] as string[]).includes(section ?? "") ? section as Tab : "feed";
+    }),
     [notice, setNotice] = useState(""),
     [picker, setPicker] = useState<Target | null>(null),
     [draft, setDraft] = useState<DraftChart | null>(null);
   const [chatInvite, setChatInvite] = useState<ChatInvite | null>(null);
+  const [awardRecipient, setAwardRecipient] = useState<{ id: string; name: string } | null>(null);
   const [viewProfile, setViewProfile] = useState<string | null>(() => {
     const owner = new URLSearchParams(location.hash.split("?")[1] ?? "").get("owner");
     return owner && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(owner) ? owner : null;
@@ -172,19 +177,17 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
   useEffect(() => {
     const jump = () => {
       const query = new URLSearchParams(location.hash.split("?")[1] ?? "");
-      if (query.get("section") === "profile") {
-        const owner = query.get("owner");
-        setViewProfile(owner && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(owner) ? owner : null);
-        setTab("profile");
+      const section = query.get("section");
+      if (section && (["feed","day","sessions","strategies","trades","learning","chats","friends","profile","settings"] as string[]).includes(section)) {
+        if (section === "profile") {
+          const owner = query.get("owner");
+          setViewProfile(owner && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(owner) ? owner : null);
+        } else {
+          setViewProfile(null);
+        }
+        setTab(section as Tab);
       }
-      if (new URLSearchParams(location.hash.split("?")[1] ?? "").has("post"))
-        setTab("feed");
-      if (
-        new URLSearchParams(location.hash.split("?")[1] ?? "").get(
-          "section",
-        ) === "settings"
-      )
-        setTab("settings");
+      if (query.has("post")) setTab("feed");
     };
     window.addEventListener("hashchange", jump);
     return () => window.removeEventListener("hashchange", jump);
@@ -318,24 +321,14 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
       </header>
       <div className={"community-dashboard" + (tab === "feed" ? " community-dashboard-feed" : "")}>
         <div className="community-sidebar">
-          <section className="community-sidebar-account" aria-label="Мій Community профіль">
-            <span className="community-page-kicker">ВАШ ПРОФІЛЬ</span>
-            <div className="community-sidebar-identity">
-              <span className="community-sidebar-avatar" aria-hidden="true">
-                {(profile?.displayName ?? user.displayName ?? "Т").trim().slice(0, 1).toUpperCase()}
-              </span>
-              <div>
-                <strong>{profile?.displayName ?? user.displayName ?? "Трейдер"}</strong>
-                <small>Учасник h00k Community</small>
-              </div>
-            </div>
-            {profile?.community?.status?.text && (
-              <p className="community-sidebar-status">{profile.community.status.text}</p>
-            )}
-            <button type="button" onClick={() => { setViewProfile(null); setTab("profile"); }}>
-              Перейти до мого профілю
-            </button>
-          </section>
+          <CommunityConceptProfile
+            version={revision}
+            onProfile={() => { setViewProfile(null); setTab("profile"); }}
+            onFriends={() => setTab("friends")}
+            onSettings={() => setTab("settings")}
+          />
+        <details className="community-concept-navigation">
+          <summary>Усі розділи Community</summary>
         <nav className="community-nav" aria-label="Розділи спільноти">
         {nav.map(([id, title, icon]) => (
           <button
@@ -352,6 +345,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           </button>
         ))}
         </nav>
+        </details>
         </div>
         <div className="community-main-pane">
       {notice && (
@@ -377,6 +371,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
               setViewProfile(id);
               setTab("profile");
             }}
+            onAward={(id, name) => setAwardRecipient({ id, name })}
           />
         )}
         {tab === "sessions" && <CommunityTradingSessions variant="page" />}
@@ -450,6 +445,11 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
         {tab === "feed" && (
           <aside className="community-context-rail" aria-label="Швидкі переходи Community">
             <CommunityTradingSessions variant="sidebar" />
+            <CommunityAwardPanel
+              recipient={awardRecipient}
+              onClear={() => setAwardRecipient(null)}
+              onGifted={changed}
+            />
             <div className="community-context-card">
               <span className="community-page-kicker">СПІЛЬНОТА</span>
               <h3>Ваш простір трейдера</h3>
@@ -568,7 +568,8 @@ function Composer({
 }) {
   const { user, profile } = useAuth();
   const [text, setText] = useState("");
-  const [audience, setAudience] = useState(() => target.replyTo ? normalizeReplyAudience(target.replyTo.audience) : "private");
+  const [audience, setAudience] = useState(() => target.replyTo ? normalizeReplyAudience(target.replyTo.audience) : target.audience ? normalizeReplyAudience(target.audience) : target.kind === "post" ? "public" : "private");
+  const [category, setCategory] = useState("general");
   const [photos, setPhotos] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
@@ -594,7 +595,7 @@ function Composer({
         conversationId: target.conversationId,
         audience,
         clientId: clientId.current,
-        body: replyBody(text, photos, target.replyTo),
+        body: { ...replyBody(text, photos, target.replyTo), ...(target.kind === "post" ? { category } : {}) },
       });
       setText("");
       setPhotos([]);
@@ -724,6 +725,16 @@ function Composer({
             <Smile size={17} aria-hidden="true" /> <span>Емодзі</span>
           </button>
         </div>
+        {target.kind === "post" && (
+          <label className="community-concept-category-label">Розділ
+            <select aria-label="Категорія публікації" value={category} onChange={(event) => setCategory(event.target.value)}>
+              <option value="general">Стрічка</option>
+              <option value="idea">Ідеї</option>
+              <option value="analysis">Аналіз</option>
+              <option value="education">Навчання</option>
+            </select>
+          </label>
+        )}
         {target.kind !== "message" && (
           <div className="community-composer-audience">
             <label htmlFor={audienceId}>
@@ -781,23 +792,28 @@ function Feed({
   onChart,
   run,
   onProfile,
+  onAward,
 }: {
   onPick: (t: Target) => void;
   onChart: (item: any, target?: Target) => Promise<void>;
   run: Run;
   onProfile: (id: string) => void;
+  onAward: (id: string, name: string) => void;
 }) {
   const { user } = useAuth();
+  const [category, setCategory] = useState("all");
   const [mode, setMode] = useState(
-    () => localStorage.getItem("h00k-community-feed:" + user?.uid) ?? "friends",
+    () => localStorage.getItem("h00k-community-feed:" + user?.uid) ?? "public",
   );
   const [data, setData] = useState<any[]>([]),
     [next, setNext] = useState<string | null>(null),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(false);
   const currentMode = useRef(mode);
+  const currentCategory = useRef(category);
   const requestNumber = useRef(0);
   currentMode.current = mode;
+  currentCategory.current = category;
   const [linkedId, setLinkedId] = useState(
     () =>
       new URLSearchParams(location.hash.split("?")[1] ?? "").get("post") ?? "",
@@ -818,16 +834,18 @@ function Feed({
   }, []);
   async function load(before?: string) {
     const startedMode = mode;
+    const startedCategory = category;
     const request = ++requestNumber.current;
     setLoading(true);
     try {
       const d = await apiJson(
         api +
-          "/feed?" +
-          new URLSearchParams({ mode, ...(before ? { before } : {}) }),
+          (mode === "saved" ? "/saved?" : "/feed?") +
+          new URLSearchParams({ ...(mode !== "saved" ? { mode, ...(category !== "all" ? { category } : {}) } : {}), ...(before ? { before } : {}) }),
       );
       if (
         currentMode.current !== startedMode ||
+        currentCategory.current !== startedCategory ||
         requestNumber.current !== request
       )
         return;
@@ -837,6 +855,7 @@ function Feed({
     } catch (e) {
       if (
         currentMode.current !== startedMode ||
+        currentCategory.current !== startedCategory ||
         requestNumber.current !== request
       )
         return;
@@ -844,6 +863,7 @@ function Feed({
     } finally {
       if (
         currentMode.current === startedMode &&
+        currentCategory.current === startedCategory &&
         requestNumber.current === request
       )
         setLoading(false);
@@ -854,7 +874,7 @@ function Feed({
     setNext(null);
     void load();
     localStorage.setItem("h00k-community-feed:" + user?.uid, mode);
-  }, [mode, user?.uid]);
+  }, [mode, category, user?.uid]);
   return (
     <section className="community-feed-view" aria-label="Стрічка спільноти">
       <div className="community-section-heading community-feed-heading">
@@ -877,12 +897,21 @@ function Feed({
           >
             Публічні
           </button>
+          <button type="button" aria-pressed={mode === "saved"} onClick={() => { setCategory("all"); setMode("saved"); }}>
+            <Bookmark size={14} aria-hidden="true" /> Збережені
+          </button>
         </div>
       </div>
+      {mode !== "saved" && <nav className="community-concept-feed-tabs" aria-label="Категорії публікацій">
+        {([["all", "Стрічка"], ["idea", "Ідеї"], ["analysis", "Аналіз"], ["education", "Навчання"]] as const).map(([id, label]) => (
+          <button key={id} type="button" aria-pressed={category === id} onClick={() => setCategory(id)}>{label}</button>
+        ))}
+        <span className="community-concept-feed-order">Найновіші ↓</span>
+      </nav>}
       <Composer
         target={{ kind: "post" }}
         onPick={onPick}
-        onSent={() => void load()}
+        onSent={() => { if (mode === "saved") setMode("public"); else void load(); }}
         run={run}
       />
       {linkedId && (
@@ -905,6 +934,7 @@ function Feed({
               run={run}
               refresh={linked.refresh}
               onProfile={onProfile}
+              onAward={onAward}
             />
           )}
         </section>
@@ -914,7 +944,7 @@ function Feed({
       {!loading && !data.length && !error && (
         <div className="community-empty">
           Тут будуть{" "}
-          {mode === "friends" ? "дописи ваших друзів" : "публічні дописи"}.
+          {mode === "saved" ? "ваші збережені дописи" : mode === "friends" ? "дописи ваших друзів" : "публічні дописи"}.
           Збережіть формацію у скрінері й поділіться своїм першим розбором.
         </div>
       )}
@@ -929,6 +959,7 @@ function Feed({
             run={run}
             refresh={() => void load()}
             onProfile={onProfile}
+            onAward={onAward}
           />
         ))}
       {next && (
@@ -951,6 +982,7 @@ function ItemCard({
   run,
   refresh,
   onProfile,
+  onAward,
 }: {
   item: any;
   onChart: (item: any, target?: Target) => Promise<void>;
@@ -958,10 +990,14 @@ function ItemCard({
   run: Run;
   refresh: () => void;
   onProfile?: (id: string) => void;
+  onAward?: (id: string, name: string) => void;
 }) {
   const { user } = useAuth();
   const [reply, setReply] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [bookmarked, setBookmarked] = useState(Boolean(item.saved));
+  const [bookmarkBusy, setBookmarkBusy] = useState(false);
+  useEffect(() => { setBookmarked(Boolean(item.saved)); }, [item.id, item.saved]);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [selectedReply, setSelectedReply] = useState<ReplySource | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
@@ -990,7 +1026,7 @@ function ItemCard({
   const target: Target =
     item.kind === "message"
       ? { kind: "message", conversationId: item.conversation_id }
-      : { kind: "comment", parentId: item.id };
+      : { kind: "comment", parentId: item.id, audience: normalizeReplyAudience(item.audience) };
   return (
     <article className={"community-card community-post-card" + (item.kind === "message" ? " community-message-card" : "")}>
       <header>
@@ -1070,6 +1106,7 @@ function ItemCard({
       )}
       {!editing && (
         <>
+      {item.kind === "post" && <span className="community-concept-post-category">{({ idea: "Ідея", analysis: "Аналіз", education: "Навчання", general: "Публікація" } as Record<string, string>)[item.body?.category] ?? "Публікація"}</span>}
       {item.body?.title && <h3>{item.body.title}</h3>}
       <p className="community-text">{item.body?.text}</p>
       {item.source && (
@@ -1098,6 +1135,24 @@ function ItemCard({
           refresh={refresh}
           variant={item.kind === "message" ? "message" : "post"}
         />
+        {item.kind === "post" && (
+          <button type="button" aria-pressed={bookmarked} disabled={bookmarkBusy}
+            onClick={() => {
+              setBookmarkBusy(true);
+              void run(async () => {
+                const result = await post(api + "/items/" + item.id + "/save", {});
+                setBookmarked(Boolean(result.saved));
+                refresh();
+              }).finally(() => setBookmarkBusy(false));
+            }}>
+            <Bookmark size={15} aria-hidden="true" /> {bookmarked ? "Збережено" : "Зберегти"}
+          </button>
+        )}
+        {item.kind === "post" && onAward && item.owner_id !== user?.uid && (
+          <button type="button" className="community-concept-gift-author" onClick={() => onAward(item.owner_id, item.author?.displayName ?? "Трейдер")}>
+            <Gift size={15} aria-hidden="true" /> Нагородити
+          </button>
+        )}
         {item.kind === "post" && (
           <button
             type="button"
