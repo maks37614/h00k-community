@@ -245,3 +245,39 @@
 @media (prefers-reduced-motion: reduce) {
   .community-guest *, .community-standalone * { scroll-behavior: auto; }
 }
+
+
+/* Source social header: slim desktop navigation, scrollable rather than stacked on mobile. */
+.community-standalone-header { position:relative; z-index:5; background:#0a121fec; border-bottom:1px solid #283a4f; }
+.community-standalone-header-inner {
+  max-width:1760px; min-height:58px; padding:6px clamp(10px,2vw,30px);
+  display:flex; flex-wrap:nowrap; justify-content:space-between; gap:clamp(8px,2vw,30px);
+}
+.community-standalone-brand { flex:0 0 auto;font-size:24px;gap:9px;white-space:nowrap; }
+.community-standalone-brand-mark { width:32px;height:32px;border-radius:8px;font-size:22px;color:#52f0df; }
+.community-standalone-brand strong {
+  display:inline-flex;align-items:center;min-height:28px;
+  padding:2px 8px;border:1px solid #12aaac;border-radius:7px;color:#2ce3de;
+  font-size:15px;letter-spacing:0;
+}
+.community-standalone-header-actions { min-width:0;max-width:100%;display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch; }
+.community-standalone-header-actions::-webkit-scrollbar {display:none;}
+.community-standalone-header-actions a,
+.community-standalone-header-actions button {
+  flex:0 0 auto;min-height:34px;border:1px solid transparent;background:transparent;
+  color:#e0e9f5;padding:7px 12px;border-radius:9px;font-size:13px;white-space:nowrap;
+}
+.community-standalone-header-actions a:hover,
+.community-standalone-header-actions button:hover {background:#16313c;border-color:#237b80;}
+.community-standalone-header-actions .community-standalone-active {
+  background:linear-gradient(115deg,#0d5e60,#133b4c);border-color:#12a5aa;
+  color:#68ede2;box-shadow:0 0 14px #00d2ca1a;
+}
+@media(max-width:770px){
+ .community-standalone-header-inner {padding:7px 10px;gap:9px;}
+ .community-standalone-brand {font-size:19px;}
+ .community-standalone-brand-mark {display:none;}
+ .community-standalone-brand strong {font-size:12px;min-height:25px;}
+ .community-standalone-header-actions a,
+ .community-standalone-header-actions button {font-size:11px;padding:7px 9px;}
+}
