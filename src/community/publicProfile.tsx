@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useState } from "react";
+import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowUpRight, Award, BookOpenText, CalendarDays, Check, Copy, MessageCircle,
@@ -106,6 +106,9 @@ export function PublicProfile() {
   const [chart, setChart] = useState<ChartDocument | null>(null);
   const [tab, setTab] = useState<PublicTab>("wall");
   const [postCategory, setPostCategory] = useState<"all" | "idea" | "analysis" | "education">("all");
+  const currentCategory = useRef(postCategory);
+  currentCategory.current = postCategory;
+  const categoryLoadedOnce = useRef(false);
   const [copied, setCopied] = useState("");
   const [expandedComments, setExpandedComments] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, CommentState>>({});
@@ -120,13 +123,38 @@ export function PublicProfile() {
     void Promise.all([read(base, controller.signal), read(base + "/posts", controller.signal)])
       .then(([account, wall]) => {
         setProfile(account.profile);
-        setItems(wall.items);
-        setNext(wall.next);
+        if (currentCategory.current === "all") {
+          setItems(wall.items);
+          setNext(wall.next);
+        }
         document.title = account.profile.displayName + " · h00k Community";
       })
       .catch(e => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "Профіль недоступний"); });
     return () => controller.abort();
   }, [base]);
+  useEffect(() => {
+    if (!categoryLoadedOnce.current) {
+      categoryLoadedOnce.current = true;
+      return;
+    }
+    const controller = new AbortController();
+    setItems([]);
+    setNext(null);
+    setPostError("");
+    const suffix = postCategory === "all" ? "" : "?category=" + encodeURIComponent(postCategory);
+    void read(base + "/posts" + suffix, controller.signal)
+      .then(wall => {
+        if (controller.signal.aborted) return;
+        setItems(wall.items);
+        setNext(wall.next);
+        setError("");
+      })
+      .catch(e => {
+        if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "Не вдалося отримати публікації");
+      });
+    return () => controller.abort();
+  }, [base, postCategory]);
+
   useEffect(() => {
     if (!linkedPostId) return;
     const controller = new AbortController();
@@ -140,7 +168,10 @@ export function PublicProfile() {
     if (!next || busy) return;
     setBusy(true); setError("");
     try {
-      const page = await read(base + "/posts?before=" + encodeURIComponent(next));
+      const requestedCategory = postCategory;
+      const params = new URLSearchParams({ before: next, ...(postCategory !== "all" ? { category: postCategory } : {}) });
+      const page = await read(base + "/posts?" + params.toString());
+      if (currentCategory.current !== requestedCategory) return;
       setItems(old => [...new Map([...old, ...page.items].map(item => [item.id, item])).values()]);
       setNext(page.next);
     } catch (e) {
@@ -227,8 +258,7 @@ export function PublicProfile() {
   const profileJoinDate = publicProfileDate(profile?.joinedAt);
   const totalClosures = profile?.statistics?.totals.reduce((sum, currency) => sum + currency.count, 0) ?? 0;
   const overview = publicClosedOrderOverview(profile?.statistics?.totals ?? []);
-  const categorizedWall = postCategory === "all" ? wall : wall.filter(item => item.category === postCategory);
-  const visibleWall = tab === "setups" ? publicProfileSetups(wall) : categorizedWall;
+  const visibleWall = tab === "setups" ? publicProfileSetups(wall) : wall;
   const visiblePostCount = items.length;
   const browsePosts = () => {
     setPostCategory("all");
@@ -312,7 +342,7 @@ export function PublicProfile() {
         <div className="public-profile-main">
           <nav id="public-profile-tabs" className="public-profile-tabs" aria-label="Розділи профілю">
             <button type="button" aria-current={tab === "wall" ? "page" : undefined} onClick={() => setTab("wall")}><Layers3 size={16} aria-hidden="true" /> Стрічка</button>
-            <button type="button" aria-current={tab === "setups" ? "page" : undefined} onClick={() => setTab("setups")}><ChartNoAxesCombined size={16} aria-hidden="true" /> HookChart</button>
+            <button type="button" aria-current={tab === "setups" ? "page" : undefined} onClick={() => { setPostCategory("all"); setTab("setups"); }}><ChartNoAxesCombined size={16} aria-hidden="true" /> HookChart</button>
             {profile.statistics && <button type="button" aria-current={tab === "statistics" ? "page" : undefined} onClick={() => setTab("statistics")}><TrendingUp size={16} aria-hidden="true" /> Результати</button>}
             <button type="button" aria-current={tab === "about" ? "page" : undefined} onClick={() => setTab("about")}><UsersRound size={16} aria-hidden="true" /> Про трейдера</button>
           </nav>
