@@ -116,7 +116,15 @@ jobs:
           set -euo pipefail
           TAG="community-stage-${RELEASE_SHA}"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "::error::The release already exists: $TAG; refusing to overwrite it"
+            # Repeated manual clicks must not show a false failure. Never
+            # overwrite published assets; verify the existing release is whole.
+            ASSETS="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
+            if grep -Fxq "h00k-community-image.tar.gz" <<< "$ASSETS" &&
+               grep -Fxq "h00k-community-image.tar.gz.sha256" <<< "$ASSETS"; then
+              echo "::notice::Release $TAG already exists with both assets; keeping it unchanged"
+              exit 0
+            fi
+            echo "::error::Existing release $TAG has missing assets; refusing to overwrite it"
             exit 1
           fi
           cd "$RUNNER_TEMP/community-release"
