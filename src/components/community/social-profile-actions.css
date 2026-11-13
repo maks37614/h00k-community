@@ -1,0 +1,87 @@
+/* Real trader relationships — no fictitious status, chats or follower counts.
+   Relationship rights and conversation membership are enforced by Community API. */
+.community-workspace .community-profile-connect {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-wrap: wrap;
+  min-width: 0;
+  padding: 15px clamp(14px, 2vw, 22px);
+  margin: -5px 0 20px;
+  border: 1px solid #26594f;
+  border-radius: 16px;
+  background: linear-gradient(110deg, #112f32, #0e1829 74%);
+}
+.community-workspace .community-profile-connect > .community-page-kicker {
+  margin-right: auto;
+}
+.community-workspace .community-profile-connect p {
+  flex: 1 1 100%;
+  color: #bad0df;
+  font-size: 12px;
+  margin: 0;
+}
+.community-workspace .community-profile-connect button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid #325768;
+  border-radius: 11px;
+  background: #17283a;
+  color: #d7e9f4;
+  font-size: 12px;
+  font-weight: 750;
+}
+.community-workspace .community-profile-connect button:hover {
+  border-color: #1eaa8a;
+  background: #16413b;
+}
+.community-workspace .community-profile-friend-status,
+.community-workspace .community-profile-request-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 31px;
+  padding: 6px 11px;
+  border: 1px solid #276d60;
+  border-radius: 10px;
+  color: #adffea;
+  background: #103b34;
+  font-size: 12px;
+  font-weight: 750;
+}
+.community-workspace .community-profile-request-status {
+  border-color: #6b5737;
+  color: #ffdfa7;
+  background: #3a2d20;
+}
+.community-workspace .community-chat-invite-notice {
+  padding: 11px 13px;
+  margin: 12px 0;
+  border: 1px solid #28685d;
+  border-radius: 11px;
+  background: #123c36;
+  color: #c1fff1;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .community-workspace .community-profile-connect {
+    gap: 9px;
+    margin: -3px 0 16px;
+    padding: 12px;
+  }
+  .community-workspace .community-profile-connect > .community-page-kicker {
+    flex-basis: 100%;
+  }
+  .community-workspace .community-profile-connect button {
+    flex: 1 1 auto;
+    min-height: 42px;
+  }
+  .community-workspace .community-profile-connect button.community-primary {
+    flex: 1 1 100%;
+  }
+}
