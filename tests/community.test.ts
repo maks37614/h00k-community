@@ -328,6 +328,13 @@ test('categorized public feed and real award spending preserve ownership and pri
   assert.equal(after.data.gifted, before.data.gifted + 1);
   const recipientAfter = await call(api + '/awards', eve);
   assert.equal(recipientAfter.data.received, recipientBefore.data.received + 1);
+  const walletHistory = await call(api + '/awards/history', alice);
+  assert.equal(walletHistory.res.status, 200);
+  assert.ok(walletHistory.data.items.some((gift: any) => gift.id === send.data.id && gift.direction === 'sent'));
+  const recipientHistory = await call(api + '/awards/history', eve);
+  assert.ok(recipientHistory.data.items.some((gift: any) => gift.id === send.data.id && gift.direction === 'received'));
+  const strangerHistory = await call(api + '/awards/history', bob);
+  assert.ok(!strangerHistory.data.items.some((gift: any) => gift.id === send.data.id));
   const notice = await call(api + '/notifications', eve);
   assert.ok(notice.data.items.some((item: any) => item.type === 'award' && item.body.awardType === 'thanks'));
 });
