@@ -9,3 +9,30 @@ server/data
 
 migration-input/
 migration-reports/
+
+dist
+
+# Never bake local credentials, dumps, media or deployment artifacts into images.
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.dump
+*.bak
+*.sqlite
+*.sqlite3
+*.tar
+*.tar.gz
+*.zip
+community-image-download/
+community-export-*/
+.ssh/
+.codex/
+**/.ssh/
+**/.codex/
+**/credentials.json
+**/secrets.json
+**/.env
+**/.env.*
+!**/.env.example
