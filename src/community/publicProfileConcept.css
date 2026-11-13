@@ -424,3 +424,24 @@ body { background: #080f1b; }
 @media (prefers-reduced-motion:reduce) {
   .public-profile * {scroll-behavior:auto!important;}
 }
+
+
+/* Aggregate awards are not displayed until the profile owner opts in. */
+.public-profile-insights .public-profile-awards-summary {
+  display:grid;gap:10px;min-width:0;padding:9px;
+  border-radius:11px;border:1px solid #384651;
+  background:linear-gradient(145deg,#202536,#131f2f);
+}
+.public-profile-insights .public-profile-awards-total {display:flex;align-items:center;gap:8px;}
+.public-profile-insights .public-profile-awards-total svg {color:#f5c96a;filter:drop-shadow(0 0 5px #f6c76b50);}
+.public-profile-insights .public-profile-awards-total strong {font-size:21px;color:#f5d48a;font-variant-numeric:tabular-nums;}
+.public-profile-insights .public-profile-awards-total span {font-size:11px;color:#c4d5e4;}
+.public-profile-insights .public-profile-awards-breakdown {display:grid;gap:6px;}
+.public-profile-insights .public-profile-awards-breakdown > span {
+  display:flex;align-items:center;gap:7px;padding:7px 8px;
+  border-radius:9px;border:1px solid #34465a;background:#101d2e;
+  color:#d4e3ef;font-size:10px;
+}
+.public-profile-insights .public-profile-awards-breakdown svg {color:#e5bd64;}
+.public-profile-insights .public-profile-awards-breakdown strong {margin-left:auto;color:#f6d896;font-size:12px;}
+.public-profile-insights .public-profile-awards-summary > small {font-size:10px;color:#98aabb;line-height:1.55;}
