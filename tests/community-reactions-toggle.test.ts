@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { COMMUNITY_REACTION_CHOICES } from "../src/components/community/CommunityReactions";
 
 const page = readFileSync(new URL("../src/components/community/CommunityPage.tsx", import.meta.url), "utf8");
 const component = readFileSync(new URL("../src/components/community/CommunityReactions.tsx", import.meta.url), "utf8");
@@ -10,7 +9,7 @@ const contentServer = readFileSync(new URL("../server/community/content.ts", imp
 const routes = readFileSync(new URL("../server/community/routes.ts", import.meta.url), "utf8");
 
 test("reactions share the server's supported set in posts and comments", () => {
-  assert.deepEqual(COMMUNITY_REACTION_CHOICES, ["👍", "❤️", "🔥", "🤔", "👏"]);
+  assert.match(component, /export const COMMUNITY_REACTION_CHOICES = \["👍", "❤️", "🔥", "🤔", "👏"\]/);
   assert.match(page, /<CommunityReactions/);
   assert.match(page, /itemId=\{item\.id\}/);
   assert.match(page, /itemId=\{comment\.id\}/);
