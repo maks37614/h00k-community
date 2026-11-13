@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   ArrowUpRight, Award, BookOpenText, CalendarDays, Check, Copy, MessageCircle,
   ShieldCheck, TrendingUp, UsersRound, UserPlus, ChartNoAxesCombined,
-  Globe2, Sparkles, Layers3, Lightbulb, GraduationCap, Trophy, Star,
+  Globe2, Sparkles, Layers3, Lightbulb, GraduationCap, Trophy, Star, Send,
 } from "lucide-react";
 import { ChartPreview } from "../components/community/ChartPreview";
 import type { ChartDocument } from "./chartDocument";
@@ -13,6 +13,7 @@ import {
   type PublicReactionSummary,
 } from "./publicProfileViewModel";
 import { publicClosedOrderOverview, publicProfileSetups } from "./publicProfileSocialModel";
+import { groupPublicComments, publicTelegramShareUrl } from "./publicDiscussionModel";
 import "./publicProfile.css";
 import "./publicProfileConcept.css";
 
@@ -61,6 +62,7 @@ type PublicComment = {
   author: string;
   text: string;
   quote: string;
+  replyToId?: string | null;
   photosCount: number;
   hasChart: boolean;
   reactions?: PublicReactionSummary[];
@@ -94,6 +96,40 @@ function ReactionTotals({ reactions }: { reactions?: PublicReactionSummary[] }) 
       ))}
     </div>
   );
+}
+
+/** Read-only, privacy-filtered public replies. Posting requires a Community login. */
+function PublicCommentCard({ comment }: { comment: PublicComment }) {
+  return (
+    <article className="public-profile-comment">
+      <div className="public-profile-comment-head">
+        <span className="public-profile-post-avatar" aria-hidden="true">{comment.author.slice(0, 1).toUpperCase()}</span>
+        <div><strong>{comment.author}</strong><time dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleString("uk-UA")}</time></div>
+      </div>
+      {comment.quote && <blockquote>{comment.quote}</blockquote>}
+      {comment.text && <p>{comment.text}</p>}
+      {(comment.photosCount > 0 || comment.hasChart) && <p className="public-profile-muted">
+        {comment.photosCount > 0 ? "Фото" : ""}{comment.photosCount > 0 && comment.hasChart ? " та " : ""}{comment.hasChart ? "HookChart" : ""} — доступні у Community
+      </p>}
+      <ReactionTotals reactions={comment.reactions} />
+    </article>
+  );
+}
+
+function PublicCommentThreads({ items }: { items: PublicComment[] }) {
+  const { roots, repliesByRoot } = groupPublicComments(items);
+  return <div className="public-profile-comment-groups">
+    {roots.map(comment => (
+      <div className="public-profile-comment-thread" key={comment.id}>
+        <PublicCommentCard comment={comment} />
+        {(repliesByRoot.get(comment.id) ?? []).map(reply => (
+          <div className="public-profile-comment-thread-reply" key={reply.id}>
+            <PublicCommentCard comment={reply} />
+          </div>
+        ))}
+      </div>
+    ))}
+  </div>;
 }
 
 export function PublicProfile() {
@@ -396,26 +432,17 @@ export function PublicProfile() {
                   {copied === item.id ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
                   {copied === item.id ? "Скопійовано" : "Поділитися"}
                 </button>
+                <a href={publicTelegramShareUrl(publicPostUrl(profile.url, item.id), item.title || item.text.slice(0, 120))}
+                  target="_blank" rel="noopener noreferrer" className="public-profile-telegram-share">
+                  <Send size={15} aria-hidden="true" /> У Telegram
+                </a>
                 <a href={communityPostUrl(profile.communityOrigin, item.id)}>Обговорити у Community <ArrowUpRight size={14} aria-hidden="true" /></a>
               </div>
               {copied === "error:" + item.id && <p className="public-profile-copy-error" role="status">Не вдалося скопіювати адресу допису.</p>}
               {expandedComments === item.id && <div className="public-profile-comments" id={"public-comments-" + item.id}>
                 <h4>Відкриті коментарі</h4>
                 <p className="public-profile-muted">Показані лише коментарі, які їхні автори дозволили читати гостям.</p>
-                {(comments[item.id]?.items ?? []).map(comment => (
-                  <article className="public-profile-comment" key={comment.id}>
-                    <div className="public-profile-comment-head">
-                      <span className="public-profile-post-avatar" aria-hidden="true">{comment.author.slice(0, 1).toUpperCase()}</span>
-                      <div><strong>{comment.author}</strong><time dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleString("uk-UA")}</time></div>
-                    </div>
-                    {comment.quote && <blockquote>{comment.quote}</blockquote>}
-                    {comment.text && <p>{comment.text}</p>}
-                    {(comment.photosCount > 0 || comment.hasChart) && <p className="public-profile-muted">
-                      {comment.photosCount > 0 ? "Фото" : ""}{comment.photosCount > 0 && comment.hasChart ? " та " : ""}{comment.hasChart ? "HookChart" : ""} — доступні у Community
-                    </p>}
-                    <ReactionTotals reactions={comment.reactions} />
-                  </article>
-                ))}
+                <PublicCommentThreads items={comments[item.id]?.items ?? []} />
                 {comments[item.id]?.loading && <p role="status">Завантаження коментарів…</p>}
                 {comments[item.id]?.error && <p role="status" className="public-profile-error">{comments[item.id].error}</p>}
                 {!comments[item.id]?.loading && comments[item.id]?.items.length === 0 && !comments[item.id]?.error && <p className="public-profile-muted">Відкритих коментарів поки немає.</p>}
