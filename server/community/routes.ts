@@ -700,6 +700,24 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
       gifted: Number(sent.rows[0]?.total ?? 0),
     });
   });
+  route("get", "/awards/history", async (_req, res, db, a) => {
+    const { rows } = await db.query(
+      `SELECT g.id,g.sender_id,g.recipient_id,g.award_type,g.cost,g.created_at,
+              sender.profile->>'displayName' AS sender_name,
+              recipient.profile->>'displayName' AS recipient_name
+         FROM hc_award_gifts g
+         JOIN hc_users sender ON sender.id=g.sender_id
+         JOIN hc_users recipient ON recipient.id=g.recipient_id
+        WHERE g.sender_id=$1 OR g.recipient_id=$1
+        ORDER BY g.created_at DESC,g.id DESC LIMIT 50`,
+      [a.id],
+    );
+    res.json({ success:true, items:rows.map(row=>({
+      id:row.id, direction:row.sender_id===a.id?"sent":"received",
+      awardType:row.award_type, cost:row.cost, date:row.created_at,
+      person:row.sender_id===a.id?row.recipient_name:row.sender_name,
+    })) });
+  });
   route("post", "/awards", async (req, res, db, a, p) => {
     const recipientId = uuid(req.body?.recipientId);
     const awardType = bounded(req.body?.awardType, 24);
