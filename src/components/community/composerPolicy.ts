@@ -26,7 +26,11 @@ export function canSendCommunityContent(text: string, photoCount: number, busy: 
 
 export function communityAudienceHint(kind: "post" | "comment" | "message", audience: string): string {
   if (kind === "message") return "Повідомлення доступне лише учасникам розмови.";
-  if (kind === "comment") return "Коментар видимий за правилами доступу до публікації.";
+  if (kind === "comment") {
+    if (audience === "public") return "Коментар бачать лише ті, кому доступний основний допис.";
+    if (audience === "friends") return "Коментар лише для друзів, які також можуть переглядати допис.";
+    return "Приватний коментар — лише для вас.";
+  }
   switch (audience) {
     case "public":
       return "Публічний допис можуть побачити інші учасники спільноти.";
