@@ -282,3 +282,42 @@ test("deletion immediately hides the profile and retires its address without ret
   const b = await actor(); assert.equal((await claim(b, "deleted-person")).res.status, 409);
   assert.equal((await db.query("SELECT count(*)::integer AS n FROM hc_profile_names WHERE owner_id=$1 OR username='deleted-person'", [a.id])).rows[0].n, 0);
 });
+
+test("Community session selections persist per-account and stay out of the anonymous public profile", async () => {
+  const owner = await actor();
+  const other = await actor();
+
+  const save = await call("/api/account/profile", owner, "PATCH", {
+    community: { tradingSessionIds: ["london", "new-york"] },
+  });
+  assert.equal(save.res.status, 200, save.text);
+  assert.deepEqual(save.data.profile.community.tradingSessionIds, ["london", "new-york"]);
+
+  const account = await call("/api/account/me", owner);
+  assert.deepEqual(account.data.profile.community.tradingSessionIds, ["london", "new-york"]);
+  assert.equal((await call("/api/account/me", other)).data.profile.community?.tradingSessionIds, undefined);
+
+  for (const invalid of [
+    "london", null, ["london", "unknown"], ["tokyo", "tokyo"],
+    ["sydney", "tokyo", "london", "new-york", "london"],
+  ]) {
+    const result = await call("/api/account/profile", owner, "PATCH", {
+      community: { tradingSessionIds: invalid },
+    });
+    assert.equal(result.res.status, 400, JSON.stringify({ invalid, error: result.data }));
+  }
+  assert.deepEqual((await call("/api/account/me", owner)).data.profile.community.tradingSessionIds, ["london", "new-york"]);
+
+  await db.query("UPDATE hc_users SET email_verified=true WHERE id=$1", [owner.id]);
+  assert.equal((await claim(owner, "trader-with-sessions")).res.status, 200);
+  await enable(owner);
+  const publicResult = await call("/api/public/profiles/trader-with-sessions");
+  assert.equal(publicResult.res.status, 200, publicResult.text);
+  assert.doesNotMatch(JSON.stringify(publicResult.data.profile), /tradingSessionIds/);
+
+  const clear = await call("/api/account/profile", owner, "PATCH", {
+    community: { tradingSessionIds: [] },
+  });
+  assert.equal(clear.res.status, 200, clear.text);
+  assert.deepEqual(clear.data.profile.community.tradingSessionIds, []);
+});
