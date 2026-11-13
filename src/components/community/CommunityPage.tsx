@@ -2107,6 +2107,7 @@ function Chats({
   inviteTarget: ChatInvite | null;
   onInviteHandled: () => void;
 }) {
+  const { user } = useAuth();
   const list = useResource("chats:" + revision, () =>
       apiJson(api + "/conversations"),
     ),
