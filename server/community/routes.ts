@@ -797,13 +797,30 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
     if (!rows.length) fail("Розмова недоступна", 404);
     res.json({ success: true, muted: rows[0].muted, muted_until: rows[0].muted_until });
   }, 30);
+  // Mention-only alerts are a private option for current group members.
+  route("post", "/conversations/:id/mentions-only", async (req, res, db, a) => {
+    const id = uuid(req.params.id);
+    if (typeof req.body?.enabled !== "boolean")
+      fail("Оберіть режим сповіщень групи");
+    const { rows } = await db.query(
+      `UPDATE hc_members m SET mentions_only=$3
+       FROM hc_conversations c
+       WHERE m.conversation_id=$1 AND m.user_id=$2
+         AND c.id=m.conversation_id AND c.is_group=true
+       RETURNING m.mentions_only`,
+      [id,a.id,req.body.enabled],
+    );
+    if (!rows.length) fail("Групова розмова недоступна", 404);
+    res.json({ success: true, mentions_only: rows[0].mentions_only });
+  }, 30);
   route("get", "/conversations/:id/members", async (req, res, db, _a, p) => {
     const id = uuid(req.params.id);
     if (!p.member.has(id)) fail("Розмова недоступна", 404);
     const { rows } = await db.query(
-      `SELECT m.user_id AS id, m.role, m.joined_at,
+      `SELECT m.user_id AS id, m.role, m.joined_at,n.username,
               COALESCE(NULLIF(u.profile->>'displayName',''),'Трейдер') AS "displayName"
          FROM hc_members m JOIN hc_users u ON u.id=m.user_id
+         LEFT JOIN hc_profile_names n ON n.owner_id=m.user_id
         WHERE m.conversation_id=$1 AND u.deleted_at IS NULL
         ORDER BY (m.role='owner') DESC,m.joined_at,m.user_id`,
       [id],
