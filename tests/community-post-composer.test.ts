@@ -69,7 +69,7 @@ test("new composer keeps live PostgreSQL-backed APIs, photo access and saved Hoo
 test("post cards keep real reactions, threaded replies and copied links only for public posts", () => {
   assert.match(page, /item\.audience === "public" && item\.kind === "post"/);
   assert.match(page, /navigator\.clipboard\.writeText\(/);
-  assert.match(page, /await post\(api \+ "\/items\/" \+ item\.id \+ "\/reaction", \{ emoji \}\)/);
+  assert.match(page, /<CommunityReactions/);
   assert.match(page, /api \+ "\/items\/" \+ item\.id \+ "\/comments"/);
   assert.match(page, /community-comment-head/);
   assert.match(page, /dateTime=\{comment\.created_at\}/);
