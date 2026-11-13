@@ -44,7 +44,7 @@ test("public profile remains server-controlled read-only and renders only return
   assert.match(publicProfile, /profile\?\.communityOrigin \?\? "https:\/\/h00k\.top\/"/);
   assert.match(publicProfile, /className="public-profile-cover"/);
   assert.match(publicProfile, /className="public-profile-identity"/);
-  assert.match(publicProfile, /className="public-profile-columns"/);
+  assert.match(publicProfile, /className="public-profile-columns public-profile-social-layout"/);
   assert.match(publicProfile, /className="public-profile-wall"/);
   assert.match(publicProfile, /profile\.statistics &&/);
   assert.match(publicProfile, /profile\.bio &&/);
