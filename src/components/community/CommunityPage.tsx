@@ -2,7 +2,7 @@ import { AccountSecuritySettings } from "./AccountSecuritySettings";
 import { PublicProfileSettings } from "./PublicProfileSettings";
 import { STRATEGY_PRESETS } from "../hookchart/strategyEngine";
 import { saveChartArchive } from "../../community/archiveChart";
-import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
+import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Users,
   ShieldCheck,
@@ -31,6 +31,8 @@ import type {
 import { ChartPreview } from "./ChartPreview";
 import "./community.css";
 import "./social-friends-settings.css";
+import "./social-chat-workspace.css";
+import { filterConversations } from "./chatModel";
 import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from "./friendsModel";
 const SharedHookChart = lazy(() => import("./SharedHookChart"));
 type Tab =
@@ -1724,11 +1726,30 @@ function Chats({
     [name, setName] = useState(""),
     [members, setMembers] = useState<string[]>([]),
     [messages, setMessages] = useState<any[]>([]),
-    [before, setBefore] = useState<string | null>(null);
+    [before, setBefore] = useState<string | null>(null),
+    [chatSearch, setChatSearch] = useState("");
   const activeId = useRef(id);
   const latestMessages = useRef(messages);
+  const threadRef = useRef<HTMLDivElement>(null);
+  const stayAtBottom = useRef(true);
+  const restoreOlderOffset = useRef<number | null>(null);
   activeId.current = id;
   latestMessages.current = messages;
+  useLayoutEffect(() => {
+    const thread = threadRef.current;
+    if (!thread) return;
+    if (restoreOlderOffset.current !== null) {
+      thread.scrollTop = Math.max(0, thread.scrollHeight - restoreOlderOffset.current);
+      restoreOlderOffset.current = null;
+    } else if (stayAtBottom.current) {
+      thread.scrollTop = thread.scrollHeight;
+    }
+  }, [id, messages]);
+  const conversations: any[] = Array.isArray(list.data?.items) ? list.data.items : [];
+  const filteredConversations = filterConversations(conversations, chatSearch);
+  const currentConversation = conversations.find((c) => c.id === id);
+  const currentTitle = currentConversation?.title ||
+    (currentConversation?.is_group ? "Групова розмова" : "Особистий діалог");
   async function load(older = false, replace = false) {
     if (!id) return;
     const startedId = id;
@@ -1745,6 +1766,10 @@ function Chats({
             : ""),
     );
     if (activeId.current !== startedId) return;
+    if (older && threadRef.current) {
+      // Record position just before prepending; concurrent polling cannot steal it.
+      restoreOlderOffset.current = threadRef.current.scrollHeight - threadRef.current.scrollTop;
+    }
     setMessages((old) => {
       const combined = older
         ? [...data.items, ...old]
@@ -1761,6 +1786,8 @@ function Chats({
     setMessages([]);
     latestMessages.current = [];
     setBefore(null);
+    stayAtBottom.current = true;
+    restoreOlderOffset.current = null;
     if (!id) return;
     let active = true;
     const pull = () => {
@@ -1821,6 +1848,8 @@ function Chats({
               setId(d.id);
               list.refresh();
               setMembers([]);
+              setName("");
+              setChatSearch("");
             })
           }
         >
@@ -1830,39 +1859,106 @@ function Chats({
       <div className="community-chat-layout">
         <aside className="community-chat-list" aria-label="Список розмов">
           <h3>Ваші розмови</h3>
-          {list.error && <p>{list.error}</p>}
-          {list.data?.items?.map((c: any) => (
-            <button
-              type="button"
-              key={c.id}
-              aria-pressed={id === c.id}
-              onClick={() => setId(c.id)}
-            >
-              {c.is_group ? "Група" : "Діалог"} · {c.title}
-            </button>
-          ))}
+          <label className="community-chat-search-label" htmlFor="community-chat-search">
+            Пошук розмови
+          </label>
+          <input
+            id="community-chat-search"
+            className="community-chat-search"
+            type="search"
+            value={chatSearch}
+            onChange={(e) => setChatSearch(e.target.value)}
+            placeholder="Назва групи або діалогу"
+          />
+          {list.error && <p role="status">{list.error}</p>}
+          {!list.error && !conversations.length && (
+            <p className="community-chat-list-empty">Тут з’являться ваші особисті та групові розмови.</p>
+          )}
+          {conversations.length > 0 && filteredConversations.length === 0 && (
+            <p className="community-chat-list-empty">За цією назвою розмов немає.</p>
+          )}
+          <div className="community-chat-channels">
+            {filteredConversations.map((c: any) => (
+              <button
+                type="button"
+                key={c.id}
+                aria-pressed={id === c.id}
+                aria-label={(c.is_group ? "Група: " : "Діалог: ") + (c.title || "Без назви")}
+                onClick={() => setId(c.id)}
+              >
+                <span className="community-chat-channel-symbol" aria-hidden="true">
+                  {c.is_group ? "👥" : "✉"}
+                </span>
+                <span className="community-chat-channel-label">
+                  <strong>{c.title || "Розмова без назви"}</strong>
+                  <small>{c.is_group ? "Групова розмова" : "Особистий діалог"}</small>
+                </span>
+              </button>
+            ))}
+          </div>
         </aside>
         <div className="community-chat-panel">
           {id ? (
             <>
-              {before && (
+              <header className="community-chat-active-header">
+                <span className="community-chat-active-avatar" aria-hidden="true">
+                  {currentConversation?.is_group ? "👥" : "✉"}
+                </span>
+                <div>
+                  <span className="community-page-kicker">
+                    {currentConversation?.is_group ? "ГРУПОВА РОЗМОВА" : "ОСОБИСТЕ ЛИСТУВАННЯ"}
+                  </span>
+                  <h3>{currentTitle}</h3>
+                </div>
                 <button
+                  className="community-chat-jump"
                   type="button"
-                  onClick={() => void run(() => load(true))}
+                  onClick={() => {
+                    if (!threadRef.current) return;
+                    stayAtBottom.current = true;
+                    threadRef.current.scrollTop = threadRef.current.scrollHeight;
+                  }}
                 >
-                  Раніші повідомлення
+                  До останніх
                 </button>
-              )}
-              {messages.map((item) => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  onChart={onChart}
-                  onPick={onPick}
-                  run={run}
-                  refresh={() => void load(false, true)}
-                />
-              ))}
+              </header>
+              <div
+                className="community-chat-thread"
+                role="log"
+                aria-label="Повідомлення розмови"
+                aria-live="off"
+                ref={threadRef}
+                onScroll={(event) => {
+                  const thread = event.currentTarget;
+                  stayAtBottom.current =
+                    thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
+                }}
+              >
+                {before && (
+                  <button
+                    className="community-chat-older"
+                    type="button"
+                    onClick={() => void run(() => load(true))}
+                  >
+                    Показати попередні повідомлення
+                  </button>
+                )}
+                {!messages.length && !before && (
+                  <div className="community-chat-thread-empty">
+                    Напишіть перше повідомлення або поділіться збереженою формацією.
+                  </div>
+                )}
+                {messages.map((item) => (
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    onChart={onChart}
+                    onPick={onPick}
+                    run={run}
+                    refresh={() => void load(false, true)}
+                  />
+                ))}
+              </div>
               <Composer
                 key={id}
                 target={{ kind: "message", conversationId: id }}
@@ -1872,8 +1968,10 @@ function Chats({
               />
             </>
           ) : (
-            <div className="community-empty">
-              Виберіть розмову або створіть нову.
+            <div className="community-empty community-chat-welcome">
+              <MessageCircle size={28} aria-hidden="true" />
+              <h3>Ваші повідомлення</h3>
+              <p>Виберіть розмову або створіть нову з підтвердженими друзями.</p>
             </div>
           )}
         </div>
