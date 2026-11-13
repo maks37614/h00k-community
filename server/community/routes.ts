@@ -124,6 +124,40 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
       next: rows.length === 40 ? rows.at(-1)!.id : null,
     });
   });
+  route("get", "/saved", async (req, res, db, a, p) => {
+    const before = req.query.before ? uuid(req.query.before) : null;
+    const { rows } = await db.query<Item>(
+      `SELECT i.* FROM hc_saved_items s
+       JOIN hc_items i ON i.id=s.item_id
+       WHERE s.owner_id=$1 AND i.kind='post' AND NOT i.deleted
+       AND ($2::uuid IS NULL OR (s.created_at,s.item_id)<(SELECT created_at,item_id FROM hc_saved_items WHERE owner_id=$1 AND item_id=$2))
+       ORDER BY s.created_at DESC,s.item_id DESC LIMIT 40`,
+      [a.id, before],
+    );
+    const items = [];
+    for (const item of rows) {
+      const shown = await presentItem(db, p, item);
+      if (shown) items.push(shown);
+    }
+    res.json({ success: true, items, next: rows.length === 40 ? rows.at(-1)!.id : null });
+  });
+  route("post", "/items/:id/save", async (req, res, db, a, p) => {
+    const id = uuid(req.params.id), item = await p.item(id);
+    if (!item || item.kind !== "post" || !(await p.visible(item)) ||
+        (item.chart_id && !(await p.canReadChart(item.chart_id))))
+      fail("Публікація недоступна", 404);
+    const existing = await db.query(
+      "DELETE FROM hc_saved_items WHERE owner_id=$1 AND item_id=$2 RETURNING item_id", [a.id,id],
+    );
+    if (existing.rows.length) res.json({ success:true, saved:false });
+    else {
+      await db.query(
+        "INSERT INTO hc_saved_items(owner_id,item_id) VALUES($1,$2) ON CONFLICT DO NOTHING",
+        [a.id,id],
+      );
+      res.json({ success:true, saved:true });
+    }
+  }, 40);
   route("get", "/items", async (req, res, db, a, p) => {
     const kind = bounded(req.query.kind ?? "strategy", 20);
     if (!["strategy", "plan", "lesson", "test"].includes(kind))
