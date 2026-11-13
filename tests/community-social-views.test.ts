@@ -46,7 +46,7 @@ test('chat visuals retain real conversations, group creation, pagination and mes
   assert.match(page, /post\(api \+ "\/conversations"/);
   assert.match(page, /target=\{\{ kind: "message", conversationId: id \}\}/);
   assert.match(page, /setInterval\(pull, 5000\)/);
-  assert.match(page, /community-composer-message/);
+  assert.match(page, /className=\{"community-composer community-composer-" \+ target\.kind\}/);
 });
 
 test('feed profile chat design is scoped and mobile adaptive', () => {
