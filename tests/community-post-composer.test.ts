@@ -51,7 +51,7 @@ test("new composer keeps live PostgreSQL-backed APIs, photo access and saved Hoo
   assert.match(page, /onSubmit=\{send\}/);
   assert.match(page, /await post\(api \+ "\/items", \{/);
   assert.match(page, /clientId: clientId\.current/);
-  assert.match(page, /body: replyBody\(text, photos, target\.replyTo\)/);
+  assert.match(page, /body: \{ \.\.\.replyBody\(text, photos, target\.replyTo\)/);
   assert.match(page, /if \(inFlight\.current/);
   assert.match(page, /validateCommunityPhoto\(file, photos\.length\)/);
   assert.match(page, /api \+ "\/media"/);
