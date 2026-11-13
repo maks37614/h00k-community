@@ -41,7 +41,7 @@ test("public profile remains server-controlled read-only and renders only return
   assert.match(publicProfile, /fetch\(url, \{ credentials: "omit", cache: "no-store", signal \}\)/);
   assert.match(publicProfile, /Promise\.all\(\[read\(base, controller\.signal\), read\(base \+ "\/posts", controller\.signal\)\]\)/);
   assert.match(publicProfile, /profile && <>/);
-  assert.match(publicProfile, /profile\.communityOrigin \?\? "https:\/\/h00k\.top\/"/);
+  assert.match(publicProfile, /profile\?\.communityOrigin \?\? "https:\/\/h00k\.top\/"/);
   assert.match(publicProfile, /className="public-profile-cover"/);
   assert.match(publicProfile, /className="public-profile-identity"/);
   assert.match(publicProfile, /className="public-profile-columns"/);
