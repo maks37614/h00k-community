@@ -4,12 +4,15 @@ import { readFileSync } from 'node:fs';
 
 const page = readFileSync(new URL('../src/components/community/CommunityPage.tsx', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../src/components/community/community.css', import.meta.url), 'utf8');
+const concept = readFileSync(new URL('../src/components/community/CommunityConceptProfile.tsx', import.meta.url), 'utf8');
+const conceptCss = readFileSync(new URL('../src/components/community/social-concept-layout.css', import.meta.url), 'utf8');
 
 test('Community sidebar displays the authenticated user, not hardcoded mock traders', () => {
   assert.match(page, /className="community-sidebar"/);
-  assert.match(page, /className="community-sidebar-account"/);
-  assert.match(page, /profile\?\.displayName \?\? user\.displayName/);
-  assert.match(page, /profile\?\.community\?\.status\?\.text/);
+  assert.match(page, /<CommunityConceptProfile/);
+  assert.match(concept, /profile\?\.displayName \?\? user\?\.displayName/);
+  assert.match(concept, /profile\?\.community\?\.status\?\.text/);
+  assert.match(concept, /apiJson\("\/api\/community\/awards"\)/);
   assert.match(page, /setViewProfile\(null\); setTab\("profile"\);/);
   assert.doesNotMatch(page, /TradingAtlas|INITIAL_PROFILES/);
 });
@@ -31,4 +34,7 @@ test('real profile sidebar and optional third column remain responsive', () => {
   assert.match(css, /@media \(max-width: 900px\)/);
   assert.match(css, /@media \(max-width: 700px\)/);
   assert.match(css, /\.community-dashboard-feed \.community-context-rail/);
+  assert.match(conceptCss, /grid-template-columns: minmax\(248px, 350px\)/);
+  assert.match(conceptCss, /\.community-concept-profile/);
+  assert.match(conceptCss, /@media \(max-width: 1180px\)/);
 });
