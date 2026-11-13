@@ -44,3 +44,19 @@ test("unread API is a membership-scoped cursor with capped indexed counts", () =
   assert.match(routes, /SELECT joined_at FROM hc_members WHERE conversation_id=\$1 AND user_id=\$2 FOR UPDATE/);
   assert.match(routes, /newer\.created_at,newer\.id/);
 });
+
+test("muted chats keep their unread bubbles but are excluded from notification aggregates", () => {
+  assert.match(schema, /ALTER TABLE hc_members ADD COLUMN IF NOT EXISTS muted boolean NOT NULL DEFAULT false/);
+  assert.match(routes, /route\("post", "\/conversations\/:id\/mute"/);
+  assert.match(routes, /typeof req\.body\?\.muted !== "boolean"/);
+  assert.match(routes, /UPDATE hc_members SET muted=\$3/);
+  assert.match(routes, /WHERE conversation_id=\$1 AND user_id=\$2 RETURNING muted/);
+  assert.match(routes, /AND NOT m\.muted AND \$\{unreadPredicate\}/);
+  assert.match(routes, /SELECT c\.\*,m\.role,m\.muted/);
+  assert.match(page, /className="community-chat-mute-toggle"/);
+  assert.match(page, /currentConversation\.muted === true/);
+  assert.match(page, /community:chat-muted/);
+  assert.match(page, /Без звуку/);
+  assert.match(page, /Number\(c\.unread_count\) > 0/);
+  assert.match(style, /\.community-chat-mute-toggle\[aria-pressed="true"\]/);
+});
