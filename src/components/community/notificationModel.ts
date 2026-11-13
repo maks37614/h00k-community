@@ -10,6 +10,9 @@ export type CommunityNotice = {
     used?: unknown;
     limit?: unknown;
     currency?: unknown;
+    friendId?: unknown;
+    postId?: unknown;
+    awardType?: unknown;
   } | null;
 };
 
@@ -34,6 +37,28 @@ export function describeCommunityNotice(notice: CommunityNotice): {
   const body = notice.body;
   const safeText =
     typeof body?.text === "string" ? body.text.slice(0, 1000) : "";
+  if (notice.type === "friend_request") {
+    return { title: "Нова заявка у друзі",
+      description: "Користувач хоче додати вас у друзі. Перевірте заявку перед прийняттям.",
+      isImportant: false };
+  }
+  if (notice.type === "friend_accepted") {
+    return { title: "Запит у друзі прийнято",
+      description: "Вашу заявку прийнято. Тепер можна спілкуватися в Community.",
+      isImportant: false };
+  }
+  if (notice.type === "comment") {
+    return { title: "Нове обговорення",
+      description: "Хтось залишив публічний коментар до вашого допису або відповів на ваш коментар.",
+      isImportant: false };
+  }
+  if (notice.type === "award") {
+    const names: Record<string,string> = { thanks: "Подяка", analysis: "Крутий аналіз", top_trader: "Топ трейдер" };
+    const label = typeof body?.awardType === "string" ? names[body.awardType] : undefined;
+    return { title: "Нова нагорода",
+      description: label ? "Ви отримали нагороду: " + label + "." : "Ви отримали нову нагороду Community.",
+      isImportant: false };
+  }
   if (notice.type === "risk") {
     const parts = [body?.used, body?.limit, body?.currency];
     const hasValues = parts.every(
@@ -69,4 +94,19 @@ export function safeNoticeDate(input: string): string {
   return Number.isNaN(date.getTime())
     ? "Час невідомий"
     : date.toLocaleString("uk-UA");
+}
+
+const PUBLIC_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export type CommunityNoticeDestination =
+  | { section: "friends" }
+  | { section: "feed"; postId: string };
+
+/** Only known server-defined destinations may be opened from an inbox item. */
+export function communityNoticeDestination(notice: CommunityNotice): CommunityNoticeDestination | null {
+  if (notice.type === "friend_request" || notice.type === "friend_accepted")
+    return { section: "friends" };
+  if (notice.type === "comment" &&
+    typeof notice.body?.postId === "string" && PUBLIC_UUID.test(notice.body.postId))
+    return { section: "feed", postId: notice.body.postId };
+  return null;
 }
