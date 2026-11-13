@@ -297,8 +297,8 @@ export function PublicProfile() {
             {profileJoinDate && <span className="public-profile-joined"><CalendarDays size={15} aria-hidden="true" /> У спільноті з {profileJoinDate}</span>}
           </div>
           <div className="public-profile-hero-actions">
-            <a className="public-profile-action public-profile-connect" href={communityUrl!} title="Запити дружби доступні після входу в Community"><UserPlus size={16} aria-hidden="true" /> Додати в друзі</a>
-            <a className="public-profile-chat" href={communityUrl!} title="Повідомлення доступні підтвердженим друзям у Community"><MessageCircle size={16} aria-hidden="true" /> Повідомлення</a>
+            <a className="public-profile-action public-profile-connect" href={communityUrl! + "&contact=friend"} title="Запити дружби доступні після входу в Community"><UserPlus size={16} aria-hidden="true" /> Додати в друзі</a>
+            <a className="public-profile-chat" href={communityUrl! + "&contact=message"} title="Повідомлення доступні підтвердженим друзям у Community"><MessageCircle size={16} aria-hidden="true" /> Повідомлення</a>
             <a className="public-profile-community-link" href={communityUrl!}><UsersRound size={16} aria-hidden="true" /> Відкрити у Community</a>
             <button type="button" className="public-profile-copy" onClick={() => void copy(profile.url, "profile")}>
               {copied === "profile" ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
