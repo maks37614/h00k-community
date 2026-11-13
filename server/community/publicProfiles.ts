@@ -63,6 +63,25 @@ async function publicPost(db: Database, rules: Policy, owner: string, id: string
   return row;
 }
 
+/** Public wall exposes a fixed set of fields; never serialize body or actor data. */
+async function publicPostCard(db: Database, rules: Policy, row: Item) {
+  const reactions = await db.query(
+    "SELECT emoji,count(*)::integer AS count FROM hc_reactions WHERE item_id=$1 GROUP BY emoji ORDER BY emoji",
+    [row.id],
+  );
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    text: text(row.body?.text, 20_000),
+    title: text(row.body?.title, 200),
+    photos: Array.isArray(row.body?.photos)
+      ? row.body.photos.slice(0, 4).filter((id: unknown) => typeof id === "string" && /^[a-f0-9-]{36}$/.test(id))
+      : [],
+    chart: row.chart_id ? await getChart(db, rules, row.chart_id, true) : null,
+    reactions: reactions.rows,
+  };
+}
+
 export function installPublicProfiles(app: Express, getDb: () => Database, buildRoot = path.resolve("dist-profile")) {
   const limits = new RequestLimits();
   let active = 0;
@@ -171,11 +190,48 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
     const output = [];
     for (const row of rows.slice(0, 15)) {
       if (!(await rules.visible(row)) || (row.chart_id && !(await rules.canReadChart(row.chart_id)))) continue;
-      output.push({ id: row.id, createdAt: row.created_at, text: text(row.body?.text, 20_000), title: text(row.body?.title, 200),
-        photos: Array.isArray(row.body?.photos) ? row.body.photos.slice(0, 4).filter((id: unknown) => typeof id === "string" && /^[a-f0-9-]{36}$/.test(id)) : [],
-        chart: row.chart_id ? await getChart(db, rules, row.chart_id, true) : null });
+      output.push(await publicPostCard(db, rules, row));
     }
     res.json({ success: true, items: output, next: rows.length > 15 ? rows[14].id : null });
+  });
+  // A shareable link loads one post without requiring users to scroll through earlier pages.
+  route("/posts/:id", async (req, res, db, owner, rules) => {
+    const row = await publicPost(db, rules, owner.id, req.params.id);
+    res.json({ success: true, item: await publicPostCard(db, rules, row) });
+  });
+  // Anonymous comments are intentionally read-only and restricted to public opt-in authors.
+  route("/posts/:id/comments", async (req, res, db, owner, rules) => {
+    const parent = await publicPost(db, rules, owner.id, req.params.id);
+    const after = req.query.after ? uuid(req.query.after) : null;
+    const { rows } = await db.query<(Item & { author_profile: Record<string, any> })>(
+      `SELECT c.*,u.profile AS author_profile FROM hc_items c JOIN hc_users u ON u.id=c.owner_id
+       WHERE c.parent_id=$1 AND c.kind='comment' AND c.audience='public' AND c.conversation_id IS NULL AND NOT c.deleted
+       AND ($2::uuid IS NULL OR (c.created_at,c.id)>(SELECT created_at,id FROM hc_items
+         WHERE id=$2 AND parent_id=$1 AND kind='comment' AND audience='public' AND NOT deleted))
+       ORDER BY c.created_at,c.id LIMIT 21`,
+      [parent.id, after],
+    );
+    const items = [];
+    for (const row of rows.slice(0, 20)) {
+      if (!(await rules.visible(row)) || (row.chart_id && !(await rules.canReadChart(row.chart_id)))) continue;
+      const source = row.body?.sourceItemId ? await rules.item(row.body.sourceItemId) : null;
+      const quoted = source && (await rules.visible(source)) ? text(source.body?.text, 180) : "";
+      const reactions = await db.query(
+        "SELECT emoji,count(*)::integer AS count FROM hc_reactions WHERE item_id=$1 GROUP BY emoji ORDER BY emoji",
+        [row.id],
+      );
+      items.push({
+        id: row.id,
+        createdAt: row.created_at,
+        author: text(row.author_profile?.displayName, 100) || "Трейдер",
+        text: text(row.body?.text, 20_000),
+        quote: quoted,
+        photosCount: Array.isArray(row.body?.photos) ? Math.min(row.body.photos.length, 4) : 0,
+        hasChart: Boolean(row.chart_id),
+        reactions: reactions.rows,
+      });
+    }
+    res.json({ success: true, items, next: rows.length > 20 ? rows[19].id : null });
   });
   route("/posts/:id/chart", async (req, res, db, owner, rules) => {
     const row = await publicPost(db, rules, owner.id, req.params.id);
