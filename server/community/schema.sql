@@ -202,3 +202,5 @@ CREATE INDEX IF NOT EXISTS hc_messages_unread
   WHERE kind='message' AND NOT deleted;
 -- Mutes are per-account; they never mark another person's messages as read.
 ALTER TABLE hc_members ADD COLUMN IF NOT EXISTS muted boolean NOT NULL DEFAULT false;
+-- Expiring per-member mutes are evaluated at read time; no scheduler is required.
+ALTER TABLE hc_members ADD COLUMN IF NOT EXISTS muted_until timestamptz;
