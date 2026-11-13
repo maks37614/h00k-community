@@ -585,3 +585,211 @@
 .community-account-deletion {
   border-color: #be123c;
 }
+
+/* Social reference: Community workspace skin.
+   Presentation only: all existing feed, profiles, chats and settings handlers
+   remain connected to the original Community API and PostgreSQL. */
+.community-shell.community-workspace {
+  width: 100%;
+  max-width: 1720px;
+  padding: 20px clamp(12px, 2.3vw, 32px) 64px;
+  color: #e6eef9;
+  --community-border: #20304a;
+  --community-muted: #95a6bf;
+  --community-panel: #0e1625;
+}
+.community-workspace .community-intro {
+  min-width: 0;
+  margin-bottom: 16px;
+  padding: 14px 18px 20px;
+  border-bottom: 1px solid #1b2b44;
+}
+.community-workspace .community-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #00e5bf;
+  font-size: 12px;
+  letter-spacing: .12em;
+}
+.community-workspace .community-eyebrow::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #00e5bf;
+  box-shadow: 0 0 12px #00e5bf77;
+}
+.community-workspace .community-intro h1 {
+  max-width: 850px;
+  font-size: clamp(23px, 2.4vw, 36px);
+  line-height: 1.18;
+  letter-spacing: -.035em;
+}
+.community-workspace .community-intro p {
+  color: #97a6be;
+}
+.community-workspace .community-intro > button {
+  border: 1px solid #235f5b;
+  border-radius: 12px;
+  background: #0e2e2e;
+  color: #a7f8e8;
+  font-weight: 650;
+  padding: 10px 14px;
+}
+.community-workspace .community-intro > button:hover {
+  background: #12423c;
+}
+.community-workspace .community-dashboard {
+  display: grid;
+  grid-template-columns: minmax(216px, 265px) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(12px, 1.8vw, 24px);
+}
+.community-workspace .community-nav {
+  position: sticky;
+  top: 20px;
+  min-width: 0;
+  max-height: calc(100dvh - 40px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  margin: 0;
+  border: 1px solid #1c2a40;
+  border-radius: 18px;
+  background: #0e1625;
+  box-shadow: 0 12px 32px #0003;
+}
+.community-workspace .community-nav::before {
+  content: "НАВІГАЦІЯ";
+  display: block;
+  padding: 7px 11px 9px;
+  color: #7e96b4;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .11em;
+}
+.community-workspace .community-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 11px;
+  width: 100%;
+  min-width: 0;
+  min-height: 43px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: #b8c7dc;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: normal;
+  text-align: left;
+}
+.community-workspace .community-nav button svg {
+  flex: 0 0 auto;
+  color: #7895b3;
+}
+.community-workspace .community-nav button:hover {
+  background: #16283d;
+  color: #f2f7ff;
+}
+.community-workspace .community-nav button[aria-current="page"] {
+  border-color: #235b59;
+  background: linear-gradient(105deg, #104e49, #153244);
+  color: #bcfff0;
+  box-shadow: inset 3px 0 #00e5bf;
+}
+.community-workspace .community-nav button[aria-current="page"] svg {
+  color: #00e5bf;
+}
+.community-workspace .community-main-pane,
+.community-workspace .community-content {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+}
+.community-workspace .community-section-heading {
+  margin-top: 0;
+  gap: 12px;
+}
+.community-workspace .community-card,
+.community-workspace .community-composer {
+  border-color: #1b2b42;
+  border-radius: 18px;
+  background: #0e1625;
+  box-shadow: 0 12px 28px #0002;
+}
+.community-workspace .community-card button,
+.community-workspace .community-composer button {
+  border-radius: 10px;
+}
+.community-workspace .community-primary {
+  background: #00bda0 !important;
+  border-color: #00e5bf !important;
+  color: #06151a !important;
+}
+.community-workspace .community-primary:hover {
+  background: #00e5bf !important;
+}
+.community-workspace .community-segment button[aria-pressed="true"] {
+  color: #b7fff0;
+  border-color: #00bda0;
+  background: #114b47;
+}
+@media (max-width: 900px) {
+  .community-workspace .community-dashboard {
+    display: block;
+  }
+  .community-workspace .community-nav {
+    position: relative;
+    top: auto;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-direction: row;
+    gap: 6px;
+    margin-bottom: 16px;
+    padding: 8px;
+    border-radius: 13px;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+  .community-workspace .community-nav::before { display: none; }
+  .community-workspace .community-nav button {
+    width: auto;
+    flex: 0 0 auto;
+    min-height: 42px;
+    padding: 9px 11px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .community-workspace .community-nav button[aria-current="page"] {
+    box-shadow: inset 0 -2px #00e5bf;
+  }
+}
+@media (max-width: 700px) {
+  .community-shell.community-workspace {
+    padding: 12px 10px 48px;
+  }
+  .community-workspace .community-intro {
+    padding: 12px 4px 16px;
+    margin-bottom: 12px;
+  }
+  .community-workspace .community-intro > button {
+    white-space: normal;
+    margin-top: 10px;
+  }
+  .community-workspace .community-card,
+  .community-workspace .community-composer {
+    border-radius: 14px;
+    padding: 14px;
+  }
+}

@@ -251,7 +251,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
       </section>
     );
   return (
-    <section className="community-shell">
+    <section className="community-shell community-workspace">
       <header className="community-intro">
         <div>
           <span className="community-eyebrow">h00k COMMUNITY</span>
@@ -265,7 +265,8 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           <ShieldCheck size={18} /> Прозорість і захист
         </button>
       </header>
-      <nav className="community-nav" aria-label="Розділи спільноти">
+      <div className="community-dashboard">
+        <nav className="community-nav" aria-label="Розділи спільноти">
         {nav.map(([id, title, icon]) => (
           <button
             type="button"
@@ -280,7 +281,8 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
             {title}
           </button>
         ))}
-      </nav>
+        </nav>
+        <div className="community-main-pane">
       {notice && (
         <div className="community-notice" role="status">
           {notice}
@@ -365,6 +367,8 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           />
         )}
         {tab === "settings" && <CommunitySettings run={run} />}
+      </div>
+        </div>
       </div>
       {picker && (
         <div className="community-backdrop">
