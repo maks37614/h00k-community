@@ -2270,10 +2270,16 @@ function CommunitySettings({ run }: { run: Run }) {
       updateProfileData({ community: { ...profile?.community, [key]: value } }),
     );
   return (
-    <>
-      <h2>Захист, біржі та особисті межі</h2>
-      <section className="community-card">
-        <h3>Прозорість</h3>
+    <section className="community-settings-view" aria-label="Налаштування Community">
+      <header className="community-section-heading community-settings-heading">
+        <div>
+          <span className="community-page-kicker">КОНТРОЛЬ І БЕЗПЕКА</span>
+          <h2>Налаштування спільноти</h2>
+          <p>Керуйте приватністю, захистом акаунта та лише читальними підключеннями бірж.</p>
+        </div>
+      </header>
+      <section className="community-card community-settings-intro">
+        <h3>Прозорість і захист</h3>
         <p>
           Підтверджені біржові факти не редагуються користувачем. Джерело та
           охоплення показуються окремо; бейдж не означає, що автору можна
@@ -2287,7 +2293,7 @@ function CommunitySettings({ run }: { run: Run }) {
         </p>
       </section>
       <AccountSecuritySettings />
-      <section className="community-card community-form">
+      <section className="community-card community-form community-settings-exchanges">
         <h3>Біржі та API · Bybit Global / linear</h3>
         <p>
           Перший конектор читає закриті ордери реального рахунка. EU та інші
@@ -2392,7 +2398,7 @@ function CommunitySettings({ run }: { run: Run }) {
         ))}
       </section>
       <form
-        className="community-card community-form"
+        className="community-card community-form community-settings-risk"
         onSubmit={(e) => {
           e.preventDefault();
           void run(async () => {
@@ -2459,7 +2465,7 @@ function CommunitySettings({ run }: { run: Run }) {
           ),
         )}
       </form>
-      <section className="community-card">
+      <section className="community-card community-settings-privacy">
         <h3>Фінансова приватність</h3>
         {[
           ["statisticsAudience", "Загальні показники"],
@@ -2489,7 +2495,7 @@ function CommunitySettings({ run }: { run: Run }) {
         ))}
         {!notifications.data?.items?.length && <p>Сповіщень поки немає.</p>}
       </section>
-    </>
+    </section>
   );
 }
 
