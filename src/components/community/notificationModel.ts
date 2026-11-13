@@ -40,11 +40,12 @@ export function unreadChatNotices(items: unknown, limit = 8): Array<ChatNotice &
     .map(item => {
       const count = Number(item.unread_count);
       return {
-        ...item,
+        id: item.id,
+        is_group: item.is_group === true,
         count: Number.isFinite(count) ? Math.max(0, Math.min(100, Math.floor(count))) : 0,
         displayName: item.is_group
-          ? (item.title?.trim() || "Групова розмова")
-          : (item.peer_name?.trim() || "Особистий діалог"),
+          ? (typeof item.title === "string" && item.title.trim() ? item.title.slice(0, 100) : "Групова розмова")
+          : (typeof item.peer_name === "string" && item.peer_name.trim() ? item.peer_name.slice(0, 100) : "Особистий діалог"),
       };
     })
     .filter(item => item.count > 0)
