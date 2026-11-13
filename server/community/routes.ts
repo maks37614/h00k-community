@@ -639,6 +639,64 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
     );
     res.json({ success: true });
   });
+  // Earned reputation credits can be spent on transparent peer-to-peer awards.
+  // Spending uses a locked wallet row so two simultaneous gifts cannot overspend.
+  route("get", "/awards", async (_req, res, db, a) => {
+    const [earned, wallet, received, sent] = await Promise.all([
+      db.query("SELECT COALESCE(sum(points),0)::integer AS total FROM hc_reputation WHERE owner_id=$1", [a.id]),
+      db.query("SELECT spent FROM hc_award_wallets WHERE owner_id=$1", [a.id]),
+      db.query("SELECT count(*)::integer AS total FROM hc_award_gifts WHERE recipient_id=$1", [a.id]),
+      db.query("SELECT count(*)::integer AS total FROM hc_award_gifts WHERE sender_id=$1", [a.id]),
+    ]);
+    const credits = Number(earned.rows[0]?.total ?? 0);
+    const spent = Number(wallet.rows[0]?.spent ?? 0);
+    res.json({
+      success: true,
+      balance: Math.max(0, credits - spent),
+      earned: credits,
+      spent,
+      received: Number(received.rows[0]?.total ?? 0),
+      gifted: Number(sent.rows[0]?.total ?? 0),
+    });
+  });
+  route("post", "/awards", async (req, res, db, a, p) => {
+    const recipientId = uuid(req.body?.recipientId);
+    const awardType = bounded(req.body?.awardType, 24);
+    const costs: Record<string, number> = { thanks: 20, analysis: 50, top_trader: 50 };
+    const cost = costs[awardType];
+    if (!cost) fail("Невідома нагорода");
+    if (recipientId === a.id || p.blocked.has(recipientId))
+      fail("Неможливо подарувати нагороду цьому користувачу", 403);
+    const giftId = randomUUID();
+    await db.transaction(async (tx) => {
+      const recipient = await tx.query(
+        "SELECT id FROM hc_users WHERE id=$1 AND deleted_at IS NULL FOR SHARE", [recipientId],
+      );
+      if (!recipient.rows.length) fail("Користувача не знайдено", 404);
+      await tx.query(
+        "INSERT INTO hc_award_wallets(owner_id) VALUES($1) ON CONFLICT DO NOTHING", [a.id],
+      );
+      const wallet = await tx.query(
+        "SELECT spent FROM hc_award_wallets WHERE owner_id=$1 FOR UPDATE", [a.id],
+      );
+      const earned = await tx.query(
+        "SELECT COALESCE(sum(points),0)::integer AS total FROM hc_reputation WHERE owner_id=$1", [a.id],
+      );
+      const balance = Number(earned.rows[0]?.total ?? 0) - Number(wallet.rows[0]?.spent ?? 0);
+      if (balance < cost) fail("Недостатньо балів для нагороди", 409);
+      await tx.query("UPDATE hc_award_wallets SET spent=spent+$2 WHERE owner_id=$1", [a.id, cost]);
+      await tx.query(
+        "INSERT INTO hc_award_gifts(id,sender_id,recipient_id,award_type,cost) VALUES($1,$2,$3,$4,$5)",
+        [giftId, a.id, recipientId, awardType, cost],
+      );
+      await tx.query(
+        `INSERT INTO hc_notifications(id,owner_id,type,body,dedup_key)
+         VALUES($1,$2,'award',$3,$4) ON CONFLICT(dedup_key) DO NOTHING`,
+        [randomUUID(), recipientId, JSON.stringify({ senderId: a.id, awardType, cost }), "award:" + giftId],
+      );
+    });
+    res.status(201).json({ success: true, id: giftId });
+  }, 12);
   route("get", "/rankings", async (req, res, db) => {
     const currency = req.query.currency === "USDC" ? "USDC" : "USDT";
     const { rows } = await db.query(
