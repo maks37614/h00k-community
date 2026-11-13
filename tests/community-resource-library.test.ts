@@ -26,6 +26,8 @@ test("resource editor preserves real API and versioned updates, with templates a
   assert.match(library, /else await post\(api \+ "\/items", \{ kind, audience, body \}\)/);
   assert.match(library, /const \[editing, setEditing\] = useState<any>\(null\)/);
   assert.match(library, /aria-expanded=\{showEditor\}/);
+  assert.match(library, /setAudience\("private"\)/);
+  assert.match(library, /setMode\("replay"\)/);
   assert.match(library, /\{showEditor && \(/);
   assert.match(library, /setShowEditor\(true\)/);
   assert.match(library, /<details className="community-card community-resource-presets">/);
