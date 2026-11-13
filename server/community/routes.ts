@@ -545,6 +545,23 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
       },
     });
   });
+  // All unread counts are bounded at 100 and computed from this member's cursor.
+  // No notification is written for each message: one indexed read per visible client.
+  const unreadPredicate = `msg.kind='message' AND NOT msg.deleted AND msg.owner_id<>$1
+    AND msg.created_at>=m.joined_at
+    AND (marker.id IS NULL OR (msg.created_at,msg.id)>(marker.created_at,marker.id))`;
+  route("get", "/conversations/unread", async (_req, res, db, a) => {
+    const { rows } = await db.query(
+      `SELECT count(*)::integer AS unread FROM (
+         SELECT 1 FROM hc_members m
+         LEFT JOIN hc_items marker ON marker.id=m.last_read_message_id AND marker.conversation_id=m.conversation_id
+         JOIN hc_items msg ON msg.conversation_id=m.conversation_id
+         WHERE m.user_id=$1 AND ${unreadPredicate} LIMIT 100
+       ) notices`,
+      [a.id],
+    );
+    res.json({ success: true, unread: Number(rows[0]?.unread ?? 0) });
+  });
   route("get", "/conversations", async (_req, res, db, a) => {
     const { rows } = await db.query(
       `SELECT c.*,m.role,
@@ -553,8 +570,17 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
           FROM hc_members others JOIN hc_users peer ON peer.id=others.user_id
           WHERE others.conversation_id=c.id AND others.user_id<>$1 AND peer.deleted_at IS NULL
           ORDER BY others.joined_at, others.user_id LIMIT 1
-        ) END AS peer_name
-        FROM hc_conversations c JOIN hc_members m ON m.conversation_id=c.id
+        ) END AS peer_name,
+        (
+          SELECT count(*)::integer FROM (
+            SELECT 1 FROM hc_items msg
+            WHERE msg.conversation_id=c.id AND ${unreadPredicate}
+            ORDER BY msg.created_at DESC,msg.id DESC LIMIT 100
+          ) recent_unread
+        ) AS unread_count
+        FROM hc_conversations c
+        JOIN hc_members m ON m.conversation_id=c.id
+        LEFT JOIN hc_items marker ON marker.id=m.last_read_message_id AND marker.conversation_id=c.id
         WHERE m.user_id=$1 ORDER BY c.created_at DESC LIMIT 100`,
       [a.id],
     );
@@ -626,6 +652,35 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
       incremental: Boolean(after),
     });
   });
+  // A client can acknowledge only a message it has actually fetched in a
+  // conversation it currently belongs to. Read cursors never move backwards.
+  route("post", "/conversations/:id/read", async (req, res, db, a) => {
+    const id = uuid(req.params.id), messageId = uuid(req.body?.messageId);
+    const member = await db.query(
+      "SELECT joined_at FROM hc_members WHERE conversation_id=$1 AND user_id=$2 FOR UPDATE",
+      [id,a.id],
+    );
+    if (!member.rows.length) fail("Розмова недоступна", 404);
+    const message = await db.query(
+      `SELECT id FROM hc_items
+         WHERE id=$1 AND conversation_id=$2 AND kind='message'
+           AND NOT deleted AND created_at >= $3`,
+      [messageId,id,member.rows[0].joined_at],
+    );
+    if (!message.rows.length) fail("Повідомлення недоступне", 404);
+    await db.query(
+      `UPDATE hc_members m SET last_read_message_id=$3
+        WHERE m.conversation_id=$1 AND m.user_id=$2 AND (
+          m.last_read_message_id IS NULL OR EXISTS (
+            SELECT 1 FROM hc_items older JOIN hc_items newer ON newer.id=$3
+             WHERE older.id=m.last_read_message_id
+               AND (newer.created_at,newer.id)>(older.created_at,older.id)
+          )
+        )`,
+      [id,a.id,messageId],
+    );
+    res.json({ success: true });
+  }, 80);
   route("get", "/conversations/:id/members", async (req, res, db, _a, p) => {
     const id = uuid(req.params.id);
     if (!p.member.has(id)) fail("Розмова недоступна", 404);
