@@ -341,6 +341,15 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
               setViewProfile(null);
               setTab("settings");
             }}
+            onNavigate={(destination) => {
+              setViewProfile(null);
+              setTab(destination.section);
+              const params = new URLSearchParams({ section: destination.section });
+              if (destination.section === "feed") params.set("post", destination.postId);
+              // The existing Feed deep-link resolves the post through the
+              // current account's authorization, not through a public bypass.
+              location.hash = "community?" + params.toString();
+            }}
           />
           <button type="button" className="community-chat-unread-shortcut" onClick={() => { setTab("chats"); setViewProfile(null); }}>
             <MessageCircle size={17} aria-hidden="true" /> Повідомлення
