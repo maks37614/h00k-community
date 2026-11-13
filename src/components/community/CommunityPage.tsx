@@ -1885,8 +1885,10 @@ function Chats({
     [messages, setMessages] = useState<any[]>([]),
     [before, setBefore] = useState<string | null>(null),
     [chatSearch, setChatSearch] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
   useEffect(() => {
     if (!inviteTarget) return;
+    setCreateOpen(true);
     setMembers([inviteTarget.id]);
     setName("Діалог із " + inviteTarget.name);
   }, [inviteTarget?.id, inviteTarget?.name]);
@@ -1971,7 +1973,11 @@ function Chats({
           <h2>Приватні та групові розмови</h2>
         </div>
       </div>
-      <details className="community-card community-chat-create" defaultOpen={Boolean(inviteTarget)}>
+      <details
+        className="community-card community-chat-create"
+        open={createOpen}
+        onToggle={(event) => setCreateOpen(event.currentTarget.open)}
+      >
         <summary>Створити розмову</summary>
         {inviteTarget && (
           <p className="community-chat-invite-notice" role="status">
@@ -2017,6 +2023,7 @@ function Chats({
               setMembers([]);
               setName("");
               setChatSearch("");
+              setCreateOpen(false);
               onInviteHandled();
             })
           }
