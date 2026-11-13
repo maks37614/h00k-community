@@ -194,3 +194,9 @@ CREATE TABLE IF NOT EXISTS hc_saved_items (
   PRIMARY KEY(owner_id,item_id)
 );
 CREATE INDEX IF NOT EXISTS hc_saved_items_owner_created ON hc_saved_items(owner_id,created_at DESC,item_id);
+-- Per-user read cursors are attached to membership, never shared across users.
+-- Existing conversations remain unread until their members open them.
+ALTER TABLE hc_members ADD COLUMN IF NOT EXISTS last_read_message_id uuid;
+CREATE INDEX IF NOT EXISTS hc_messages_unread
+  ON hc_items(conversation_id,created_at,id)
+  WHERE kind='message' AND NOT deleted;
