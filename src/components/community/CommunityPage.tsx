@@ -2640,7 +2640,7 @@ function Profile({
         </article>
       )}
       {id !== user?.uid && p && (
-        <section id="community-profile-contact" className={"community-profile-connect" + (requestedContact ? " community-profile-contact-highlight" : "")} aria-label="Зв'язок із трейдером">
+        <section id="community-profile-contact" className="community-profile-connect" data-contact-focus={requestedContact ? "true" : undefined} aria-label="Зв'язок із трейдером">
           {friendships.error ? (
             <p role="status">{friendships.error}</p>
           ) : !friends ? (
