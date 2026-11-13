@@ -325,6 +325,50 @@ test('unread message cursors are member-private, monotonic, and respect join tim
   assert.equal((await call(api + '/conversations', bob)).data.items.some((c: any) => c.id === roomId), false);
 });
 
+test('muting a conversation is private, reversible, and never clears its unread count', async () => {
+  await call(api + '/friends/' + bob.id, alice, 'POST', {});
+  await call(api + '/friends/' + alice.id, bob, 'POST', {});
+  const direct = await call(api + '/conversations', alice, 'POST', {
+    members: [bob.id], title: 'Діалог без звуку', isGroup: false,
+  });
+  assert.equal(direct.res.status, 201, JSON.stringify(direct.data));
+  const id = direct.data.id;
+  const before = (await call(api + '/conversations/unread', bob)).data.unread;
+  const first = await call(api + '/items', alice, 'POST', {
+    kind: 'message', conversationId: id, body: { text: 'Перше для чату' },
+  });
+  assert.equal(first.res.status, 201, JSON.stringify(first.data));
+  const summary = async (actor: Actor) =>
+    (await call(api + '/conversations', actor)).data.items.find((x: any) => x.id === id);
+  assert.equal((await summary(bob)).muted, false);
+  assert.equal((await summary(bob)).unread_count, 1);
+  assert.equal((await call(api + '/conversations/unread', bob)).data.unread, before + 1);
+  assert.equal((await call(api + '/conversations/' + id + '/mute', eve, 'POST', { muted: true })).res.status, 404);
+  assert.equal((await call(api + '/conversations/' + id + '/mute', bob, 'POST', { muted: 'true' })).res.status, 400);
+  const muted = await call(api + '/conversations/' + id + '/mute', bob, 'POST', { muted: true });
+  assert.equal(muted.res.status, 200, JSON.stringify(muted.data));
+  assert.equal(muted.data.muted, true);
+  assert.equal((await summary(bob)).muted, true);
+  assert.equal((await summary(alice)).muted, false, 'other member stays unmuted');
+  assert.equal((await summary(bob)).unread_count, 1, 'muting is not marking messages as read');
+  assert.equal((await call(api + '/conversations/unread', bob)).data.unread, before);
+  assert.equal((await call(api + '/conversations/' + id + '/messages', bob)).data.items.length, 1);
+
+  const second = await call(api + '/items', alice, 'POST', {
+    kind: 'message', conversationId: id, body: { text: 'Після приглушення' },
+  });
+  assert.equal(second.res.status, 201);
+  assert.equal((await summary(bob)).unread_count, 2);
+  assert.equal((await call(api + '/conversations/unread', bob)).data.unread, before);
+  const restored = await call(api + '/conversations/' + id + '/mute', bob, 'POST', { muted: false });
+  assert.equal(restored.res.status, 200);
+  assert.equal((await call(api + '/conversations/unread', bob)).data.unread, before + 2);
+  assert.equal((await summary(bob)).muted, false);
+  await call(api + '/conversations/' + id + '/read', bob, 'POST', { messageId: second.data.id });
+  assert.equal((await summary(bob)).unread_count, 0);
+  assert.equal((await call(api + '/conversations/unread', bob)).data.unread, before);
+});
+
 test('group membership, message idempotence and block policy apply to direct links too',async()=>{
   await call(api+'/friends/'+bob.id,alice,'POST',{});await call(api+'/friends/'+alice.id,bob,'POST',{});
   const group=await call(api+'/conversations',alice,'POST',{title:'Спільний тест',members:[bob.id]});assert.equal(group.res.status,201,JSON.stringify(group.data));const conversationId=group.data.id;
