@@ -1,0 +1,198 @@
+/* Profile address manager: scoped to the Community account panel. */
+.community-profile-address {
+  min-width: 0;
+  padding: clamp(16px, 2.4vw, 24px);
+  border-color: #23475a;
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 100% 0, #00e5bf16, transparent 45%),
+    linear-gradient(140deg, #101f31, #0c1829);
+}
+
+.community-profile-address-header h3 {
+  margin: 7px 0;
+  font-size: 19px;
+  color: #eefaff;
+}
+
+.community-profile-address-header p {
+  margin: 0;
+  font-size: 13px;
+  color: #9fbbca;
+}
+
+.community-profile-address-link {
+  display: block;
+  max-width: 100%;
+  width: fit-content;
+  overflow-wrap: anywhere;
+  padding: 12px 14px;
+  border: 1px solid #26776a;
+  border-radius: 12px;
+  background: #0d3a37;
+  color: #b4ffed !important;
+  font-size: 13px;
+  font-weight: 750;
+  text-decoration: none !important;
+}
+
+.community-profile-address-link:hover {
+  background: #13524b;
+}
+
+.community-profile-address-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  border: 1px solid #2a4154;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #0c1928;
+}
+
+.community-profile-address-status > span {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.community-address-ok {
+  color: #80e8c9;
+}
+.community-address-warning {
+  color: #facb83;
+}
+
+.community-profile-address-status button {
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid #2d6b67;
+  border-radius: 9px;
+  background: #133432;
+  color: #b9ffef;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.community-profile-address-status button:hover {
+  background: #175149;
+}
+
+.community-profile-address-form {
+  border-top: 1px solid #23364a;
+  padding-top: 16px;
+}
+
+.community-profile-address-form > label {
+  display: grid;
+  gap: 7px;
+}
+
+.community-profile-address-form input:not([type="checkbox"]) {
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+  border-radius: 11px;
+}
+
+.community-profile-address-form .community-address-preview {
+  margin: -3px 0 1px;
+  color: #b7c9d9;
+  font-size: 12px;
+}
+
+.community-profile-address-form .community-address-preview strong {
+  color: #b3ffef;
+  overflow-wrap: anywhere;
+}
+
+.community-profile-address-form > .community-primary {
+  width: fit-content;
+  min-height: 44px;
+  padding: 10px 17px;
+  border-radius: 11px;
+  font-size: 13px;
+}
+
+.community-profile-address-recovery,
+.community-profile-address-toggle {
+  display: flex !important;
+  align-items: flex-start;
+  flex-direction: row !important;
+  gap: 10px !important;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.community-profile-address-recovery input,
+.community-profile-address-toggle input {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  margin: 3px 0 0;
+  accent-color: #00bda0;
+}
+
+.community-profile-address-help,
+.community-profile-address-reason {
+  margin: 0;
+  border: 1px solid #6d4e2a;
+  border-radius: 11px;
+  padding: 11px 13px;
+  background: #352719;
+  color: #f4cf99;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.community-profile-address-visibility {
+  border-top: 1px solid #23364a;
+  padding-top: 16px;
+}
+
+.community-profile-address-visibility .community-hint {
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.community-profile-address-notice {
+  border-radius: 11px;
+  padding: 12px 14px;
+  margin: 0;
+  line-height: 1.6;
+  font-size: 13px;
+}
+
+.community-address-notice-success {
+  background: #0f3e35;
+  border: 1px solid #287b66;
+  color: #bdffeb;
+}
+
+.community-address-notice-error {
+  background: #3c202c;
+  border: 1px solid #854455;
+  color: #ffc6cd;
+}
+
+.community-address-notice-info {
+  background: #152c40;
+  border: 1px solid #35637e;
+  color: #cce8fb;
+}
+
+@media (max-width: 700px) {
+  .community-profile-address-status button {
+    flex: 0 1 auto;
+  }
+
+  .community-profile-address-form > .community-primary {
+    width: 100%;
+  }
+
+  .community-profile-address-status,
+  .community-profile-address-form {
+    min-width: 0;
+  }
+}
