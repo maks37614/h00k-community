@@ -625,6 +625,11 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
   const unreadPredicate = `msg.kind='message' AND NOT msg.deleted AND msg.owner_id<>$1
     AND msg.created_at>=m.joined_at
     AND (marker.id IS NULL OR (msg.created_at,msg.id)>(marker.created_at,marker.id))`;
+  // Mention rows contain only server-verified recipients, never message content.
+  const mentionPredicate = `(NOT m.mentions_only OR EXISTS (
+    SELECT 1 FROM hc_message_mentions mm
+    WHERE mm.message_id=msg.id AND mm.user_id=m.user_id
+  ))`;
   route("get", "/conversations/unread", async (_req, res, db, a) => {
     const { rows } = await db.query(
       `SELECT count(*)::integer AS unread FROM (
@@ -633,7 +638,8 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
          JOIN hc_items msg ON msg.conversation_id=m.conversation_id
          WHERE m.user_id=$1 AND NOT m.muted
            AND (m.muted_until IS NULL OR m.muted_until<=NOW())
-           AND ${unreadPredicate} LIMIT 100
+           AND ${unreadPredicate}
+           AND ${mentionPredicate} LIMIT 100
        ) notices`,
       [a.id],
     );
@@ -641,7 +647,7 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
   });
   route("get", "/conversations", async (_req, res, db, a) => {
     const { rows } = await db.query(
-      `SELECT c.*,m.role,
+      `SELECT c.*,m.role,m.mentions_only,
         (m.muted OR COALESCE(m.muted_until>NOW(),false)) AS muted,
         m.muted_until,
         CASE WHEN c.is_group THEN NULL ELSE (
@@ -650,16 +656,24 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
           WHERE others.conversation_id=c.id AND others.user_id<>$1 AND peer.deleted_at IS NULL
           ORDER BY others.joined_at, others.user_id LIMIT 1
         ) END AS peer_name,
-        (
-          SELECT count(*)::integer FROM (
-            SELECT 1 FROM hc_items msg
-            WHERE msg.conversation_id=c.id AND ${unreadPredicate}
-            ORDER BY msg.created_at DESC,msg.id DESC LIMIT 100
-          ) recent_unread
-        ) AS unread_count
+        COALESCE(counts.unread_count,0) AS unread_count,
+        CASE WHEN m.muted OR COALESCE(m.muted_until>NOW(),false) THEN 0
+          ELSE COALESCE(counts.alert_unread_count,0) END AS alert_unread_count
         FROM hc_conversations c
         JOIN hc_members m ON m.conversation_id=c.id
         LEFT JOIN hc_items marker ON marker.id=m.last_read_message_id AND marker.conversation_id=c.id
+        LEFT JOIN LATERAL (
+          SELECT count(*)::integer AS unread_count,
+            count(*) FILTER (WHERE NOT m.mentions_only OR EXISTS (
+              SELECT 1 FROM hc_message_mentions mm
+              WHERE mm.message_id=msg.id AND mm.user_id=m.user_id
+            ))::integer AS alert_unread_count
+          FROM (
+            SELECT msg.id FROM hc_items msg
+            WHERE msg.conversation_id=c.id AND ${unreadPredicate}
+            ORDER BY msg.created_at DESC,msg.id DESC LIMIT 100
+          ) msg
+        ) counts ON true
         WHERE m.user_id=$1 ORDER BY c.created_at DESC LIMIT 100`,
       [a.id],
     );
