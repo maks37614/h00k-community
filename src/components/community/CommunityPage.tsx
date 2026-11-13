@@ -46,6 +46,7 @@ import "./social-chat-workspace.css";
 import { filterConversations } from "./chatModel";
 import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from "./friendsModel";
 import { canSendCommunityContent, communityAudienceHint, validateCommunityPhoto, MAX_COMMUNITY_PHOTOS } from "./composerPolicy";
+import { canShareReplyWithAudience, normalizeReplyAudience, replyAudienceOptions, replyBody, replyPreviewText, type ReplySource, type CommentAudience } from "./commentReplyModel";
 import "./social-composer-posts.css";
 import "./social-edit-items.css";
 import "./social-photo-gallery.css";
@@ -68,6 +69,7 @@ type Target = {
   kind: "post" | "comment" | "message";
   parentId?: string;
   conversationId?: string;
+  replyTo?: ReplySource;
 };
 type DraftChart = {
   document: ChartDocument;
@@ -81,11 +83,18 @@ function Audience({
   value,
   onChange,
   id,
+  allowedValues = ["private", "friends", "public"],
 }: {
   value: string;
   onChange: (value: string) => void;
   id?: string;
+  allowedValues?: readonly CommentAudience[];
 }) {
+  const labels: Record<CommentAudience, string> = {
+    private: "Лише я",
+    friends: "Друзі",
+    public: "Публічно",
+  };
   return (
     <select
       id={id}
@@ -93,9 +102,9 @@ function Audience({
       value={value}
       onChange={(e) => onChange(e.target.value)}
     >
-      <option value="private">Лише я</option>
-      <option value="friends">Друзі</option>
-      <option value="public">Публічно</option>
+      {allowedValues.map((scope) => (
+        <option key={scope} value={scope}>{labels[scope]}</option>
+      ))}
     </select>
   );
 }
@@ -555,7 +564,7 @@ function Composer({
 }) {
   const { user, profile } = useAuth();
   const [text, setText] = useState("");
-  const [audience, setAudience] = useState("private");
+  const [audience, setAudience] = useState(() => target.replyTo ? normalizeReplyAudience(target.replyTo.audience) : "private");
   const [photos, setPhotos] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
@@ -564,13 +573,13 @@ function Composer({
   const clientId = useRef(crypto.randomUUID());
   const emojiPanelId = useId();
   const audienceId = useId();
-  const canSubmit = canSendCommunityContent(text, photos.length, busy);
+  const canSubmit = canSendCommunityContent(text, photos.length, busy) && canShareReplyWithAudience(target.replyTo, audience);
   const kindLabel = target.kind === "post" ? "Нова публікація" :
     target.kind === "comment" ? "Написати коментар" : "Нове повідомлення";
 
   function send(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (inFlight.current || !canSendCommunityContent(text, photos.length, false)) return;
+    if (inFlight.current || !canSendCommunityContent(text, photos.length, false) || !canShareReplyWithAudience(target.replyTo, audience)) return;
     inFlight.current = true;
     setBusy(true);
     setPhotoError("");
@@ -581,7 +590,7 @@ function Composer({
         conversationId: target.conversationId,
         audience,
         clientId: clientId.current,
-        body: { text, photos },
+        body: replyBody(text, photos, target.replyTo),
       });
       setText("");
       setPhotos([]);
@@ -642,6 +651,13 @@ function Composer({
         <div className="community-composer-context">
           <span className="community-page-kicker">{kindLabel}</span>
         </div>
+      )}
+      {target.kind === "comment" && target.replyTo && (
+        <blockquote className="community-reply-composer-quote">
+          <span>Відповідь на коментар {target.replyTo.displayName}</span>
+          <p>{replyPreviewText(target.replyTo.text) || "Коментар із вкладенням"}</p>
+          <small>Відповідь залишиться в обговоренні цього допису.</small>
+        </blockquote>
       )}
       <textarea
         aria-label={
@@ -709,7 +725,7 @@ function Composer({
             <label htmlFor={audienceId}>
               Аудиторія
             </label>
-            <Audience id={audienceId} value={audience} onChange={setAudience} />
+            <Audience id={audienceId} value={audience} onChange={setAudience} allowedValues={replyAudienceOptions(target.replyTo)} />
           </div>
         )}
         <button type="submit" className="community-primary community-composer-send" disabled={!canSubmit}>
