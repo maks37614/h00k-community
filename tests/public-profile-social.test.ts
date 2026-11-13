@@ -43,7 +43,7 @@ test("social public profile renders tabs, real API discussion, actions and no pl
   const view = readFileSync(new URL("../src/community/publicProfile.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../src/community/publicProfile.css", import.meta.url), "utf8");
   const api = readFileSync(new URL("../server/community/publicProfiles.ts", import.meta.url), "utf8");
-  assert.match(view, /type PublicTab = "wall" \| "statistics" \| "about"/);
+  assert.match(view, /type PublicTab = "wall" \| "setups" \| "statistics" \| "about"/);
   assert.match(view, /className="public-profile-tabs"/);
   assert.match(view, /className="public-profile-post-actions"/);
   assert.match(view, /aria-expanded=\{expandedComments === item\.id\}/);
