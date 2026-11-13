@@ -174,6 +174,34 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
     }
   }
   const changed = () => bump((v) => v + 1);
+  const [chatUnread, setChatUnread] = useState(0);
+  useEffect(() => {
+    if (!user?.uid) { setChatUnread(0); return; }
+    let active = true, inFlight = false;
+    const refresh = () => {
+      if (!active || inFlight || document.visibilityState !== "visible") return;
+      inFlight = true;
+      void apiJson(api + "/conversations/unread")
+        .then(result => {
+          if (active && Number.isFinite(result.unread))
+            setChatUnread(Math.max(0, Math.min(100, result.unread)));
+        })
+        .catch(() => { /* A transient failure must not block Community navigation. */ })
+        .finally(() => { inFlight = false; });
+    };
+    refresh();
+    const timer = setInterval(refresh, 60000);
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("community:chat-read", refresh);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("community:chat-read", refresh);
+    };
+  }, [user?.uid]);
   useEffect(() => {
     const jump = () => {
       const query = new URLSearchParams(location.hash.split("?")[1] ?? "");
@@ -314,6 +342,10 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
               setTab("settings");
             }}
           />
+          <button type="button" className="community-chat-unread-shortcut" onClick={() => { setTab("chats"); setViewProfile(null); }}>
+            <MessageCircle size={17} aria-hidden="true" /> Повідомлення
+            {chatUnread > 0 && <span className="community-chat-unread-count" aria-label={"Непрочитані повідомлення: " + chatUnread}>{chatUnread >= 100 ? "99+" : chatUnread}</span>}
+          </button>
           <button type="button" onClick={() => setTab("settings")}>
             <ShieldCheck size={18} /> Прозорість і захист
           </button>
@@ -342,6 +374,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           >
             {icon}
             {title}
+            {id === "chats" && chatUnread > 0 && <span className="community-chat-unread-count" aria-label={"Непрочитані повідомлення: " + chatUnread}>{chatUnread >= 100 ? "99+" : chatUnread}</span>}
           </button>
         ))}
         </nav>
@@ -2125,6 +2158,14 @@ function Chats({
   const [inviteMember, setInviteMember] = useState("");
   const [pollError, setPollError] = useState("");
   const inFlightPoll = useRef(false);
+  const acknowledged = useRef<Map<string, string>>(new Map());
+  async function acknowledgeRead(conversationId: string, messageId: string) {
+    if (acknowledged.current.get(conversationId) === messageId) return;
+    await post(api + "/conversations/" + encodeURIComponent(conversationId) + "/read", { messageId });
+    acknowledged.current.set(conversationId, messageId);
+    if (activeId.current === conversationId) list.refresh();
+    window.dispatchEvent(new Event("community:chat-read"));
+  }
   useEffect(() => {
     if (!inviteTarget) return;
     setCreateOpen(true);
@@ -2200,6 +2241,12 @@ function Chats({
       ];
     });
     if (!after) setBefore(data.next);
+    if (!older && document.visibilityState === "visible") {
+      const lastSeenId = data.items.at(-1)?.id ?? latestMessages.current.at(-1)?.id;
+      if (lastSeenId)
+        void acknowledgeRead(startedId, lastSeenId)
+          .catch(error => setPollError(error instanceof Error ? error.message : "Не вдалося позначити повідомлення прочитаним"));
+    }
   }
   useEffect(() => {
     setMessages([]);
@@ -2331,7 +2378,7 @@ function Chats({
                 type="button"
                 key={c.id}
                 aria-pressed={id === c.id}
-                aria-label={(c.is_group ? "Група: " : "Діалог: ") + (c.title || "Без назви")}
+                aria-label={(c.is_group ? "Група: " : "Діалог: ") + conversationDisplayTitle(c) + (Number(c.unread_count) ? ". Непрочитаних: " + c.unread_count : "")}
                 onClick={() => setId(c.id)}
               >
                 <span className="community-chat-channel-symbol" aria-hidden="true">
@@ -2341,6 +2388,11 @@ function Chats({
                   <strong>{conversationDisplayTitle(c)}</strong>
                   <small>{c.is_group ? "Групова розмова" : "Особистий діалог"}</small>
                 </span>
+                {Number(c.unread_count) > 0 && (
+                  <span className="community-chat-unread-count" aria-hidden="true">
+                    {Number(c.unread_count) >= 100 ? "99+" : Number(c.unread_count)}
+                  </span>
+                )}
               </button>
             ))}
           </div>
