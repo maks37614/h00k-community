@@ -45,7 +45,7 @@ export function PublicProfile() {
   const communityUrl = profile ? profile.communityOrigin + "/#community?section=profile&owner=" + encodeURIComponent(profile.id) : null;
   return <main className="public-profile" data-network-mode="public-snapshot">
     <header className="public-profile-top">
-      <a className="public-profile-brand" href="https://community-stage.h00k.top/">
+      <a className="public-profile-brand" href={profile?.communityOrigin ?? "https://h00k.top/"}>
         h00k <span>Community</span>
       </a>
       <div className="public-profile-top-links">
