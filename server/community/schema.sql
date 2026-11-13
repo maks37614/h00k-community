@@ -186,3 +186,11 @@ CREATE TABLE IF NOT EXISTS hc_award_gifts (
 );
 CREATE INDEX IF NOT EXISTS hc_awards_received ON hc_award_gifts(recipient_id,created_at DESC);
 CREATE INDEX IF NOT EXISTS hc_awards_sent ON hc_award_gifts(sender_id,created_at DESC);
+
+CREATE TABLE IF NOT EXISTS hc_saved_items (
+  owner_id uuid NOT NULL REFERENCES hc_users(id) ON DELETE CASCADE,
+  item_id uuid NOT NULL REFERENCES hc_items(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY(owner_id,item_id)
+);
+CREATE INDEX IF NOT EXISTS hc_saved_items_owner_created ON hc_saved_items(owner_id,created_at DESC,item_id);
