@@ -1396,24 +1396,44 @@ function Workspace({
     [checklist, setChecklist] = useState(""),
     [fields, setFields] = useState<Record<string, string>>({}),
     [mode, setMode] = useState("replay"),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [showEditor, setShowEditor] = useState(false),
+    [view, setView] = useState<"available" | "mine">("available");
   const reset = () => {
     setEditing(null);
     setName("");
     setText("");
     setChecklist("");
     setFields({});
+    setShowEditor(false);
   };
+  const loadedItems: any[] = resource.data?.items ?? [];
+  const visibleItems = view === "mine" ? loadedItems.filter((item) => item.owner_id === user?.uid) : loadedItems;
+  const ownCount = loadedItems.filter((item) => item.owner_id === user?.uid).length;
   return (
-    <section className="community-workspace">
-      <div className="community-section-heading">
-        <h2>{title}</h2>
-        {(kind === "test" || kind === "strategy") && (
-          <button type="button" onClick={onReplay}>
-            Відкрити наявний Replay ↗
+    <section className={"community-resource-view community-resource-" + kind}>
+      <header className="community-section-heading community-resource-heading">
+        <div>
+          <span className="community-page-kicker">ОСОБИСТИЙ ПРОСТІР · h00k COMMUNITY</span>
+          <h2>{title}</h2>
+        </div>
+        <div className="community-resource-heading-actions">
+          {(kind === "test" || kind === "strategy") && (
+            <button type="button" onClick={onReplay}>Відкрити Replay ↗</button>
+          )}
+          <button
+            type="button"
+            className="community-primary"
+            aria-expanded={showEditor}
+            onClick={() => {
+              if (showEditor) reset();
+              else setShowEditor(true);
+            }}
+          >
+            {showEditor ? "Закрити редактор" : kind === "plan" ? "Новий план" : kind === "strategy" ? "Нова стратегія" : kind === "lesson" ? "Новий матеріал" : "Новий тест"}
           </button>
-        )}
-      </div>
+        </div>
+      </header>
       <p className="community-hint">
         {kind === "plan"
           ? "Плануйте спостереження, навчання та відпочинок. День без угод також є повноцінним. Відмітки задач — ваша самооцінка."
@@ -1423,8 +1443,9 @@ function Workspace({
               ? "Результати тут — авторські навчальні звіти, окремі від підтверджених API-угод. Для спільної практики створіть групову переписку."
               : "Діліться поясненнями, прикладами й вправами. Указуйте джерела та обмеження."}
       </p>
+      {showEditor && (
       <form
-        className="community-card community-form"
+        className="community-card community-form community-resource-editor"
         onSubmit={(e) => {
           e.preventDefault();
           setBusy(true);
@@ -1532,9 +1553,11 @@ function Workspace({
           )}
         </div>
       </form>
+      )}
       {kind === "strategy" && (
-        <div className="community-card">
-          <h3>Почати з шаблона</h3>
+        <details className="community-card community-resource-presets">
+          <summary>Почати з шаблона стратегії</summary>
+          <h3>Шаблони правил HookChart</h3>
           <p>Шаблон структурує ваші правила й не є обіцянкою прибутковості.</p>
           {STRATEGY_PRESETS.map((template) => (
             <button
@@ -1556,21 +1579,43 @@ function Workspace({
                   session: template.requiredTfs.join(", "),
                 });
                 setChecklist(template.bullets.join("\n"));
+                setShowEditor(true);
               }}
             >
               {template.name}
             </button>
           ))}
+        </details>
+      )}
+      <div className="community-resource-library-heading">
+        <div>
+          <span className="community-page-kicker">ЗБЕРЕЖЕНІ МАТЕРІАЛИ</span>
+          <h3>Ваша бібліотека</h3>
+        </div>
+        <div className="community-resource-filter" role="group" aria-label="Фільтр матеріалів">
+          <button type="button" aria-pressed={view === "available"} onClick={() => setView("available")}>
+            Доступні {resource.data?.items ? "(" + loadedItems.length + ")" : ""}
+          </button>
+          <button type="button" aria-pressed={view === "mine"} onClick={() => setView("mine")}>
+            Мої {resource.data?.items ? "(" + ownCount + ")" : ""}
+          </button>
+        </div>
+      </div>
+      {resource.error && <p role="status">{resource.error}</p>}
+      {!resource.data && !resource.error && <p role="status">Завантажуємо матеріали…</p>}
+      {resource.data && !visibleItems.length && (
+        <div className="community-empty community-resource-empty">
+          {view === "mine" ? "У вас поки немає власних матеріалів." : "Поки немає доступних матеріалів. Можете створити свій перший."}
         </div>
       )}
-      {resource.error && <p role="status">{resource.error}</p>}
-      {resource.data?.items?.map((item: any) => (
-        <article className="community-card" key={item.id}>
+      <div className="community-resource-grid">
+      {visibleItems.map((item: any) => (
+        <article className="community-card community-resource-card" key={item.id}>
           <header>
             <h3>{item.body.title}</h3>
             <small>
-              Версія {item.revision} · {item.author.displayName} ·{" "}
-              {item.audience}
+              Версія {item.revision} · {item.author?.displayName ?? "Трейдер"} ·{" "}
+              {item.audience === "public" ? "Публічно" : item.audience === "friends" ? "Для друзів" : "Приватно"}
             </small>
           </header>
           <p className="community-text">{item.body.text}</p>
@@ -1629,8 +1674,9 @@ function Workspace({
               {task.text}
             </label>
           ))}
-          <footer>
+          <footer className="community-resource-actions">
             {item.owner_id === user?.uid ? (
+              <>
               <button
                 type="button"
                 onClick={() => {
@@ -1647,10 +1693,25 @@ function Workspace({
                     ).join("\n"),
                   );
                   setMode(item.body.mode ?? "replay");
+                  setShowEditor(true);
                 }}
               >
                 Редагувати з історією версій
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!window.confirm("Видалити цей матеріал зі своєї бібліотеки?")) return;
+                  void run(async () => {
+                    await apiJson(api + "/items/" + item.id, { method: "DELETE" });
+                    if (editing?.id === item.id) reset();
+                    resource.refresh();
+                  });
+                }}
+              >
+                Видалити
+              </button>
+              </>
             ) : (
               <button
                 type="button"
@@ -1675,6 +1736,7 @@ function Workspace({
           </footer>
         </article>
       ))}
+      </div>
     </section>
   );
 }
