@@ -8,7 +8,7 @@ const server = readFileSync(new URL('../server/community/routes.ts', import.meta
 
 test('social-inspired Community shell retains its original live section handlers', () => {
   assert.match(page, /className="community-shell community-workspace"/);
-  assert.match(page, /className="community-dashboard"/);
+  assert.match(page, /className=\{"community-dashboard" \+ \(tab === "feed"/);
   assert.match(page, /className="community-main-pane"/);
   assert.match(page, /className="community-nav" aria-label="Розділи спільноти"/);
   for (const section of ['feed', 'chats', 'friends', 'profile', 'settings']) {
