@@ -43,6 +43,7 @@ import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from ".
 import { canSendCommunityContent, communityAudienceHint, validateCommunityPhoto, MAX_COMMUNITY_PHOTOS } from "./composerPolicy";
 import "./social-composer-posts.css";
 import "./social-profile-actions.css";
+import "./social-profile-tabs.css";
 const SharedHookChart = lazy(() => import("./SharedHookChart"));
 type Tab =
   | "feed"
@@ -2327,7 +2328,8 @@ function Profile({
   const friendships = useResource("profile-friends:" + id + ":" + user?.uid, () =>
     user?.uid === id ? Promise.resolve({ people: [] }) : apiJson(api + "/friends"),
   );
-  const [showTrades, setShowTrades] = useState(false);
+  const [profileSection, setProfileSection] = useState<"wall" | "about" | "trades">("wall");
+  useEffect(() => setProfileSection("wall"), [id]);
   const [form, setForm] = useState<any>({ ...profile?.community }),
     [displayName, setName] = useState(profile?.displayName ?? "");
   const wall = useResource("wall:" + id, () =>
@@ -2433,7 +2435,34 @@ function Profile({
           )}
         </section>
       )}
-      {id === user?.uid && (
+      <nav className="community-profile-tabs" aria-label="Розділи профілю">
+        {(
+          [
+            ["wall", "Стіна"],
+            ["about", "Про трейдера"],
+            ["trades", "Статистика"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            type="button"
+            key={key}
+            aria-pressed={profileSection === key}
+            onClick={() => setProfileSection(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+      {profileSection === "about" && (
+        <section className="community-profile-about" aria-label="Інформація про трейдера">
+          <header className="community-section-heading">
+            <div>
+              <span className="community-page-kicker">ОСОБИСТИЙ ПРОСТІР</span>
+              <h3>{id === user?.uid ? "Ваш профіль і приватність" : "Про трейдера"}</h3>
+            </div>
+          </header>
+          {id === user?.uid ? (
+            <>
         <form
           className="community-card community-form community-profile-editor"
           onSubmit={(e) => {
@@ -2511,37 +2540,73 @@ function Profile({
           </p>
           <button className="community-primary">Зберегти профіль</button>
         </form>
+              <PublicProfileSettings />
+            </>
+          ) : (
+            <div className="community-card community-profile-readonly">
+              <p className="community-hint">Відображаються лише дані, до яких автор профілю відкрив доступ.</p>
+              {p?.bio && <p><b>Про себе</b><span>{p.bio}</span></p>}
+              {p?.interests && <p><b>Інтереси</b><span>{p.interests}</span></p>}
+              {p?.lifestyle && <p><b>Звички та стиль життя</b><span>{p.lifestyle}</span></p>}
+              {!p?.bio && !p?.interests && !p?.lifestyle && (
+                <div className="community-empty">Трейдер поки не відкрив додаткову інформацію про себе.</div>
+              )}
+            </div>
+          )}
+        </section>
       )}
-      <button type="button" onClick={() => setShowTrades((v) => !v)}>
-        Угоди та статистика цього профілю
-      </button>
-      {id === user?.uid && <PublicProfileSettings />}
-      {showTrades && <Trades owner={id} run={run} />}
-      <div className="community-profile-wall">
-        <div className="community-section-heading">
-          <h3>Стіна</h3>
-        </div>
-      {id === user?.uid && (
-        <Composer
-          target={{ kind: "post" }}
-          onPick={onPick}
-          onSent={wall.refresh}
-          run={run}
-        />
+      {profileSection === "trades" && (
+        <section className="community-profile-trades" aria-label="Угоди й статистика">
+          <header className="community-section-heading">
+            <div>
+              <span className="community-page-kicker">ТОРГОВИЙ ЩОДЕННИК</span>
+              <h3>Угоди та статистика</h3>
+              <p className="community-hint">Відображаються лише доступні дані, отримані з підтверджених джерел, а не вигадані результати.</p>
+            </div>
+          </header>
+          <Trades owner={id} run={run} />
+        </section>
       )}
-      {wall.data?.items
-        ?.filter((item: any) => item.owner_id === id)
-        .map((item: any) => (
-          <ItemCard
-            key={item.id}
-            item={item}
-            onChart={onChart}
-            onPick={onPick}
-            run={run}
-            refresh={wall.refresh}
-          />
-        ))}
-      </div>
+      {profileSection === "wall" && (
+        <section className="community-profile-wall" aria-label="Стіна трейдера">
+          <div className="community-section-heading">
+            <div>
+              <span className="community-page-kicker">ПУБЛІКАЦІЇ</span>
+              <h3>Стіна</h3>
+            </div>
+          </div>
+          {id === user?.uid && (
+            <Composer
+              target={{ kind: "post" }}
+              onPick={onPick}
+              onSent={wall.refresh}
+              run={run}
+            />
+          )}
+          {wall.error && <p role="status">{wall.error}</p>}
+          {!wall.data && !wall.error && <p role="status">Завантажуємо публікації…</p>}
+          {wall.data?.items &&
+            !wall.data.items.some((item: any) => item.owner_id === id) && (
+              <div className="community-empty">
+                {id === user?.uid
+                  ? "На вашій стіні поки немає дописів. Опублікуйте першу ідею!"
+                  : "Тут поки немає доступних вам публікацій."}
+              </div>
+            )}
+          {wall.data?.items
+            ?.filter((item: any) => item.owner_id === id)
+            .map((item: any) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                onChart={onChart}
+                onPick={onPick}
+                run={run}
+                refresh={wall.refresh}
+              />
+            ))}
+        </section>
+      )}
     </>
   );
 }
