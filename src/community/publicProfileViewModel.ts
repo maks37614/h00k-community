@@ -32,7 +32,7 @@ export function visibleReactionSummary(input: unknown): PublicReactionSummary[] 
   return input.filter((item): item is PublicReactionSummary =>
     !!item && typeof item.emoji === "string" && item.emoji.length <= 10 &&
     Number.isInteger(item.count) && item.count > 0 && item.count <= 1_000_000,
-  ).slice(0, 5);
+  ).slice(0, 5).map(({ emoji, count }) => ({ emoji, count }));
 }
 
 export function publicProfileDate(value: unknown): string {
