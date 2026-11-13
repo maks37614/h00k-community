@@ -49,7 +49,9 @@ test("social public profile renders tabs, real API discussion, actions and no pl
   assert.match(view, /aria-expanded=\{expandedComments === item\.id\}/);
   assert.match(view, /const toggleComments =/);
   assert.match(view, /navigator\.clipboard\.writeText/);
-  assert.match(view, /publicPostUrl\(profile\.url, item\.id\)/);
+  assert.match(view, /publicPostUrl\(profile\.url, id\)/);
+  assert.match(view, /navigator\.share/);
+  assert.match(view, /const sharePost = async/);
   assert.match(view, /communityPostUrl\(profile\.communityOrigin, item\.id\)/);
   assert.match(view, /base \+ "\/posts\/" \+ encodeURIComponent\(linkedPostId\)/);
   assert.match(view, /credentials: "omit", cache: "no-store"/);
