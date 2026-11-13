@@ -312,7 +312,8 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
     for (const row of rows.slice(0, 20)) {
       if (!(await rules.visible(row)) || (row.chart_id && !(await rules.canReadChart(row.chart_id)))) continue;
       const source = row.body?.sourceItemId ? await rules.item(row.body.sourceItemId) : null;
-      const quoted = source && (await rules.visible(source)) ? text(source.body?.text, 180) : "";
+      const visibleSource = source && (await rules.visible(source)) ? source : null;
+      const quoted = visibleSource ? text(visibleSource.body?.text, 180) : "";
       const reactions = await db.query(
         "SELECT emoji,count(*)::integer AS count FROM hc_reactions WHERE item_id=$1 GROUP BY emoji ORDER BY emoji",
         [row.id],
@@ -323,6 +324,10 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
         author: text(row.author_profile?.displayName, 100) || "Трейдер",
         text: text(row.body?.text, 20_000),
         quote: quoted,
+        // Replies share the post as parent, but quote another comment from this post.
+        // Expose only IDs of visible comment sources on the same public post.
+        replyToId: visibleSource?.kind === "comment" && visibleSource.parent_id === parent.id
+          ? visibleSource.id : null,
         photosCount: Array.isArray(row.body?.photos) ? Math.min(row.body.photos.length, 4) : 0,
         hasChart: Boolean(row.chart_id),
         reactions: reactions.rows,
