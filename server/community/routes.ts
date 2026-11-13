@@ -556,9 +556,12 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
     "post",
     "/conversations",
     async (req, res, db, a, p) => {
-      const members = [...new Set<string>((req.body.members ?? []).map(uuid))];
-      if (members.length > 30 || !members.length)
+      if (!Array.isArray(req.body?.members) || !req.body.members.length || req.body.members.length > 30)
         fail("Оберіть від 1 до 30 друзів");
+      const members = [...new Set<string>(req.body.members.map(uuid))];
+      const isGroup = req.body.isGroup === undefined ? members.length > 1 : req.body.isGroup;
+      if (typeof isGroup !== "boolean" || (!isGroup && members.length !== 1))
+        fail("Особистий діалог має бути з одним другом");
       for (const id of members)
         if (!p.accepted.has(id) || p.blocked.has(id))
           fail("Запрошувати можна лише друзів, що прийняли запит", 403);
@@ -573,7 +576,7 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
       await db.transaction(async (tx) => {
         await tx.query(
           "INSERT INTO hc_conversations(id,owner_id,title,is_group) VALUES($1,$2,$3,$4)",
-          [id, a.id, title, members.length > 1],
+          [id, a.id, title, isGroup],
         );
         await tx.query(
           `INSERT INTO hc_members(conversation_id,user_id,role) VALUES($1,$2,'owner')`,
@@ -615,6 +618,19 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
       incremental: Boolean(after),
     });
   });
+  route("get", "/conversations/:id/members", async (req, res, db, _a, p) => {
+    const id = uuid(req.params.id);
+    if (!p.member.has(id)) fail("Розмова недоступна", 404);
+    const { rows } = await db.query(
+      `SELECT m.user_id AS id, m.role, m.joined_at,
+              COALESCE(NULLIF(u.profile->>'displayName',''),'Трейдер') AS "displayName"
+         FROM hc_members m JOIN hc_users u ON u.id=m.user_id
+        WHERE m.conversation_id=$1 AND u.deleted_at IS NULL
+        ORDER BY (m.role='owner') DESC,m.joined_at,m.user_id`,
+      [id],
+    );
+    res.json({ success: true, items: rows });
+  });
   route(
     "post",
     "/conversations/:id/members",
@@ -629,20 +645,63 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
         p.blocked.has(target)
       )
         fail("Запрошення недоступне", 403);
-      const count = await db.query(
-        "SELECT count(*)::integer AS count FROM hc_members WHERE conversation_id=$1",
-        [id],
-      );
-      if (count.rows[0].count >= 31)
-        fail("У групі вже максимальна кількість учасників");
-      await db.query(
-        "INSERT INTO hc_members(conversation_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING",
-        [id, target],
-      );
+      await db.transaction(async (tx) => {
+        const conversation = await tx.query(
+          "SELECT is_group FROM hc_conversations WHERE id=$1 FOR UPDATE", [id],
+        );
+        if (!conversation.rows[0]?.is_group)
+          fail("Додавати учасників можна лише до групової розмови", 403);
+        const living = await tx.query(
+          "SELECT id FROM hc_users WHERE id=$1 AND deleted_at IS NULL FOR SHARE", [target],
+        );
+        if (!living.rows.length) fail("Контакт недоступний", 404);
+        const already = await tx.query(
+          "SELECT 1 FROM hc_members WHERE conversation_id=$1 AND user_id=$2", [id,target],
+        );
+        if (already.rows.length) return;
+        const count = await tx.query(
+          "SELECT count(*)::integer AS count FROM hc_members WHERE conversation_id=$1",
+          [id],
+        );
+        if (count.rows[0].count >= 31)
+          fail("У групі вже максимальна кількість учасників", 409);
+        await tx.query(
+          "INSERT INTO hc_members(conversation_id,user_id) VALUES($1,$2)",
+          [id, target],
+        );
+      });
       res.json({ success: true });
     },
     10,
   );
+  route("post", "/conversations/:id/transfer", async (req, res, db, a, p) => {
+    const id = uuid(req.params.id), target = uuid(req.body?.targetId);
+    if (target === a.id || p.member.get(id)?.role !== "owner")
+      fail("Передати групу може лише її власник", 403);
+    await db.transaction(async (tx) => {
+      const conversation = await tx.query(
+        "SELECT owner_id,is_group FROM hc_conversations WHERE id=$1 FOR UPDATE", [id],
+      );
+      if (!conversation.rows[0]?.is_group || conversation.rows[0]?.owner_id !== a.id)
+        fail("Недостатньо прав на передачу групи", 403);
+      const recipient = await tx.query(
+        "SELECT role FROM hc_members WHERE conversation_id=$1 AND user_id=$2", [id,target],
+      );
+      if (!recipient.rows.length) fail("Оберіть поточного учасника групи", 404);
+      await tx.query(
+        "UPDATE hc_members SET role='member' WHERE conversation_id=$1 AND user_id=$2",
+        [id,a.id],
+      );
+      await tx.query(
+        "UPDATE hc_members SET role='owner' WHERE conversation_id=$1 AND user_id=$2",
+        [id,target],
+      );
+      await tx.query(
+        "UPDATE hc_conversations SET owner_id=$2 WHERE id=$1", [id,target],
+      );
+    });
+    res.json({ success:true });
+  }, 10);
   route(
     "delete",
     "/conversations/:id/members/:user",
