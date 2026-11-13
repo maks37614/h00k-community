@@ -1406,6 +1406,8 @@ function Workspace({
     setText("");
     setChecklist("");
     setFields({});
+    setAudience("private");
+    setMode("replay");
     setShowEditor(false);
   };
   const loadedItems: any[] = resource.data?.items ?? [];
