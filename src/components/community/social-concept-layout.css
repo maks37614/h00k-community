@@ -209,3 +209,10 @@
   .community-workspace .community-feed-heading {flex-wrap:wrap;}
   .community-workspace .community-concept-profile {padding:12px 13px;}
 }
+
+
+.community-workspace .community-concept-history {margin-top:9px;padding:10px;border:1px solid #2b4054;border-radius:10px;background:#101d2d;max-height:230px;overflow-y:auto;}
+.community-workspace .community-concept-history h4 {margin:0 0 9px;color:#e7f6fb;font-size:12px;}
+.community-workspace .community-concept-history p {font-size:11px;color:#9cabbc;}
+.community-workspace .community-concept-history-row {display:grid;gap:3px;border-top:1px solid #2a384a;padding:7px 0;color:#ddebf3;font-size:11px;}
+.community-workspace .community-concept-history-row small {color:#98acc0;font-size:10px;}
