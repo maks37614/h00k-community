@@ -10,11 +10,13 @@ import {
 import { apiJson } from "../../utils/apiFetch";
 import {
   describeCommunityNotice,
+  communityNoticeDestination,
   filterCommunityNotices,
   safeNoticeDate,
   unreadNoticeCount,
   type CommunityNotice,
   type NoticeFilter,
+  type CommunityNoticeDestination,
 } from "./notificationModel";
 import "./social-notification-center.css";
 
@@ -24,8 +26,10 @@ import "./social-notification-center.css";
  */
 export function CommunityNotificationCenter({
   onOpenSettings,
+  onNavigate,
 }: {
   onOpenSettings: () => void;
+  onNavigate?: (destination: CommunityNoticeDestination) => void;
 }) {
   const panelId = useId();
   const alive = useRef(true);
@@ -167,6 +171,7 @@ export function CommunityNotificationCenter({
           <ul className="community-notification-list">
             {visible.map((notice) => {
               const details = describeCommunityNotice(notice);
+              const destination = communityNoticeDestination(notice);
               const isUnread = !notice.read_at;
               return (
                 <li
@@ -182,6 +187,16 @@ export function CommunityNotificationCenter({
                     <strong>{details.title}</strong>
                     <time dateTime={notice.created_at}>{safeNoticeDate(notice.created_at)}</time>
                     <p>{details.description}</p>
+                    {destination && onNavigate && (
+                      <button type="button" className="community-notification-open"
+                        onClick={() => {
+                          setOpen(false);
+                          onNavigate(destination);
+                          if (isUnread) void markRead(notice.id);
+                        }}>
+                        {destination.section === "friends" ? "Переглянути друзів" : "Відкрити обговорення"}
+                      </button>
+                    )}
                     {isUnread && (
                       <button
                         type="button"
