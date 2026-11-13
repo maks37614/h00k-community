@@ -14,6 +14,7 @@ import {
 } from "./publicProfileViewModel";
 import { publicClosedOrderOverview, publicProfileSetups } from "./publicProfileSocialModel";
 import "./publicProfile.css";
+import "./publicProfileConcept.css";
 
 type PublicStats = {
   totals: Array<{
