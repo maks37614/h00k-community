@@ -526,3 +526,32 @@ test("public post categories are filtered by the server before pagination", asyn
   assert.equal((await call(url + "?category=bogus")).res.status, 400);
   assert.deepEqual((await call(url + "?category=education")).data.items, []);
 });
+
+test("public trading sessions are opt-in and never reveal the owner's timezone", async () => {
+  const owner = await named("session-visibility-user");
+  const url = "/api/public/profiles/session-visibility-user";
+  const privateView = await call(url);
+  assert.equal(privateView.res.status, 200);
+  assert.equal(privateView.data.profile.sessions, null);
+  const invalid = await call("/api/account/profile", owner, "PATCH", {
+    community: { publicSessionsEnabled: "public" },
+  });
+  assert.equal(invalid.res.status, 400);
+  const enabled = await call("/api/account/profile", owner, "PATCH", {
+    timeZone: "Europe/Warsaw",
+    community: {
+      tradingSessionIds: ["london", "new-york"],
+      publicSessionsEnabled: true,
+    },
+  });
+  assert.equal(enabled.res.status, 200);
+  const publicView = await call(url);
+  assert.equal(publicView.res.status, 200);
+  assert.deepEqual(publicView.data.profile.sessions, ["london", "new-york"]);
+  assert.doesNotMatch(publicView.text, /Europe\/Warsaw|email|password_hash|mfa_secret/);
+  const hidden = await call("/api/account/profile", owner, "PATCH", {
+    community: { publicSessionsEnabled: false },
+  });
+  assert.equal(hidden.res.status, 200);
+  assert.equal((await call(url)).data.profile.sessions, null);
+});
