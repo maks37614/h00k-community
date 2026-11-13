@@ -33,7 +33,11 @@ test("live chat UI keeps authenticated conversations and API-backed messages", (
   assert.match(chat, /className="community-chat-list"/);
   assert.match(chat, /className="community-chat-panel"/);
   assert.match(chat, /target=\{\{ kind: "message", conversationId: id \}\}/);
-  assert.match(chat, /setInterval\(pull, 5000\)/);
+  assert.match(chat, /setInterval\(pull, 12000\)/);
+  assert.match(chat, /document\.visibilityState !== "visible"/);
+  assert.match(chat, /inFlightPoll\.current/);
+  assert.match(chat, /document\.addEventListener\("visibilitychange", pull\)/);
+  assert.match(chat, /window\.addEventListener\("focus", pull\)/);
   assert.match(chat, /stayAtBottom = useRef\(true\)/);
   assert.match(chat, /restoreOlderOffset = useRef<number \| null>\(null\)/);
   assert.match(chat, /useLayoutEffect\(\(\) => \{/);
@@ -55,4 +59,22 @@ test("chat styles keep full conversation titles and responsive composer visible"
   assert.match(style, /@media \(max-width: 700px\)/);
   assert.match(style, /font-size: 16px !important/);
   assert.doesNotMatch(style, /(^|\n)\s*(html|body)\s*\{/);
+});
+
+
+test("group chats offer explicit group creation and server-owned participant management", () => {
+  const chat = page.split("function Chats({")[1]?.split("function Trades(")[0] ?? "";
+  assert.match(chat, /isGroup: createGroup \|\| members\.length > 1/);
+  assert.match(chat, /Групова розмова — можна додавати друзів пізніше/);
+  assert.match(chat, /\/conversations\/".*\/members/);
+  assert.match(chat, /chat-members:/);
+  assert.match(chat, /community-chat-members-panel/);
+  assert.match(chat, /"\/transfer"/);
+  assert.match(chat, /Передати права/);
+  assert.match(chat, /Вийти з групи/);
+  assert.match(chat, /eligibleFriends\.map/);
+  assert.match(chat, /list\.refresh\(\)/);
+  assert.match(style, /\.community-workspace \.community-chat-members-panel/);
+  assert.match(style, /@media\(max-width:700px\)/);
+  assert.doesNotMatch(chat, /DEFAULT_GROUP_MEMBERS|mockParticipants/);
 });
