@@ -851,7 +851,8 @@ body{margin:0}*{box-sizing:border-box}.public-profile{max-width:1000px;margin:0 
 }
 @media (max-width: 900px) {
   .public-profile-columns { grid-template-columns: minmax(0, 1fr); }
-  .public-profile-main, .public-profile-aside { order: initial; }
+  .public-profile-main { order: 1; }
+  .public-profile-aside { order: 2; }
   .public-profile-aside { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
   .public-profile-aside > * { margin-bottom: 0; }
   .public-profile-kpi-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
