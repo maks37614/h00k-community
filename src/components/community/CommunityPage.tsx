@@ -1521,6 +1521,16 @@ function Workspace({
   );
 }
 
+type CommunityFriend = {
+  id: string;
+  displayName?: string;
+  accepted?: boolean;
+  incoming?: boolean;
+  friend?: boolean;
+};
+
+type FriendFilter = "all" | "friends" | "requests";
+
 function Friends({
   run,
   onProfile,
@@ -1529,83 +1539,202 @@ function Friends({
   onProfile: (id: string) => void;
 }) {
   const resource = useResource("friends", () => apiJson(api + "/friends"));
-  const [q, setQ] = useState(""),
-    [people, setPeople] = useState<any[]>([]);
+  const [q, setQ] = useState("");
+  const [people, setPeople] = useState<CommunityFriend[]>([]);
+  const [searched, setSearched] = useState(false);
+  const [filter, setFilter] = useState<FriendFilter>("all");
+
+  const relationships: CommunityFriend[] = resource.data?.people ?? [];
+  const relationshipsById = new Map(relationships.map((p) => [p.id, p]));
+  const combined = new Map<string, CommunityFriend>();
+  for (const person of people) combined.set(person.id, person);
+  for (const person of relationships) {
+    combined.set(person.id, { ...combined.get(person.id), ...person });
+  }
+
+  const isFriend = (person: CommunityFriend) =>
+    relationshipsById.get(person.id)?.accepted === true ||
+    (!relationshipsById.has(person.id) && person.friend === true);
+  const isPending = (person: CommunityFriend) => {
+    const relationship = relationshipsById.get(person.id);
+    return !!relationship && !relationship.accepted;
+  };
+  const visible = [...combined.values()].filter((person) => {
+    if (filter === "friends") return isFriend(person);
+    if (filter === "requests") return isPending(person);
+    return true;
+  });
+  const friendsCount = relationships.filter((p) => p.accepted).length;
+  const requestsCount = relationships.filter((p) => !p.accepted).length;
+
+  function changeFriend(person: CommunityFriend, action: "send" | "accept" | "cancel" | "remove") {
+    if (action === "remove" && !window.confirm("Видалити цього користувача з друзів?")) return;
+    void run(async () => {
+      if (action === "cancel" || action === "remove") {
+        await apiJson(api + "/friends/" + person.id, { method: "DELETE" });
+      } else {
+        await post(api + "/friends/" + person.id, {});
+      }
+      setPeople([]);
+      resource.refresh();
+    });
+  }
+
   return (
-    <>
-      <h2>Друзі та запити</h2>
+    <section className="community-friends-view" aria-label="Друзі та запити">
+      <header className="community-section-heading community-friends-heading">
+        <div>
+          <span className="community-page-kicker">ЛЮДИ ТА СПІЛКУВАННЯ</span>
+          <h2>Друзі та запити</h2>
+          <p>Знайомтеся з трейдерами, керуйте запитами та своїм колом спілкування.</p>
+        </div>
+      </header>
       <form
-        className="community-search"
+        className="community-card community-friends-search"
         onSubmit={(e) => {
           e.preventDefault();
+          const query = q.trim();
+          if (query.length < 2) return;
           void run(async () => {
-            setPeople(
-              (await apiJson(api + "/people?q=" + encodeURIComponent(q)))
-                .people,
-            );
+            const result = await apiJson(api + "/people?q=" + encodeURIComponent(query));
+            setPeople(result.people ?? []);
+            setSearched(true);
+            setFilter("all");
           });
         }}
       >
-        <input
-          aria-label="Пошук трейдера"
-          value={q}
-          minLength={2}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Псевдонім трейдера"
-        />
-        <button>Шукати</button>
-      </form>
-      {resource.error && <p>{resource.error}</p>}
-      {[...(resource.data?.people ?? []), ...people].map(
-        (person: any, i: number) => (
-          <div
-            className="community-card community-person"
-            key={person.id + ":" + i}
-          >
-            <button type="button" onClick={() => onProfile(person.id)}>
-              {person.displayName}
-            </button>
-            <span>
-              {person.accepted
-                ? "Друзі"
-                : person.incoming
-                  ? "Вхідний запит"
-                  : ""}
-            </span>
-            {!person.accepted && (
-              <button
-                type="button"
-                onClick={() =>
-                  void run(async () => {
-                    await post(api + "/friends/" + person.id, {});
-                    resource.refresh();
-                    setPeople([]);
-                  })
-                }
-              >
-                {person.incoming ? "Прийняти" : "Запит дружби"}
-              </button>
-            )}
+        <label htmlFor="community-friends-query">Пошук трейдерів</label>
+        <div className="community-friends-search-row">
+          <input
+            id="community-friends-query"
+            aria-label="Пошук трейдера"
+            value={q}
+            minLength={2}
+            maxLength={80}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Введіть ім’я або псевдонім"
+          />
+          <button type="submit" className="community-primary" disabled={q.trim().length < 2}>
+            Шукати
+          </button>
+          {searched && (
             <button
               type="button"
-              onClick={() =>
-                void run(async () => {
-                  await post(api + "/blocks/" + person.id, {});
-                  resource.refresh();
-                  setPeople([]);
-                })
-              }
+              onClick={() => {
+                setPeople([]);
+                setQ("");
+                setSearched(false);
+              }}
             >
-              Заблокувати
+              Очистити
             </button>
-          </div>
-        ),
+          )}
+        </div>
+      </form>
+
+      <div className="community-friends-tabs" role="group" aria-label="Фільтр контактів">
+        {(
+          [
+            ["all", "Усі", null],
+            ["friends", "Мої друзі", friendsCount],
+            ["requests", "Запити", requestsCount],
+          ] as const
+        ).map(([id, title, count]) => (
+          <button
+            type="button"
+            key={id}
+            aria-pressed={filter === id}
+            onClick={() => setFilter(id)}
+          >
+            {title}{count !== null && <span>{count}</span>}
+          </button>
+        ))}
+      </div>
+
+      {resource.error && <p role="status">{resource.error}</p>}
+      {!visible.length && !resource.error && (
+        <div className="community-empty community-friends-empty">
+          {filter === "friends"
+            ? "У вас поки немає підтверджених друзів."
+            : filter === "requests"
+              ? "Немає нових або очікуваних запитів."
+              : searched
+                ? "За цим запитом трейдерів не знайдено."
+                : "Знайдіть трейдера за іменем, щоб надіслати запит дружби."}
+        </div>
       )}
-      <p className="community-hint">
-        Незнайомці не можуть автоматично додати вас у групу. Запрошення в першій
-        версії доступні лише прийнятим друзям.
+
+      <div className="community-friends-grid">
+        {visible.map((person) => {
+          const relation = relationshipsById.get(person.id);
+          const accepted = isFriend(person);
+          const incoming = !!relation && !relation.accepted && !!relation.incoming;
+          const outgoing = !!relation && !relation.accepted && !relation.incoming;
+          const state = accepted
+            ? "Друзі"
+            : incoming
+              ? "Вхідний запит"
+              : outgoing
+                ? "Запит надіслано"
+                : "Трейдер";
+          const name = person.displayName?.trim() || "Трейдер";
+
+          return (
+            <article className="community-card community-friend-card" key={person.id}>
+              <div className="community-friend-identity">
+                <span className="community-friend-avatar" aria-hidden="true">
+                  {name.slice(0, 1).toUpperCase()}
+                </span>
+                <div>
+                  <button type="button" className="community-friend-name" onClick={() => onProfile(person.id)}>
+                    {name}
+                  </button>
+                  <span className={"community-friend-state" + (accepted ? " community-friend-state-accepted" : incoming ? " community-friend-state-incoming" : "")}>
+                    {state}
+                  </span>
+                </div>
+              </div>
+              <div className="community-friend-actions">
+                {accepted ? (
+                  <button type="button" onClick={() => changeFriend(person, "remove")}>
+                    Видалити з друзів
+                  </button>
+                ) : incoming ? (
+                  <button type="button" className="community-primary" onClick={() => changeFriend(person, "accept")}>
+                    Прийняти
+                  </button>
+                ) : outgoing ? (
+                  <button type="button" onClick={() => changeFriend(person, "cancel")}>
+                    Відкликати запит
+                  </button>
+                ) : (
+                  <button type="button" className="community-primary" onClick={() => changeFriend(person, "send")}>
+                    Додати в друзі
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="community-friend-block"
+                  onClick={() => {
+                    if (!window.confirm("Заблокувати цього користувача? Він не зможе бути вашим другом.")) return;
+                    void run(async () => {
+                      await post(api + "/blocks/" + person.id, {});
+                      setPeople([]);
+                      resource.refresh();
+                    });
+                  }}
+                >
+                  Заблокувати
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      <p className="community-hint community-friends-hint">
+        Незнайомці не можуть автоматично додавати вас у групи. Запрошувати до розмов можна лише підтверджених друзів.
       </p>
-    </>
+    </section>
   );
 }
 
