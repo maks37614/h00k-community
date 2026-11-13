@@ -119,6 +119,9 @@ async function publicPostCard(db: Database, rules: Policy, row: Item) {
     createdAt: row.created_at,
     text: text(row.body?.text, 20_000),
     title: text(row.body?.title, 200),
+    category: ["idea", "analysis", "education"].includes(row.body?.category)
+      ? row.body.category as "idea" | "analysis" | "education"
+      : "general",
     photos: Array.isArray(row.body?.photos)
       ? row.body.photos.slice(0, 4).filter((id: unknown) => typeof id === "string" && /^[a-f0-9-]{36}$/.test(id))
       : [],
