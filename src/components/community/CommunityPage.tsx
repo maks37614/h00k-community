@@ -11,6 +11,8 @@ import {
   Users,
   ShieldCheck,
   MessageCircle,
+  Bell,
+  BellOff,
   CalendarCheck,
   Clock3,
   BookOpen,
@@ -194,12 +196,14 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
     document.addEventListener("visibilitychange", refresh);
     window.addEventListener("focus", refresh);
     window.addEventListener("community:chat-read", refresh);
+    window.addEventListener("community:chat-muted", refresh);
     return () => {
       active = false;
       clearInterval(timer);
       document.removeEventListener("visibilitychange", refresh);
       window.removeEventListener("focus", refresh);
       window.removeEventListener("community:chat-read", refresh);
+      window.removeEventListener("community:chat-muted", refresh);
     };
   }, [user?.uid]);
   useEffect(() => {
@@ -2428,8 +2432,9 @@ function Chats({
                 </span>
                 <span className="community-chat-channel-label">
                   <strong>{conversationDisplayTitle(c)}</strong>
-                  <small>{c.is_group ? "Групова розмова" : "Особистий діалог"}</small>
+                  <small>{c.is_group ? "Групова розмова" : "Особистий діалог"}{c.muted === true ? " · Без звуку" : ""}</small>
                 </span>
+                {c.muted === true && <BellOff size={15} className="community-chat-muted-icon" aria-label="Сповіщення розмови приглушені" />}
                 {Number(c.unread_count) > 0 && (
                   <span className="community-chat-unread-count" aria-hidden="true">
                     {Number(c.unread_count) >= 100 ? "99+" : Number(c.unread_count)}
@@ -2452,6 +2457,21 @@ function Chats({
                   </span>
                   <h3>{currentTitle}</h3>
                 </div>
+                {currentConversation && (
+                  <button type="button"
+                    className="community-chat-mute-toggle"
+                    aria-pressed={currentConversation.muted === true}
+                    onClick={() => void run(async () => {
+                      const targetId = currentConversation.id;
+                      const nextMuted = currentConversation.muted !== true;
+                      await post(api + "/conversations/" + encodeURIComponent(targetId) + "/mute", { muted: nextMuted });
+                      list.refresh();
+                      window.dispatchEvent(new Event("community:chat-muted"));
+                    })}>
+                    {currentConversation.muted === true ? <Bell size={15} aria-hidden="true" /> : <BellOff size={15} aria-hidden="true" />}
+                    {currentConversation.muted === true ? "Увімкнути сповіщення" : "Приглушити"}
+                  </button>
+                )}
                 {currentConversation?.is_group && (
                   <button type="button" className="community-chat-members-toggle" aria-expanded={groupOpen}
                     onClick={() => setGroupOpen(open => !open)}>
