@@ -39,6 +39,7 @@ import type {
 } from "../../types";
 import { ChartPreview } from "./ChartPreview";
 import { CommunityItemEditor } from "./CommunityItemEditor";
+import { CommunityReactions } from "./CommunityReactions";
 import { CommunityPhotoGallery } from "./CommunityPhotoGallery";
 import "./community.css";
 import "./social-friends-settings.css";
@@ -1090,22 +1091,13 @@ function ItemCard({
         />
       )}
       <footer className="community-card-actions" aria-label="Дії з публікацією">
-        {["👍", "❤️", "🔥", "🤔"].map((emoji) => (
-          <button
-            type="button"
-            key={emoji}
-            aria-label={`Поставити реакцію ${emoji}`}
-            onClick={() =>
-              void run(async () => {
-                await post(api + "/items/" + item.id + "/reaction", { emoji });
-                refresh();
-              })
-            }
-          >
-            {emoji}{" "}
-            {item.reactions?.find((r: any) => r.emoji === emoji)?.count ?? ""}
-          </button>
-        ))}
+        <CommunityReactions
+          itemId={item.id}
+          reactions={item.reactions}
+          run={run}
+          refresh={refresh}
+          variant={item.kind === "message" ? "message" : "post"}
+        />
         {item.kind === "post" && (
           <button
             type="button"
@@ -1260,6 +1252,13 @@ function ItemCard({
                     label="Фото коментаря"
                   />
                 )}
+                <CommunityReactions
+                  itemId={comment.id}
+                  reactions={comment.reactions}
+                  run={run}
+                  refresh={thread.refresh}
+                  variant="comment"
+                />
                 <div className="community-comment-reply-actions">
                   <button
                     type="button"
