@@ -25,6 +25,7 @@ import {
   Copy,
   Check,
   Gift,
+  Bookmark,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useArchive } from "../../context/ArchiveContext";
@@ -840,8 +841,8 @@ function Feed({
     try {
       const d = await apiJson(
         api +
-          "/feed?" +
-          new URLSearchParams({ mode, ...(category !== "all" ? { category } : {}), ...(before ? { before } : {}) }),
+          (mode === "saved" ? "/saved?" : "/feed?") +
+          new URLSearchParams({ ...(mode !== "saved" ? { mode, ...(category !== "all" ? { category } : {}) } : {}), ...(before ? { before } : {}) }),
       );
       if (
         currentMode.current !== startedMode ||
@@ -897,18 +898,21 @@ function Feed({
           >
             Публічні
           </button>
+          <button type="button" aria-pressed={mode === "saved"} onClick={() => { setCategory("all"); setMode("saved"); }}>
+            <Bookmark size={14} aria-hidden="true" /> Збережені
+          </button>
         </div>
       </div>
-      <nav className="community-concept-feed-tabs" aria-label="Категорії публікацій">
+      {mode !== "saved" && <nav className="community-concept-feed-tabs" aria-label="Категорії публікацій">
         {([["all", "Стрічка"], ["idea", "Ідеї"], ["analysis", "Аналіз"], ["education", "Навчання"]] as const).map(([id, label]) => (
           <button key={id} type="button" aria-pressed={category === id} onClick={() => setCategory(id)}>{label}</button>
         ))}
         <span className="community-concept-feed-order">Найновіші ↓</span>
-      </nav>
+      </nav>}
       <Composer
         target={{ kind: "post" }}
         onPick={onPick}
-        onSent={() => void load()}
+        onSent={() => { if (mode === "saved") setMode("public"); else void load(); }}
         run={run}
       />
       {linkedId && (
@@ -941,7 +945,7 @@ function Feed({
       {!loading && !data.length && !error && (
         <div className="community-empty">
           Тут будуть{" "}
-          {mode === "friends" ? "дописи ваших друзів" : "публічні дописи"}.
+          {mode === "saved" ? "ваші збережені дописи" : mode === "friends" ? "дописи ваших друзів" : "публічні дописи"}.
           Збережіть формацію у скрінері й поділіться своїм першим розбором.
         </div>
       )}
@@ -992,6 +996,9 @@ function ItemCard({
   const { user } = useAuth();
   const [reply, setReply] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [bookmarked, setBookmarked] = useState(Boolean(item.saved));
+  const [bookmarkBusy, setBookmarkBusy] = useState(false);
+  useEffect(() => { setBookmarked(Boolean(item.saved)); }, [item.id, item.saved]);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [selectedReply, setSelectedReply] = useState<ReplySource | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
@@ -1129,6 +1136,19 @@ function ItemCard({
           refresh={refresh}
           variant={item.kind === "message" ? "message" : "post"}
         />
+        {item.kind === "post" && (
+          <button type="button" aria-pressed={bookmarked} disabled={bookmarkBusy}
+            onClick={() => {
+              setBookmarkBusy(true);
+              void run(async () => {
+                const result = await post(api + "/items/" + item.id + "/save", {});
+                setBookmarked(Boolean(result.saved));
+                refresh();
+              }).finally(() => setBookmarkBusy(false));
+            }}>
+            <Bookmark size={15} aria-hidden="true" /> {bookmarked ? "Збережено" : "Зберегти"}
+          </button>
+        )}
         {item.kind === "post" && onAward && item.owner_id !== user?.uid && (
           <button type="button" className="community-concept-gift-author" onClick={() => onAward(item.owner_id, item.author?.displayName ?? "Трейдер")}>
             <Gift size={15} aria-hidden="true" /> Нагородити
