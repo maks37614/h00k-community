@@ -2173,6 +2173,7 @@ function Chats({
   const [createOpen, setCreateOpen] = useState(false);
   const [createGroup, setCreateGroup] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
+  const [muteMenuOpen, setMuteMenuOpen] = useState(false);
   const [groupNotice, setGroupNotice] = useState("");
   const [inviteMember, setInviteMember] = useState("");
   const [pollError, setPollError] = useState("");
@@ -2235,6 +2236,21 @@ function Chats({
     }
     setRequestedConversationId("");
   }, [requestedConversationId, list.data]);
+  // The server enforces expiry. Refresh the active list once when the nearest
+  // timed mute expires, without a background polling worker.
+  useEffect(() => {
+    const expiry = conversations
+      .filter(chat => chat.muted === true && typeof chat.muted_until === "string")
+      .map(chat => Date.parse(chat.muted_until))
+      .filter(time => Number.isFinite(time) && time > Date.now());
+    if (!expiry.length) return;
+    const delay = Math.min(2_147_483_647, Math.max(1000, Math.min(...expiry) - Date.now() + 250));
+    const timer = window.setTimeout(() => {
+      list.refresh();
+      window.dispatchEvent(new Event("community:chat-muted"));
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [list.data]);
   const filteredConversations = filterConversations(conversations, chatSearch);
   const currentConversation = conversations.find((c) => c.id === id);
   const currentTitle = conversationDisplayTitle(currentConversation);
@@ -2252,6 +2268,7 @@ function Chats({
     (friends.data?.people ?? []).filter((person: any) => person.accepted && !memberIds.has(person.id));
   useEffect(() => {
     setGroupOpen(false);
+    setMuteMenuOpen(false);
     setGroupNotice("");
     setInviteMember("");
   }, [id]);
@@ -2432,7 +2449,7 @@ function Chats({
                 </span>
                 <span className="community-chat-channel-label">
                   <strong>{conversationDisplayTitle(c)}</strong>
-                  <small>{c.is_group ? "Групова розмова" : "Особистий діалог"}{c.muted === true ? " · Без звуку" : ""}</small>
+                  <small>{c.is_group ? "Групова розмова" : "Особистий діалог"}{c.muted === true ? (c.muted_until ? " · Тимчасово без звуку" : " · Без звуку") : ""}</small>
                 </span>
                 {c.muted === true && <BellOff size={15} className="community-chat-muted-icon" aria-label="Сповіщення розмови приглушені" />}
                 {Number(c.unread_count) > 0 && (
@@ -2458,19 +2475,50 @@ function Chats({
                   <h3>{currentTitle}</h3>
                 </div>
                 {currentConversation && (
-                  <button type="button"
-                    className="community-chat-mute-toggle"
-                    aria-pressed={currentConversation.muted === true}
-                    onClick={() => void run(async () => {
-                      const targetId = currentConversation.id;
-                      const nextMuted = currentConversation.muted !== true;
-                      await post(api + "/conversations/" + encodeURIComponent(targetId) + "/mute", { muted: nextMuted });
-                      list.refresh();
-                      window.dispatchEvent(new Event("community:chat-muted"));
-                    })}>
-                    {currentConversation.muted === true ? <Bell size={15} aria-hidden="true" /> : <BellOff size={15} aria-hidden="true" />}
-                    {currentConversation.muted === true ? "Увімкнути сповіщення" : "Приглушити"}
-                  </button>
+                  <div className="community-chat-mute-control">
+                    <button type="button"
+                      className="community-chat-mute-toggle"
+                      aria-pressed={currentConversation.muted === true}
+                      aria-expanded={muteMenuOpen && currentConversation.muted !== true}
+                      onClick={() => {
+                        if (currentConversation.muted === true) {
+                          void run(async () => {
+                            await post(api + "/conversations/" + encodeURIComponent(currentConversation.id) + "/mute", { muted: false });
+                            setMuteMenuOpen(false);
+                            list.refresh();
+                            window.dispatchEvent(new Event("community:chat-muted"));
+                          });
+                        } else setMuteMenuOpen(open => !open);
+                      }}>
+                      {currentConversation.muted === true ? <Bell size={15} aria-hidden="true" /> : <BellOff size={15} aria-hidden="true" />}
+                      {currentConversation.muted === true ? "Увімкнути сповіщення" : "Приглушити"}
+                    </button>
+                    {muteMenuOpen && currentConversation.muted !== true && (
+                      <div className="community-chat-mute-options" role="group" aria-label="Час приглушення">
+                        {[
+                          { label: "На 1 годину", minutes: 60 },
+                          { label: "На 8 годин", minutes: 480 },
+                          { label: "Назавжди", minutes: null },
+                        ].map(option => (
+                          <button type="button" key={option.label}
+                            onClick={() => void run(async () => {
+                              await post(api + "/conversations/" + encodeURIComponent(currentConversation.id) + "/mute",
+                                option.minutes === null ? { muted: true } : { muted: true, durationMinutes: option.minutes });
+                              setMuteMenuOpen(false);
+                              list.refresh();
+                              window.dispatchEvent(new Event("community:chat-muted"));
+                            })}>
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {currentConversation.muted === true && currentConversation.muted_until && (
+                      <small className="community-chat-muted-until">
+                        Без звуку до {new Date(currentConversation.muted_until).toLocaleString("uk-UA", { dateStyle: "short", timeStyle: "short" })}
+                      </small>
+                    )}
+                  </div>
                 )}
                 {currentConversation?.is_group && (
                   <button type="button" className="community-chat-members-toggle" aria-expanded={groupOpen}
