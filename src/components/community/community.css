@@ -1194,3 +1194,209 @@
     flex-wrap: wrap;
   }
 }
+
+/* Real-account sidebar and feed context rail. No simulated user metrics. */
+.community-workspace .community-sidebar {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  min-width: 0;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.community-workspace .community-sidebar-account {
+  min-width: 0;
+  padding: 17px 15px;
+  margin-bottom: 12px;
+  border: 1px solid #1d3046;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #112337, #0d1728 75%);
+  box-shadow: 0 12px 32px #0003;
+}
+.community-workspace .community-sidebar-identity {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+  margin: 14px 0 12px;
+}
+.community-workspace .community-sidebar-avatar {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #218e80;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #117b71, #214269);
+  color: #eafff9;
+  font-size: 19px;
+  font-weight: 900;
+}
+.community-workspace .community-sidebar-identity > div {
+  min-width: 0;
+}
+.community-workspace .community-sidebar-identity strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: #f2f8ff;
+  font-size: 14px;
+  font-weight: 800;
+}
+.community-workspace .community-sidebar-identity small {
+  display: block;
+  margin-top: 3px;
+  color: #8da6bf;
+  font-size: 11px;
+}
+.community-workspace .community-sidebar-status {
+  overflow-wrap: anywhere;
+  margin: 10px 0 !important;
+  padding: 8px 10px;
+  border: 1px solid #1f655d;
+  border-radius: 10px;
+  background: #0e3331;
+  color: #b8fff0;
+  font-size: 12px;
+}
+.community-workspace .community-sidebar-account > button {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #236a61;
+  border-radius: 11px;
+  background: #104740;
+  color: #b8fff0;
+  font-size: 12px;
+  font-weight: 750;
+}
+.community-workspace .community-sidebar-account > button:hover {
+  background: #17675a;
+}
+.community-workspace .community-sidebar .community-nav {
+  position: relative;
+  top: auto;
+  max-height: none;
+  overflow: visible;
+}
+.community-workspace .community-context-rail {
+  display: none;
+  min-width: 0;
+}
+.community-workspace .community-context-card {
+  padding: 18px 16px;
+  border: 1px solid #1d2f46;
+  border-radius: 18px;
+  background: #0e1625;
+  margin-bottom: 13px;
+}
+.community-workspace .community-context-card h3 {
+  color: #edf6ff;
+  margin: 8px 0;
+  font-size: 17px;
+}
+.community-workspace .community-context-card p {
+  margin: 9px 0 14px;
+  color: #9eafc4;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.community-workspace .community-context-actions {
+  display: grid;
+  gap: 8px;
+}
+.community-workspace .community-context-actions button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 43px;
+  text-align: left;
+  padding: 9px 11px;
+  border: 1px solid #25374d;
+  border-radius: 11px;
+  background: #111f32;
+  color: #c9d8e9;
+  font-size: 12px;
+  font-weight: 650;
+}
+.community-workspace .community-context-actions button:hover {
+  background: #143b39;
+  border-color: #237d73;
+}
+.community-workspace .community-privacy-tip {
+  background: linear-gradient(150deg, #102b2c, #0e1625);
+}
+.community-workspace .community-privacy-tip > svg { color: #00e5bf; }
+.community-workspace .community-privacy-tip > button {
+  border: 1px solid #206d62;
+  background: #10443e;
+  color: #baffef;
+  width: 100%;
+  text-align: center;
+  font-weight: 650;
+  font-size: 12px;
+}
+@media (min-width: 1380px) {
+  .community-workspace .community-dashboard-feed {
+    grid-template-columns: minmax(216px, 265px) minmax(0, 1fr) minmax(205px, 245px);
+  }
+  .community-workspace .community-dashboard-feed .community-context-rail {
+    display: block;
+    align-self: start;
+    position: sticky;
+    top: 16px;
+  }
+}
+@media (max-width: 900px) {
+  .community-workspace .community-sidebar {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+  .community-workspace .community-sidebar-account {
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    border-radius: 14px;
+  }
+  .community-workspace .community-sidebar-identity { margin: 10px 0; }
+  .community-workspace .community-sidebar .community-nav {
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-bottom: 16px;
+  }
+}
+@media (max-width: 700px) {
+  .community-workspace .community-sidebar-account {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+  .community-workspace .community-sidebar-account > .community-page-kicker {
+    width: 100%;
+  }
+  .community-workspace .community-sidebar-identity {
+    flex: 1 1 170px;
+    margin: 0;
+  }
+  .community-workspace .community-sidebar-avatar {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    font-size: 16px;
+  }
+  .community-workspace .community-sidebar-status {
+    flex: 1 0 100%;
+    order: 2;
+    margin: 0 !important;
+  }
+  .community-workspace .community-sidebar-account > button {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 38px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+}

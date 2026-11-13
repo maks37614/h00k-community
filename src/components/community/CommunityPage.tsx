@@ -265,7 +265,26 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           <ShieldCheck size={18} /> Прозорість і захист
         </button>
       </header>
-      <div className="community-dashboard">
+      <div className={"community-dashboard" + (tab === "feed" ? " community-dashboard-feed" : "")}>
+        <div className="community-sidebar">
+          <section className="community-sidebar-account" aria-label="Мій Community профіль">
+            <span className="community-page-kicker">ВАШ ПРОФІЛЬ</span>
+            <div className="community-sidebar-identity">
+              <span className="community-sidebar-avatar" aria-hidden="true">
+                {(profile?.displayName ?? user.displayName ?? "Т").trim().slice(0, 1).toUpperCase()}
+              </span>
+              <div>
+                <strong>{profile?.displayName ?? user.displayName ?? "Трейдер"}</strong>
+                <small>Учасник h00k Community</small>
+              </div>
+            </div>
+            {profile?.community?.status?.text && (
+              <p className="community-sidebar-status">{profile.community.status.text}</p>
+            )}
+            <button type="button" onClick={() => { setViewProfile(null); setTab("profile"); }}>
+              Перейти до мого профілю
+            </button>
+          </section>
         <nav className="community-nav" aria-label="Розділи спільноти">
         {nav.map(([id, title, icon]) => (
           <button
@@ -282,6 +301,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           </button>
         ))}
         </nav>
+        </div>
         <div className="community-main-pane">
       {notice && (
         <div className="community-notice" role="status">
@@ -369,6 +389,34 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
         {tab === "settings" && <CommunitySettings run={run} />}
       </div>
         </div>
+        {tab === "feed" && (
+          <aside className="community-context-rail" aria-label="Швидкі переходи Community">
+            <div className="community-context-card">
+              <span className="community-page-kicker">СПІЛЬНОТА</span>
+              <h3>Ваш простір трейдера</h3>
+              <p>Розбирайте ринок, діліться власними формаціями та спілкуйтеся з друзями.</p>
+              <div className="community-context-actions">
+                <button type="button" onClick={() => { setViewProfile(null); setTab("profile"); }}>
+                  <Users size={16} /> Моя стіна
+                </button>
+                <button type="button" onClick={() => setTab("friends")}>
+                  <Users size={16} /> Знайти друзів
+                </button>
+                <button type="button" onClick={() => setTab("chats")}>
+                  <MessageCircle size={16} /> Мої повідомлення
+                </button>
+              </div>
+            </div>
+            <div className="community-context-card community-privacy-tip">
+              <ShieldCheck size={19} aria-hidden="true" />
+              <h3>Контроль приватності</h3>
+              <p>Для кожної публікації можна вибрати аудиторію. Параметри профілю керуються окремо.</p>
+              <button type="button" onClick={() => setTab("settings")}>
+                Налаштувати приватність
+              </button>
+            </div>
+          </aside>
+        )}
       </div>
       {picker && (
         <div className="community-backdrop">
