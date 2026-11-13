@@ -494,3 +494,92 @@ test('bookmarks persist per user, toggle and never disclose private posts', asyn
   assert.equal(secret.res.status, 201);
   assert.equal((await call(api + '/items/' + secret.data.id + '/save', alice, 'POST', {})).res.status, 404);
 });
+
+test('social notices are real, deduplicated, private and limited to public discussions', async () => {
+  // Reuse existing authenticated actors: registration is deliberately rate-limited
+  // to five accounts per IP. Reset only this pair's social fixtures.
+  const hana = alice, ihor = eve;
+  await db.query(
+    "DELETE FROM hc_blocks WHERE (owner_id=$1 AND target_id=$2) OR (owner_id=$2 AND target_id=$1)",
+    [hana.id, ihor.id],
+  );
+  await db.query(
+    "DELETE FROM hc_friendships WHERE (sender=$1 AND recipient=$2) OR (sender=$2 AND recipient=$1)",
+    [hana.id, ihor.id],
+  );
+  await db.query(
+    "DELETE FROM hc_notifications WHERE dedup_key=ANY($1::text[])",
+    [[
+      "friend-request:" + hana.id + ":" + ihor.id,
+      "friend-request:" + ihor.id + ":" + hana.id,
+      "friend-accepted:" + hana.id + ":" + ihor.id,
+      "friend-accepted:" + ihor.id + ":" + hana.id,
+    ]],
+  );
+  const request = await call(api + '/friends/' + ihor.id, hana, 'POST', {});
+  assert.equal(request.res.status, 200, JSON.stringify(request.data));
+  const incoming = await call(api + '/notifications', ihor);
+  const requestNotice = incoming.data.items.find((entry: any) =>
+    entry.type === 'friend_request' && entry.body.friendId === hana.id);
+  assert.ok(requestNotice, 'only the recipient sees the incoming request');
+  assert.equal((await call(api + '/notifications', hana)).data.items.some(
+    (entry: any) => entry.id === requestNotice.id), false);
+  await call(api + '/friends/' + ihor.id, hana, 'POST', {});
+  const stillOne = (await call(api + '/notifications', ihor)).data.items.filter(
+    (entry: any) => entry.type === 'friend_request' && entry.body.friendId === hana.id);
+  assert.equal(stillOne.length, 1, 'repeated requests never generate duplicate notices');
+
+  assert.equal((await call(api + '/friends/' + hana.id, ihor, 'POST', {})).res.status, 200);
+  const accepted = (await call(api + '/notifications', hana)).data.items.filter(
+    (entry: any) => entry.type === 'friend_accepted' && entry.body.friendId === ihor.id);
+  assert.equal(accepted.length, 1);
+  await call(api + '/friends/' + hana.id, ihor, 'POST', {});
+  assert.equal((await call(api + '/notifications', hana)).data.items.filter(
+    (entry: any) => entry.type === 'friend_accepted' && entry.body.friendId === ihor.id).length, 1);
+
+  const post = await call(api + '/items', hana, 'POST', {
+    kind: 'post', audience: 'public', body: { text: 'Публічний допис для обговорення' },
+  });
+  assert.equal(post.res.status, 201);
+  const clientId = randomUUID();
+  const visible = await call(api + '/items', ihor, 'POST', {
+    clientId, kind: 'comment', parentId: post.data.id, audience: 'public',
+    body: { text: 'Не передавати текст коментаря через notification body' },
+  });
+  assert.equal(visible.res.status, 201, JSON.stringify(visible.data));
+  await call(api + '/items', ihor, 'POST', {
+    clientId, kind: 'comment', parentId: post.data.id, audience: 'public',
+    body: { text: 'Повторна спроба відправлення' },
+  });
+  const hanaNotices = (await call(api + '/notifications', hana)).data.items.filter(
+    (entry: any) => entry.type === 'comment' && entry.body.postId === post.data.id);
+  assert.equal(hanaNotices.length, 1, 'one comment, one notification after retry');
+  assert.equal(hanaNotices[0].body.postId, post.data.id);
+  assert.deepEqual(Object.keys(hanaNotices[0].body), ['postId']);
+  assert.doesNotMatch(JSON.stringify(hanaNotices), /Не передавати текст|Повторна спроба/);
+
+  const privateComment = await call(api + '/items', ihor, 'POST', {
+    kind: 'comment', parentId: post.data.id, audience: 'private',
+    body: { text: 'Приватний коментар — без сповіщення' },
+  });
+  assert.equal(privateComment.res.status, 201);
+  assert.equal((await call(api + '/notifications', hana)).data.items.filter(
+    (entry: any) => entry.type === 'comment' && entry.body.postId === post.data.id).length, 1);
+
+  const answer = await call(api + '/items', hana, 'POST', {
+    kind: 'comment', parentId: post.data.id, audience: 'public',
+    body: { text: 'Публічна відповідь', sourceItemId: visible.data.id },
+  });
+  assert.equal(answer.res.status, 201);
+  const recipientReply = (await call(api + '/notifications', ihor)).data.items.filter(
+    (entry: any) => entry.type === 'comment' && entry.body.postId === post.data.id);
+  assert.equal(recipientReply.length, 1, 'reply reaches the original commenter, not the post owner twice');
+
+  await call(api + '/notifications/' + recipientReply[0].id + '/read', hana, 'POST', {});
+  const unread = (await call(api + '/notifications', ihor)).data.items.find(
+    (entry: any) => entry.id === recipientReply[0].id);
+  assert.equal(unread.read_at, null, 'other users cannot mark a notice read');
+  assert.equal((await call(api + '/notifications/' + recipientReply[0].id + '/read', ihor, 'POST', {})).res.status, 200);
+  assert.ok((await call(api + '/notifications', ihor)).data.items.find(
+    (entry: any) => entry.id === recipientReply[0].id).read_at);
+});

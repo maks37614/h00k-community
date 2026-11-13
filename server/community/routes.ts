@@ -211,6 +211,41 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
     async (req, res, db, a, p) => {
       limits.take("publish:" + a.id, 20);
       const id = await createItem(db, p, req.body);
+      // At most two small inbox records for an original PUBLIC comment on
+      // a PUBLIC post. Never include comment text, charts or private fields.
+      // Friend-only and private comment events must not leak to another user.
+      if (req.body?.kind === "comment" && req.body?.audience === "public") {
+        const parentId = uuid(req.body.parentId);
+        const sourceId = req.body.body?.sourceItemId
+          ? uuid(req.body.body.sourceItemId) : null;
+        const { rows: parents } = await db.query(
+          "SELECT id,owner_id FROM hc_items WHERE id=$1 AND kind='post' AND audience='public' AND NOT deleted",
+          [parentId],
+        );
+        if (parents.length) {
+          const recipients = new Set<string>([parents[0].owner_id]);
+          if (sourceId) {
+            const { rows: sources } = await db.query(
+              "SELECT owner_id FROM hc_items WHERE id=$1 AND kind='comment' AND audience='public' AND parent_id=$2 AND NOT deleted",
+              [sourceId, parentId],
+            );
+            if (sources.length) recipients.add(sources[0].owner_id);
+          }
+          for (const recipient of recipients) {
+            if (recipient === a.id) continue;
+            const blocked = await db.query(
+              "SELECT 1 FROM hc_blocks WHERE (owner_id=$1 AND target_id=$2) OR (owner_id=$2 AND target_id=$1) LIMIT 1",
+              [a.id, recipient],
+            );
+            if (blocked.rows.length) continue;
+            await db.query(
+              `INSERT INTO hc_notifications(id,owner_id,type,body,dedup_key)
+               VALUES($1,$2,'comment',$3,$4) ON CONFLICT(dedup_key) DO NOTHING`,
+              [randomUUID(), recipient, JSON.stringify({ postId: parentId }), "comment:" + id + ":" + recipient],
+            );
+          }
+        }
+      }
       res.status(201).json({ success: true, id });
     },
     30,
@@ -465,14 +500,29 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
       );
       if (!other.rows.length) fail("Контакт недоступний", 404);
       const incoming = await db.query(
-        "UPDATE hc_friendships SET accepted=true WHERE sender=$1 AND recipient=$2 RETURNING sender",
+        "UPDATE hc_friendships SET accepted=true WHERE sender=$1 AND recipient=$2 AND NOT accepted RETURNING sender",
         [id, a.id],
       );
-      if (!incoming.rows.length)
+      if (incoming.rows.length) {
+        // The original requester is notified once on the acceptance transition.
         await db.query(
-          "INSERT INTO hc_friendships(sender,recipient) VALUES($1,$2) ON CONFLICT DO NOTHING",
+          `INSERT INTO hc_notifications(id,owner_id,type,body,dedup_key)
+           VALUES($1,$2,'friend_accepted',$3,$4) ON CONFLICT(dedup_key) DO NOTHING`,
+          [randomUUID(), id, JSON.stringify({ friendId: a.id }), "friend-accepted:" + id + ":" + a.id],
+        );
+      } else {
+        const created = await db.query(
+          "INSERT INTO hc_friendships(sender,recipient) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING sender",
           [a.id, id],
         );
+        if (created.rows.length) {
+          await db.query(
+            `INSERT INTO hc_notifications(id,owner_id,type,body,dedup_key)
+             VALUES($1,$2,'friend_request',$3,$4) ON CONFLICT(dedup_key) DO NOTHING`,
+            [randomUUID(), id, JSON.stringify({ friendId: a.id }), "friend-request:" + a.id + ":" + id],
+          );
+        }
+      }
       res.json({ success: true });
     },
     10,
