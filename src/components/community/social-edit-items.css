@@ -1,0 +1,112 @@
+/* Live post/comment editing — scoped to Community; does not affect HookChart. */
+.community-workspace .community-item-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0 18px;
+  padding: 16px;
+  min-width: 0;
+  border: 1px solid #267a71;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #10342f, #0c1c2b 70%);
+}
+.community-workspace .community-item-editor-label {
+  color: #c5faeb;
+  font-size: 13px;
+  font-weight: 800;
+}
+.community-workspace .community-item-editor textarea {
+  width: 100%;
+  min-width: 0;
+  resize: vertical;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.6;
+  padding: 12px 13px;
+  border: 1px solid #357067;
+  border-radius: 11px;
+  background: #091a28;
+  color: #f1fbff;
+}
+.community-workspace .community-item-editor textarea:focus-visible,
+.community-workspace .community-item-editor select:focus-visible {
+  outline: 2px solid #21e3c3;
+  outline-offset: 2px;
+}
+.community-workspace .community-item-editor-meta {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 7px;
+  color: #a8bed0;
+  font-size: 11px;
+}
+.community-workspace .community-item-editor-meta > span:last-child {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.community-workspace .community-item-editor-audience {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #d5f5ea;
+  font-size: 12px;
+  font-weight: 700;
+}
+.community-workspace .community-item-editor-audience select {
+  min-height: 39px;
+  min-width: 160px;
+  max-width: 100%;
+  padding: 8px 11px;
+  border: 1px solid #31685c;
+  border-radius: 10px;
+  background: #0c2730;
+  color: #e7fff6;
+  font-size: 16px;
+}
+.community-workspace .community-item-editor-privacy {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #aac0ce;
+}
+.community-workspace .community-item-editor-error {
+  color: #ffd0da;
+  padding: 10px 12px;
+  border: 1px solid #874858;
+  border-radius: 10px;
+  background: #351f2d;
+}
+.community-workspace .community-item-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.community-workspace .community-item-editor-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.community-workspace .community-item-editor-actions button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+@media (max-width: 520px) {
+  .community-workspace .community-item-editor {
+    padding: 12px;
+    margin: 10px 0 14px;
+  }
+  .community-workspace .community-item-editor-actions button {
+    flex: 1 1 110px;
+  }
+  .community-workspace .community-item-editor textarea {
+    font-size: 16px; /* prevent input zoom in iOS Safari */
+  }
+}
