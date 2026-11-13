@@ -24,6 +24,7 @@ import {
   ChartNoAxesCombined,
   Copy,
   Check,
+  Gift,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useArchive } from "../../context/ArchiveContext";
@@ -810,8 +811,10 @@ function Feed({
     [error, setError] = useState(""),
     [loading, setLoading] = useState(false);
   const currentMode = useRef(mode);
+  const currentCategory = useRef(category);
   const requestNumber = useRef(0);
   currentMode.current = mode;
+  currentCategory.current = category;
   const [linkedId, setLinkedId] = useState(
     () =>
       new URLSearchParams(location.hash.split("?")[1] ?? "").get("post") ?? "",
@@ -832,6 +835,7 @@ function Feed({
   }, []);
   async function load(before?: string) {
     const startedMode = mode;
+    const startedCategory = category;
     const request = ++requestNumber.current;
     setLoading(true);
     try {
@@ -842,6 +846,7 @@ function Feed({
       );
       if (
         currentMode.current !== startedMode ||
+        currentCategory.current !== startedCategory ||
         requestNumber.current !== request
       )
         return;
@@ -851,6 +856,7 @@ function Feed({
     } catch (e) {
       if (
         currentMode.current !== startedMode ||
+        currentCategory.current !== startedCategory ||
         requestNumber.current !== request
       )
         return;
@@ -858,6 +864,7 @@ function Feed({
     } finally {
       if (
         currentMode.current === startedMode &&
+        currentCategory.current === startedCategory &&
         requestNumber.current === request
       )
         setLoading(false);
