@@ -472,6 +472,18 @@ export function installAccountRoutes(
           clean[key] = raw[key];
         }
       }
+      if (raw.tradingSessionIds !== undefined) {
+        const allowed = new Set(["sydney", "tokyo", "london", "new-york"]);
+        const values = raw.tradingSessionIds;
+        if (
+          !Array.isArray(values) ||
+          values.length > 4 ||
+          values.some((value: unknown) => typeof value !== "string" || !allowed.has(value)) ||
+          new Set(values).size !== values.length
+        )
+          fail("Некоректний список торгових сесій");
+        clean.tradingSessionIds = values;
+      }
       if (raw.rankingPublic !== undefined)
         clean.rankingPublic = raw.rankingPublic === true;
       if (raw.publicProfileEnabled !== undefined) {
