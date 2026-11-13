@@ -201,15 +201,30 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
   });
   route("post", "/items/:id/reaction", async (req, res, db, a, p) => {
     const id = uuid(req.params.id);
-    if (!(await p.visible(await p.item(id)))) fail("Матеріал недоступний", 404);
+    const item = await p.item(id);
+    if (!(await p.visible(item)) || (item?.chart_id && !(await p.canReadChart(item.chart_id))))
+      fail("Матеріал недоступний", 404);
     const emoji = bounded(req.body.emoji, 10);
     if (!["👍", "❤️", "🔥", "🤔", "👏"].includes(emoji))
       fail("Непідтримувана реакція");
-    await db.query(
-      "INSERT INTO hc_reactions(item_id,user_id,emoji) VALUES($1,$2,$3) ON CONFLICT(item_id,user_id) DO UPDATE SET emoji=excluded.emoji",
-      [id, a.id, emoji],
+    limits.take("reaction:" + a.id, 100);
+    const existing = await db.query(
+      "SELECT emoji FROM hc_reactions WHERE item_id=$1 AND user_id=$2",
+      [id, a.id],
     );
-    res.json({ success: true });
+    const active = existing.rows[0]?.emoji !== emoji;
+    if (!active) {
+      await db.query(
+        "DELETE FROM hc_reactions WHERE item_id=$1 AND user_id=$2 AND emoji=$3",
+        [id, a.id, emoji],
+      );
+    } else {
+      await db.query(
+        "INSERT INTO hc_reactions(item_id,user_id,emoji) VALUES($1,$2,$3) ON CONFLICT(item_id,user_id) DO UPDATE SET emoji=excluded.emoji",
+        [id, a.id, emoji],
+      );
+    }
+    res.json({ success: true, active, emoji });
   });
   route(
     "post",
