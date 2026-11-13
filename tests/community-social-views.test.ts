@@ -13,7 +13,7 @@ test('social feed visuals preserve live public/friends requests, real posts and 
   assert.match(page, /onClick=\{\(\) => setMode\("friends"\)\}/);
   assert.match(page, /onClick=\{\(\) => setMode\("public"\)\}/);
   assert.match(page, /api \+\s*"\/feed\?"/);
-  assert.match(page, /api \+ "\/items\/" \+ item\.id \+ "\/reaction"/);
+  assert.match(page, /<CommunityReactions/);
   assert.match(page, /item\.body\?\.text/);
   assert.match(page, /item\.author\?\.displayName/);
   assert.match(page, /<ChartPreview/);
