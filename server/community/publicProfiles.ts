@@ -119,6 +119,9 @@ async function publicPostCard(db: Database, rules: Policy, row: Item) {
     createdAt: row.created_at,
     text: text(row.body?.text, 20_000),
     title: text(row.body?.title, 200),
+    category: ["idea", "analysis", "education"].includes(row.body?.category)
+      ? row.body.category as "idea" | "analysis" | "education"
+      : "general",
     photos: Array.isArray(row.body?.photos)
       ? row.body.photos.slice(0, 4).filter((id: unknown) => typeof id === "string" && /^[a-f0-9-]{36}$/.test(id))
       : [],
@@ -225,6 +228,20 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
         ...(c.amountsAudience === "public" ? { pnl: row.pnl } : {}),
       })), coverage: coverage.rows };
     }
+    let awards = null;
+    if (c.publicAwardsEnabled === true) {
+      const rewardRows = await db.query(
+        "SELECT award_type,count(*)::integer AS count FROM hc_award_gifts WHERE recipient_id=$1 GROUP BY award_type",
+        [owner.id],
+      );
+      const types = { thanks: 0, analysis: 0, topTrader: 0 };
+      for (const row of rewardRows.rows) {
+        if (row.award_type === "thanks") types.thanks = Number(row.count);
+        if (row.award_type === "analysis") types.analysis = Number(row.count);
+        if (row.award_type === "top_trader") types.topTrader = Number(row.count);
+      }
+      awards = { received: types.thanks + types.analysis + types.topTrader, ...types };
+    }
     res.json({ success: true, profile: {
       id: owner.id, username: owner.username, displayName: text(p.displayName, 100) || "Трейдер",
       joinedAt: owner.created_at, url: publicProfileUrl(owner.username), communityOrigin: communityOrigin(),
@@ -232,7 +249,7 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
       interests: c.interestsAudience === "public" ? text(c.interests, 2000) : "",
       lifestyle: c.lifestyleAudience === "public" ? text(c.lifestyle, 2000) : "",
       telegram: c.telegramAudience === "public" && /^https:\/\/t\.me\/[A-Za-z0-9_]+$/.test(c.telegram ?? "") ? c.telegram : "",
-      status, statistics,
+      status, statistics, awards,
       avatarUrl: c.avatarAudience === "public" && typeof c.avatarMediaId === "string"
         ? "/api/public/profiles/" + owner.username + "/avatar" : null,
       coverUrl: c.coverAudience === "public" && typeof c.coverMediaId === "string"
@@ -258,10 +275,14 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
   }
   route("/posts", async (req, res, db, owner, rules) => {
     const before = req.query.before ? uuid(req.query.before) : null;
+    const category = req.query.category === undefined ? null : req.query.category;
+    if (category !== null && (typeof category !== "string" || !["idea", "analysis", "education"].includes(category)))
+      fail("Некоректна категорія публікації", 400);
     const { rows } = await db.query<Item>(
       `SELECT * FROM hc_items WHERE owner_id=$1 AND kind='post' AND audience='public' AND conversation_id IS NULL AND NOT deleted
       AND ($2::uuid IS NULL OR (created_at,id)<(SELECT created_at,id FROM hc_items WHERE id=$2 AND owner_id=$1 AND kind='post' AND audience='public' AND NOT deleted))
-      ORDER BY created_at DESC,id DESC LIMIT 16`, [owner.id, before],
+      AND ($3::text IS NULL OR body->>'category'=$3)
+      ORDER BY created_at DESC,id DESC LIMIT 16`, [owner.id, before, category],
     );
     const output = [];
     for (const row of rows.slice(0, 15)) {

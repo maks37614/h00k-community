@@ -43,6 +43,7 @@ export function PublicProfileSettings() {
 
   const verified = info?.emailVerified === true;
   const enabled = profile?.community?.publicProfileEnabled === true;
+  const awardsPublic = profile?.community?.publicAwardsEnabled === true;
   const address = getProfileAddressState(
     name, password, info, verified, busy, recovery, code,
   );
@@ -121,6 +122,20 @@ export function PublicProfileSettings() {
         kind: "error",
         text: error instanceof Error ? error.message : "Не вдалося змінити видимість.",
       });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function changeAwardsVisibility(next: boolean) {
+    if (busy || !info?.username || !enabled) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      await updateProfileData({ community: { publicAwardsEnabled: next } });
+      setNotice({ kind: "success", text: next ? "Публічний показ нагород увімкнено." : "Нагороди приховано від гостей." });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "Не вдалося змінити видимість нагород." });
     } finally {
       setBusy(false);
     }
@@ -244,6 +259,12 @@ export function PublicProfileSettings() {
           фотографії та графіки для всього Інтернету. Дані з аудиторією «Друзі»
           або «Лише я» не розкриваються. Статистика й суми мають окремі дозволи.
         </p>
+        <label className="community-profile-address-toggle">
+          <input type="checkbox" checked={awardsPublic} disabled={busy || !enabled || !info?.username}
+            onChange={(event) => void changeAwardsVisibility(event.target.checked)} />
+          Показувати отримані нагороди в публічному профілі
+        </label>
+        <p className="community-hint">За замовчуванням вимкнено. Показуються лише кількість та типи отриманих нагород, без імен відправників або списку подарунків.</p>
       </div>
 
       <PublicProfileMediaSettings />

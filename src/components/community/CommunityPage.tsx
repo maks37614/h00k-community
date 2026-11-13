@@ -2576,6 +2576,14 @@ function Profile({
     apiJson(api + "/feed?mode=wall&owner=" + id),
   );
   const p = resource.data?.profile;
+  const requestedContact = new URLSearchParams(location.hash.split("?")[1] ?? "").get("contact");
+  useEffect(() => {
+    if (!p || user?.uid === id || !["friend", "message"].includes(requestedContact ?? "")) return;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById("community-profile-contact")?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [id, p, requestedContact, user?.uid]);
   const friends: CommunityFriend[] | undefined = friendships.data?.people;
   const relation = friends?.find((person) => person.id === id);
   function changeFriend(action: "send" | "accept" | "cancel" | "remove") {
@@ -2632,7 +2640,7 @@ function Profile({
         </article>
       )}
       {id !== user?.uid && p && (
-        <section className="community-profile-connect" aria-label="Зв'язок із трейдером">
+        <section id="community-profile-contact" className="community-profile-connect" data-contact-focus={requestedContact ? "true" : undefined} aria-label="Зв'язок із трейдером">
           {friendships.error ? (
             <p role="status">{friendships.error}</p>
           ) : !friends ? (
@@ -2640,6 +2648,9 @@ function Profile({
           ) : (
             <>
               <span className="community-page-kicker">КОНТАКТИ</span>
+              {requestedContact === "message" && !relation?.accepted && (
+                <p className="community-profile-contact-hint">Для особистих повідомлень спочатку потрібно підтвердити дружбу.</p>
+              )}
               {relation?.accepted ? (
                 <>
                   <span className="community-profile-friend-status">Ви друзі</span>
