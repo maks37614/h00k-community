@@ -15,6 +15,7 @@ import { lossSum, evaluateRisk, riskWindows } from '../server/community/risk';
 import { bybitRead, checkReadOnly } from '../server/community/bybit';
 import type { Kline } from '../src/types';
 import {testDatabase} from './fixtures/community-db';
+import { profileNameHash } from '../server/community/profileNames';
 
 const engine=new PGlite();
 const db=testDatabase(engine),mail: Array<{email:string;url:string}>=[];
@@ -437,6 +438,86 @@ test('timed mute expires automatically for one member and restores alerts withou
   assert.equal(reset.data.muted_until, null);
   assert.equal((await summary(bob)).unread_count, 1);
   assert.equal((await call(api + '/conversations/unread', bob)).data.unread, baseline);
+});
+
+
+test('mention-only group notifications require a real @member handle and retain all unread messages',async()=>{
+  // Use SQL only to create test membership fixtures without exhausting request
+  // rate limits that must remain enabled on the actual API.
+  const groupId=randomUUID();
+  await db.query(
+    "INSERT INTO hc_conversations(id,owner_id,title,is_group) VALUES($1,$2,'Згадки у групі',true)",
+    [groupId,eve.id],
+  );
+  await db.query(
+    "INSERT INTO hc_members(conversation_id,user_id,role) VALUES($1,$2,'owner'),($1,$3,'member')",
+    [groupId,eve.id,bob.id],
+  );
+  let nameRow=await db.query("SELECT username FROM hc_profile_names WHERE owner_id=$1",[bob.id]);
+  let handle=nameRow.rows[0]?.username as string|undefined;
+  if(!handle) {
+    handle='bob-'+randomUUID().slice(0,8);
+    await db.query(
+      "INSERT INTO hc_profile_names(name_hash,username,owner_id) VALUES($1,$2,$3)",
+      [profileNameHash(handle),handle,bob.id],
+    );
+  }
+  const endpoint=api+'/conversations/'+groupId;
+  const list=async(actor:Actor)=>(await call(api+'/conversations',actor)).data.items.find((c:any)=>c.id===groupId);
+  const aggregate=async(actor:Actor)=>(await call(api+'/conversations/unread',actor)).data.unread;
+  const current=await call(endpoint+'/members',eve);
+  assert.equal(current.res.status,200);
+  assert.equal(current.data.items.find((m:any)=>m.id===bob.id).username,handle);
+  assert.equal((await call(endpoint+'/members',alice)).res.status,404);
+  assert.equal((await call(endpoint+'/mentions-only',alice,'POST',{enabled:true})).res.status,404);
+  assert.equal((await call(endpoint+'/mentions-only',bob,'POST',{enabled:'yes'})).res.status,400);
+  assert.equal((await call(endpoint+'/mentions-only',bob,'POST',{enabled:true})).res.status,200);
+  assert.equal((await list(bob)).mentions_only,true);
+  assert.equal((await list(eve)).mentions_only,false);
+  const base=await aggregate(bob);
+
+  const plain=await call(api+'/items',eve,'POST',{
+    kind:'message',conversationId:groupId,body:{text:'Звичайне повідомлення без адресата'},
+  });
+  assert.equal(plain.res.status,201,JSON.stringify(plain.data));
+  const prefix=await call(api+'/items',eve,'POST',{
+    kind:'message',conversationId:groupId,body:{text:'Це для @'+handle+'-longer, не для вас'},
+  });
+  assert.equal(prefix.res.status,201);
+  assert.equal((await list(bob)).unread_count,2);
+  assert.equal((await list(bob)).alert_unread_count,0);
+  assert.equal(await aggregate(bob),base);
+
+  const clientId=randomUUID();
+  const msg={kind:'message',conversationId:groupId,clientId,
+    body:{text:'Тепер саме для @'+handle.toUpperCase()+'!'}};
+  const mentioned=await call(api+'/items',eve,'POST',msg);
+  assert.equal(mentioned.res.status,201,JSON.stringify(mentioned.data));
+  const duplicate=await call(api+'/items',eve,'POST',msg);
+  assert.equal(duplicate.res.status,201);
+  assert.equal(duplicate.data.id,mentioned.data.id);
+  const mentionRows=await db.query(
+    "SELECT user_id FROM hc_message_mentions WHERE message_id=$1",[mentioned.data.id],
+  );
+  assert.deepEqual(mentionRows.rows.map((m:any)=>m.user_id),[bob.id]);
+  assert.equal((await list(bob)).unread_count,3);
+  assert.equal((await list(bob)).alert_unread_count,1);
+  assert.equal(await aggregate(bob),base+1);
+  assert.equal((await list(eve)).unread_count,0);
+
+  // Per-member full mute wins over mention-only, but never marks anything read.
+  assert.equal((await call(endpoint+'/mute',bob,'POST',{muted:true})).res.status,200);
+  assert.equal((await list(bob)).unread_count,3);
+  assert.equal((await list(bob)).alert_unread_count,0);
+  assert.equal(await aggregate(bob),base);
+  assert.equal((await call(endpoint+'/mute',bob,'POST',{muted:false})).res.status,200);
+  assert.equal(await aggregate(bob),base+1);
+  assert.equal((await call(endpoint+'/mentions-only',bob,'POST',{enabled:false})).res.status,200);
+  assert.equal((await list(bob)).alert_unread_count,3);
+  assert.equal(await aggregate(bob),base+3);
+  assert.equal((await call(endpoint+'/read',bob,'POST',{messageId:mentioned.data.id})).res.status,200);
+  assert.equal((await list(bob)).unread_count,0);
+  assert.equal(await aggregate(bob),base);
 });
 
 test('group membership, message idempotence and block policy apply to direct links too',async()=>{
