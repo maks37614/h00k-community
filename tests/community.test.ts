@@ -193,6 +193,68 @@ test('reaction toggle works on posts and comments, with viewer-specific selected
   assert.deepEqual(myComment.data.item.reactions, [{ emoji: '👏', count: 1, mine: true }]);
 });
 
+test('real group chats support membership listing, invitations, ownership transfer and leaving', async () => {
+  await call(api + '/friends/' + bob.id, alice, 'POST', {});
+  await call(api + '/friends/' + alice.id, bob, 'POST', {});
+  await call(api + '/friends/' + eve.id, alice, 'POST', {});
+  await call(api + '/friends/' + alice.id, eve, 'POST', {});
+
+  assert.equal((await call(api + '/conversations', alice, 'POST', {
+    title: 'Некоректний режим', members: [bob.id], isGroup: 'yes',
+  })).res.status, 400);
+  const direct = await call(api + '/conversations', alice, 'POST', {
+    title: 'Особистий діалог', members: [bob.id], isGroup: false,
+  });
+  assert.equal(direct.res.status, 201, JSON.stringify(direct.data));
+  const directInfo = await call(api + '/conversations', alice);
+  assert.equal(directInfo.data.items.find((c: any) => c.id === direct.data.id)?.is_group, false);
+  assert.equal((await call(api + '/conversations/' + direct.data.id + '/members', eve)).res.status, 404);
+  assert.equal((await call(api + '/conversations/' + direct.data.id + '/members', alice)).data.items.length, 2);
+  assert.equal((await call(api + '/conversations/' + direct.data.id + '/members', alice, 'POST', {
+    id: eve.id,
+  })).res.status, 403);
+
+  // One invited person still creates a real group, open to adding confirmed friends later.
+  const group = await call(api + '/conversations', alice, 'POST', {
+    title: 'Груповий аналіз', members: [bob.id], isGroup: true,
+  });
+  assert.equal(group.res.status, 201, JSON.stringify(group.data));
+  const id = group.data.id;
+  const list = await call(api + '/conversations/' + id + '/members', bob);
+  assert.equal(list.res.status, 200);
+  assert.deepEqual(new Set(list.data.items.map((m: any) => m.id)), new Set([alice.id,bob.id]));
+  assert.equal(list.data.items.find((m: any) => m.id === alice.id)?.role, 'owner');
+  assert.doesNotMatch(JSON.stringify(list.data), /password_hash|email|credential|mfa_secret/);
+  assert.equal((await call(api + '/conversations/' + id + '/members', eve)).res.status, 404);
+  assert.equal((await call(api + '/conversations/' + id + '/members', bob, 'POST', {
+    id: eve.id,
+  })).res.status, 403);
+  assert.equal((await call(api + '/conversations/' + id + '/members', alice, 'POST', {
+    id: eve.id,
+  })).res.status, 200);
+  assert.equal((await call(api + '/conversations/' + id + '/members', alice, 'POST', {
+    id: eve.id,
+  })).res.status, 200);
+  assert.equal((await call(api + '/conversations/' + id + '/members', eve)).data.items.length, 3);
+
+  assert.equal((await call(api + '/conversations/' + id + '/transfer', bob, 'POST', {
+    targetId: eve.id,
+  })).res.status, 403);
+  const handover = await call(api + '/conversations/' + id + '/transfer', alice, 'POST', {
+    targetId: eve.id,
+  });
+  assert.equal(handover.res.status, 200, JSON.stringify(handover.data));
+  const transferred = await call(api + '/conversations/' + id + '/members', alice);
+  assert.equal(transferred.data.items.find((m: any) => m.id === eve.id)?.role, 'owner');
+  assert.equal((await call(api + '/conversations/' + id + '/transfer', alice, 'POST', {
+    targetId: bob.id,
+  })).res.status, 403);
+  assert.equal((await call(api + '/conversations/' + id + '/members/' + eve.id, eve, 'DELETE')).res.status, 400);
+  assert.equal((await call(api + '/conversations/' + id + '/members/' + alice.id, alice, 'DELETE')).res.status, 200);
+  assert.equal((await call(api + '/conversations/' + id + '/members', alice)).res.status, 404);
+  assert.equal((await call(api + '/conversations/' + id + '/members', eve)).res.status, 200);
+});
+
 test('group membership, message idempotence and block policy apply to direct links too',async()=>{
   await call(api+'/friends/'+bob.id,alice,'POST',{});await call(api+'/friends/'+alice.id,bob,'POST',{});
   const group=await call(api+'/conversations',alice,'POST',{title:'Спільний тест',members:[bob.id]});assert.equal(group.res.status,201,JSON.stringify(group.data));const conversationId=group.data.id;
