@@ -1,5 +1,6 @@
 import { AccountSecuritySettings } from "./AccountSecuritySettings";
 import { PublicProfileSettings } from "./PublicProfileSettings";
+import { CommunityNotificationCenter } from "./CommunityNotificationCenter";
 import { STRATEGY_PRESETS } from "../hookchart/strategyEngine";
 import { saveChartArchive } from "../../community/archiveChart";
 import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, useId } from "react";
@@ -281,9 +282,18 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
             Ви визначаєте, хто бачить ваші дані.
           </p>
         </div>
-        <button type="button" onClick={() => setTab("settings")}>
-          <ShieldCheck size={18} /> Прозорість і захист
-        </button>
+        <div className="community-intro-actions">
+          <CommunityNotificationCenter
+            key={user.uid}
+            onOpenSettings={() => {
+              setViewProfile(null);
+              setTab("settings");
+            }}
+          />
+          <button type="button" onClick={() => setTab("settings")}>
+            <ShieldCheck size={18} /> Прозорість і захист
+          </button>
+        </div>
       </header>
       <div className={"community-dashboard" + (tab === "feed" ? " community-dashboard-feed" : "")}>
         <div className="community-sidebar">
