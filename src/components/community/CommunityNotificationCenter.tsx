@@ -12,7 +12,6 @@ import { apiJson } from "../../utils/apiFetch";
 import {
   describeCommunityNotice,
   communityNoticeDestination,
-  filterCommunityNotices,
   visibleCommunityNotices,
   unreadChatNotices,
   safeNoticeDate,
