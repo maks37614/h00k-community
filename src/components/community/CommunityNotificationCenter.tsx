@@ -4,6 +4,7 @@ import {
   Check,
   CircleAlert,
   Inbox,
+  MessageCircle,
   RefreshCw,
   ShieldAlert,
 } from "lucide-react";
@@ -12,6 +13,8 @@ import {
   describeCommunityNotice,
   communityNoticeDestination,
   filterCommunityNotices,
+  visibleCommunityNotices,
+  unreadChatNotices,
   safeNoticeDate,
   unreadNoticeCount,
   type CommunityNotice,
@@ -27,9 +30,13 @@ import "./social-notification-center.css";
 export function CommunityNotificationCenter({
   onOpenSettings,
   onNavigate,
+  showChatNotices = true,
+  showSocialNotices = true,
 }: {
   onOpenSettings: () => void;
   onNavigate?: (destination: CommunityNoticeDestination) => void;
+  showChatNotices?: boolean;
+  showSocialNotices?: boolean;
 }) {
   const panelId = useId();
   const alive = useRef(true);
@@ -37,6 +44,8 @@ export function CommunityNotificationCenter({
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<NoticeFilter>("unread");
   const [items, setItems] = useState<CommunityNotice[]>([]);
+  const [chats, setChats] = useState<ReturnType<typeof unreadChatNotices>>([]);
+  const [chatError, setChatError] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -55,17 +64,32 @@ export function CommunityNotificationCenter({
     setLoading(true);
     setError("");
     try {
-      const result = await apiJson("/api/community/notifications");
+      // Chat summaries and stored events share the SAME on-demand refresh.
+      // No WebSocket, per-message notification inserts or extra polling timer.
+      const [notices, conversations] = await Promise.allSettled([
+        apiJson("/api/community/notifications"),
+        showChatNotices
+          ? apiJson("/api/community/conversations")
+          : Promise.resolve({ items: [] }),
+      ]);
       if (!alive.current || request !== requestId.current) return;
-      if (!Array.isArray(result.items)) {
+      if (notices.status === "rejected") throw notices.reason;
+      if (!Array.isArray(notices.value.items)) {
         throw new Error("Невідома відповідь сервера сповіщень");
       }
-      setItems(result.items.filter((item: unknown) =>
+      setItems(notices.value.items.filter((item: unknown) =>
         !!item &&
         typeof item === "object" &&
         typeof (item as CommunityNotice).id === "string" &&
         typeof (item as CommunityNotice).type === "string",
       ) as CommunityNotice[]);
+      if (conversations.status === "fulfilled") {
+        setChats(unreadChatNotices(conversations.value?.items));
+        setChatError("");
+      } else {
+        setChats([]);
+        setChatError("Не вдалося завантажити непрочитані чати.");
+      }
       setLoaded(true);
     } catch (cause) {
       if (alive.current && request === requestId.current)
@@ -110,8 +134,11 @@ export function CommunityNotificationCenter({
     }
   }
 
-  const visible = filterCommunityNotices(items, filter);
-  const unread = unreadNoticeCount(items);
+  const visible = visibleCommunityNotices(items, filter, showSocialNotices);
+  const unread = unreadNoticeCount(visibleCommunityNotices(items, "unread", showSocialNotices));
+  const openChats = showChatNotices ? chats : [];
+  const totalUnreadChats = openChats.reduce((total, chat) => total + chat.count, 0);
+  const totalUnread = unread + totalUnreadChats;
 
   return (
     <div className="community-notification-anchor">
@@ -124,7 +151,7 @@ export function CommunityNotificationCenter({
       >
         <Bell size={17} aria-hidden="true" />
         <span>Сповіщення</span>
-        {loaded && unread > 0 && <span className="community-notification-count">{unread > 99 ? "99+" : unread}</span>}
+        {loaded && totalUnread > 0 && <span className="community-notification-count">{totalUnread > 99 ? "99+" : totalUnread}</span>}
       </button>
       {open && (
         <section
@@ -140,7 +167,7 @@ export function CommunityNotificationCenter({
             <div>
               <span className="community-page-kicker">ВАШ АКАУНТ</span>
               <h2>Сповіщення</h2>
-              <small>Особисті події з Community · останні 50</small>
+              <small>Особисті події · останні 50 та непрочитані розмови</small>
             </div>
             <button
               type="button"
@@ -153,15 +180,16 @@ export function CommunityNotificationCenter({
           </header>
           <div className="community-notification-filters" role="group" aria-label="Показати сповіщення">
             <button type="button" aria-pressed={filter === "unread"} onClick={() => setFilter("unread")}>
-              Непрочитані {loaded && unread > 0 ? `(${unread})` : ""}
+              Непрочитані {loaded && totalUnread > 0 ? `(${totalUnread > 99 ? "99+" : totalUnread})` : ""}
             </button>
             <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
               Усі
             </button>
           </div>
           {error && <p className="community-notification-error" role="alert">{error}</p>}
+          {showChatNotices && chatError && <p className="community-notification-error" role="status">{chatError}</p>}
           {loading && <p className="community-notification-loading" role="status">Завантаження сповіщень…</p>}
-          {!loading && loaded && visible.length === 0 && (
+          {!loading && loaded && visible.length === 0 && openChats.length === 0 && (
             <div className="community-notification-empty">
               <Inbox size={22} aria-hidden="true" />
               {filter === "unread" ? "Немає непрочитаних сповіщень." : "Сповіщень поки немає."}
@@ -169,6 +197,24 @@ export function CommunityNotificationCenter({
           )}
           {!loading && !loaded && !error && <p className="community-notification-loading">Відкриваємо повідомлення…</p>}
           <ul className="community-notification-list">
+            {openChats.map((chat) => (
+              <li className="community-notification-item community-notification-unread community-notification-chat-item" key={"chat:" + chat.id}>
+                <div className="community-notification-item-icon" aria-hidden="true"><MessageCircle size={17} /></div>
+                <div className="community-notification-item-body">
+                  <strong>{chat.is_group ? "Група: " : "Повідомлення: "}{chat.displayName}</strong>
+                  <p>Непрочитаних повідомлень: {chat.count >= 100 ? "99+" : chat.count}</p>
+                  {onNavigate && (
+                    <button type="button" className="community-notification-open"
+                      onClick={() => {
+                        setOpen(false);
+                        onNavigate({ section: "chats", conversationId: chat.id });
+                      }}>
+                      Відкрити розмову
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
             {visible.map((notice) => {
               const details = describeCommunityNotice(notice);
               const destination = communityNoticeDestination(notice);
