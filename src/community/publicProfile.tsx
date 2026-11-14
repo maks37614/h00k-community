@@ -10,7 +10,7 @@ import { PublicProfileArticles } from "./PublicProfileArticles";
 import { PublicProfilePhotoGallery } from "./PublicProfilePhotoGallery";
 import type { ChartDocument } from "./chartDocument";
 import {
-  communityPostUrl, publicPostUrl, publicCommentUrl, publicCommentIdFromSearch,
+  communityPostUrl, communityProfileContactUrl, publicPostUrl, publicCommentUrl, publicCommentIdFromSearch,
   publicChartGalleryUrl, publicChartPostUrl, publicArticleUrl, publicProfileDeepLink,
   publicProfileDate, visibleReactionSummary,
   type PublicReactionSummary,
@@ -538,7 +538,7 @@ export function PublicProfile() {
     await copy(url, "chart");
   };
 
-  const communityUrl = profile ? profile.communityOrigin + "/#community?section=profile&owner=" + encodeURIComponent(profile.id) : null;
+  const communityUrl = profile ? communityProfileContactUrl(profile.communityOrigin, profile.id) : null;
   const pinned = profile?.featuredPost ?? null;
   const eligiblePinned = pinned && (tab === "articles" ? pinned.category === "education"
     : postCategory === "all" || pinned.category === postCategory) &&
@@ -599,8 +599,8 @@ export function PublicProfile() {
             {profileJoinDate && <span className="public-profile-joined"><CalendarDays size={15} aria-hidden="true" /> У спільноті з {profileJoinDate}</span>}
           </div>
           <div className="public-profile-hero-actions">
-            <a className="public-profile-action public-profile-connect" href={communityUrl! + "&contact=friend"} title="Запити дружби доступні після входу в Community"><UserPlus size={16} aria-hidden="true" /> Додати в друзі</a>
-            <a className="public-profile-chat" href={communityUrl! + "&contact=message"} title="Повідомлення доступні підтвердженим друзям у Community"><MessageCircle size={16} aria-hidden="true" /> Повідомлення</a>
+            <a className="public-profile-action public-profile-connect" href={communityProfileContactUrl(profile.communityOrigin, profile.id, "friend")} title="Запити дружби доступні після входу в Community"><UserPlus size={16} aria-hidden="true" /> Додати в друзі</a>
+            <a className="public-profile-chat" href={communityProfileContactUrl(profile.communityOrigin, profile.id, "message")} title="Повідомлення доступні підтвердженим друзям у Community"><MessageCircle size={16} aria-hidden="true" /> Повідомлення</a>
             <a className="public-profile-community-link" href={communityUrl!}><UsersRound size={16} aria-hidden="true" /> Відкрити у Community</a>
             <button type="button" className="public-profile-copy" onClick={() => void copy(profile.url, "profile")}>
               {copied === "profile" ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
