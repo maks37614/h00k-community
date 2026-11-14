@@ -4,6 +4,7 @@ export type FriendFilter = "all" | "friends" | "requests";
 export type CommunityFriend = {
   id: string;
   displayName?: string;
+  username?: string | null;
   accepted?: boolean;
   incoming?: boolean;
   friend?: boolean;
