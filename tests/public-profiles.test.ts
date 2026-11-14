@@ -307,6 +307,61 @@ test("guest /u/ wall shows only opt-in public comments, post deep links and aggr
   assert.equal((await call(root + "/comments")).res.status, 404);
 });
 
+test("social public comments show only consented same-owner media, with revocation and wildcard-host checks", async () => {
+  const owner = await named("portrait-comments-owner");
+  const author = await named("portrait-comments-author");
+  const another = await named("portrait-comments-foreign");
+  const id = await post(owner, { text: "Публічний розбір" });
+  const visible = await call("/api/community/items", author, "POST", {
+    kind: "comment", audience: "public", parentId: id, body: { text: "Мій коментар" },
+  });
+  assert.equal(visible.res.status, 201, visible.text);
+  const privateComment = await call("/api/community/items", author, "POST", {
+    kind: "comment", audience: "private", parentId: id, body: { text: "Лише я" },
+  });
+  assert.equal(privateComment.res.status, 201, privateComment.text);
+  const root = "/api/public/profiles/portrait-comments-owner/posts/" + id;
+  const image = root + "/comments/" + visible.data.id + "/avatar";
+  const foreignImage = randomUUID();
+  const avatar = randomUUID();
+  await db.query("INSERT INTO hc_media(id,owner_id,bytes) VALUES($1,$2,4),($3,$4,4)",
+    [avatar, author.id, foreignImage, another.id]);
+  await fs.writeFile(path.join(directory, avatar + ".webp"), Buffer.from("RIFF"));
+  await fs.writeFile(path.join(directory, foreignImage + ".webp"), Buffer.from("RIFF"));
+
+  assert.equal((await call("/api/account/profile", author, "PATCH", {
+    community: { avatarMediaId: foreignImage, avatarAudience: "public" },
+  })).res.status, 403);
+  await enable(author, { avatarMediaId: avatar, avatarAudience: "private" });
+  let comments = await call(root + "/comments");
+  assert.equal(comments.data.items[0].authorAvatarUrl, null);
+  assert.equal((await call(image)).res.status, 404);
+
+  await enable(author, { avatarAudience: "public" });
+  comments = await call(root + "/comments");
+  assert.equal(comments.res.status, 200, comments.text);
+  assert.equal(comments.data.items[0].authorAvatarUrl, image);
+  assert.doesNotMatch(comments.text, new RegExp(avatar + "|" + foreignImage));
+  const result = await call(image);
+  assert.equal(result.res.status, 200);
+  assert.match(result.res.headers.get("content-type") ?? "", /image\/webp/);
+  assert.equal(result.res.headers.get("cache-control"), "private, no-store");
+  assert.equal((await call(image, undefined, "GET", undefined, {
+    Host: "portrait-comments-owner.h00k.test",
+  })).res.status, 200);
+  assert.equal((await call(image, undefined, "GET", undefined, {
+    Host: "portrait-comments-author.h00k.test",
+  })).res.status, 404);
+
+  assert.equal((await call(root + "/comments/" + privateComment.data.id + "/avatar")).res.status, 404);
+  await enable(author, { avatarAudience: "private" });
+  assert.equal((await call(image)).res.status, 404);
+  assert.equal((await call(root + "/comments")).data.items[0].authorAvatarUrl, null);
+  await enable(author, { avatarAudience: "public", publicProfileEnabled: false });
+  assert.equal((await call(image)).res.status, 404);
+  assert.equal((await call(root + "/comments")).data.items.length, 0);
+});
+
 test("owner can feature only own public posts and revocation hides the pinned post immediately", async () => {
   const owner = await named("featured-trader");
   const another = await named("featured-other");
