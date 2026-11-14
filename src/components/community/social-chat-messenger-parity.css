@@ -264,3 +264,29 @@
 @media(prefers-reduced-motion:reduce) {
   .community-workspace .community-chat-thread {scroll-behavior:auto;}
 }
+
+/* Consent-driven avatars: a real image is shown only when the profile opted in. */
+.community-workspace .community-friend-avatar,
+.community-workspace .community-chat-channel-symbol,
+.community-workspace .community-chat-active-avatar,
+.community-workspace .community-chat-thread .community-message-card .community-avatar {
+  position:relative;
+  overflow:hidden;
+}
+.community-workspace .community-friend-avatar img,
+.community-workspace .community-chat-channel-symbol img,
+.community-workspace .community-chat-active-avatar img,
+.community-workspace .community-chat-thread .community-message-card .community-avatar img {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:inherit;
+}
+.community-workspace .community-friend-avatar img[hidden],
+.community-workspace .community-chat-channel-symbol img[hidden],
+.community-workspace .community-chat-active-avatar img[hidden],
+.community-workspace .community-chat-thread .community-message-card .community-avatar img[hidden] {
+  display:none;
+}
