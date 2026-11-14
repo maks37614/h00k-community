@@ -75,6 +75,34 @@ export function publicProfileDeepLink(search: string): PublicProfileDeepLink {
   return { tab, postId, openChart: tab === "setups" && postId !== null && params.get("view") === "chart" };
 }
 
+export type PublicPostCategory = "all" | "idea" | "analysis" | "education";
+
+/** Query categories are presentation filters only, never API permissions. */
+export function publicProfileCategoryFromSearch(search: string): PublicPostCategory {
+  const raw = new URLSearchParams(search).get("category");
+  return raw === "idea" || raw === "analysis" || raw === "education" ? raw : "all";
+}
+
+/** Keep every public profile tab shareable and compatible with browser history. */
+export function publicProfileTabUrl(profileUrl: string, tab: PublicProfileDeepLink["tab"]): string {
+  const url = new URL(profileUrl);
+  if (!["https:", "http:"].includes(url.protocol) || url.username || url.password)
+    throw new Error("Некоректна адреса профілю");
+  // A tab transition is not permission to keep an unrelated post or chart open.
+  for (const field of ["post", "comment", "view", "category", "tab"])
+    url.searchParams.delete(field);
+  if (tab !== "wall")
+    url.searchParams.set("tab", tab === "setups" ? "hookchart" : tab);
+  return url.toString();
+}
+
+/** Canonical wall category filter, excluding obsolete post/article/chart links. */
+export function publicProfileCategoryUrl(profileUrl: string, category: PublicPostCategory): string {
+  const url = new URL(publicProfileTabUrl(profileUrl, "wall"));
+  if (category !== "all") url.searchParams.set("category", category);
+  return url.toString();
+}
+
 /** Link directly to the public HookChart gallery, not a live market terminal. */
 export function publicChartGalleryUrl(profileUrl: string): string {
   const url = new URL(profileUrl);
