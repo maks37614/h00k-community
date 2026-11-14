@@ -286,12 +286,18 @@ export function PublicProfile() {
   useEffect(() => {
     const controller = new AbortController();
     const requestVersion = ++feedRequestVersion.current;
-    void Promise.all([read(base, controller.signal), read(base + "/posts", controller.signal)])
+    // Do not load the general wall when opening articles, statistics, about or
+    // a filtered category directly: those views have their own lazy requests.
+    const needInitialWall = currentFeedKey.current === "wall:all";
+    void Promise.all([
+      read(base, controller.signal),
+      needInitialWall ? read(base + "/posts", controller.signal) : Promise.resolve(null),
+    ])
       .then(([account, wall]) => {
         if (controller.signal.aborted) return;
         setProfile(account.profile);
         if (initialLink.tab === "statistics" && !account.profile.statistics) setTab("wall");
-        if (requestVersion === feedRequestVersion.current && currentFeedKey.current === "wall:all") {
+        if (wall && requestVersion === feedRequestVersion.current && currentFeedKey.current === "wall:all") {
           setItems(wall.items);
           setNext(wall.next);
           setWallPreviewCount(wall.items.length);
@@ -405,7 +411,7 @@ export function PublicProfile() {
       })
       .catch(e => { if (!controller.signal.aborted) setPostError(e instanceof Error ? e.message : "Допис недоступний"); });
     return () => controller.abort();
-  }, [base, linkedPostId, linkedCommentId, initialLink.openChart]);
+  }, [base, linkedPostId, linkedCommentId, initialLink.openChart, initialLink.tab]);
 
   const more = async () => {
     if (!next || busy || pendingFeedKey || !feedKey || loadedFeedKey !== feedKey) return;
