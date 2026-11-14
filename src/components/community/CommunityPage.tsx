@@ -79,6 +79,7 @@ type Tab =
   | "strategies"
   | "trades"
   | "learning"
+  | "articles"
   | "chats"
   | "friends"
   | "profile"
@@ -166,7 +167,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
   const { archivedFormations } = useArchive();
   const [tab, setTab] = useState<Tab>(() => {
       const section = new URLSearchParams(location.hash.split("?")[1] ?? "").get("section");
-      return (["feed","day","sessions","strategies","trades","learning","chats","friends","profile","settings"] as string[]).includes(section ?? "") ? section as Tab : "feed";
+      return (["feed","day","sessions","strategies","trades","learning","articles","chats","friends","profile","settings"] as string[]).includes(section ?? "") ? section as Tab : "feed";
     }),
     [notice, setNotice] = useState(""),
     [picker, setPicker] = useState<Target | null>(null),
@@ -178,6 +179,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
     return owner && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(owner) ? owner : null;
   }),
     [revision, bump] = useState(0);
+  const [mobileFeedColumn, setMobileFeedColumn] = useState<"profile" | "feed" | "sessions">("feed");
   async function run(fn: () => Promise<unknown>) {
     setNotice("");
     try {
@@ -228,7 +230,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
         setViewProfile(null);
         setTab("feed");
       }
-      if (section && (["feed","day","sessions","strategies","trades","learning","chats","friends","profile","settings"] as string[]).includes(section)) {
+      if (section && (["feed","day","sessions","strategies","trades","learning","articles","chats","friends","profile","settings"] as string[]).includes(section)) {
         if (section === "profile") {
           const owner = query.get("owner");
           setViewProfile(owner && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(owner) ? owner : null);
@@ -365,6 +367,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
     ["strategies", "Стратегії", <BookOpen size={16} />],
     ["trades", "Угоди та статистика", <ShieldCheck size={16} />],
     ["learning", "Навчання", <BookOpen size={16} />],
+    ["articles", "Статті та аналітика", <BookOpen size={16} />],
     ["chats", "Чати", <MessageCircle size={16} />],
     ["friends", "Друзі", <Users size={16} />],
     ["profile", "Профіль", <Users size={16} />],
@@ -415,7 +418,17 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           </button>
         </div>
       </header>
-      <div className={"community-dashboard" + (tab === "feed" ? " community-dashboard-feed" : "")}>
+      {tab === "feed" && <nav className="community-social-mobile-columns" aria-label="Колонки Community">
+        {([["profile","Профіль"],["feed","Стрічка"],["sessions","Сесії й нагороди"]] as const)
+          .map(([key,label]) => (
+            <button type="button" key={key} aria-pressed={mobileFeedColumn === key}
+              onClick={() => setMobileFeedColumn(key)}>
+              {label}
+            </button>
+          ))}
+      </nav>}
+      <div className={"community-dashboard" + (tab === "feed" ? " community-dashboard-feed" : "")}
+        data-mobile-column={tab === "feed" ? mobileFeedColumn : undefined}>
         <div className="community-sidebar">
           <CommunityConceptProfile
             version={revision}
@@ -505,6 +518,10 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           </>
         )}
         {tab === "trades" && <Trades run={run} />}
+        {tab === "articles" && (
+          <CommunityArticles run={run} onPick={setPicker} onChart={openChart}
+            onProfile={id => { setViewProfile(id); setTab("profile"); }} />
+        )}
         {tab === "chats" && (
           <Chats
             revision={revision}
