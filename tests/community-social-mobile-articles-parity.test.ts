@@ -64,3 +64,13 @@ test("Article and mobile styles stay scoped, adapt to iPhone and avoid layout sh
   assert.match(css, /prefers-reduced-motion|community-social-topbar/);
   assert.doesNotMatch(css, /\.community-chart\b|\.screener-/);
 });
+
+test("social market pulse card links to live screener without duplicating exchange traffic", () => {
+  assert.match(workspace, /className="community-context-card community-social-market-card"/);
+  assert.match(workspace, /href="https:\/\/h00k\.top\/"/);
+  assert.match(workspace, /rel="noopener noreferrer"/);
+  assert.match(workspace, /Community не дублює біржові підключення/);
+  assert.match(css, /\.community-workspace \.community-social-market-card/);
+  assert.match(css, /@media\(max-width:900px\)/);
+  assert.doesNotMatch(workspace, /new WebSocket\("wss:\/\/stream\./);
+});
