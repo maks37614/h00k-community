@@ -570,6 +570,47 @@ test("public post categories are filtered by the server before pagination", asyn
   assert.deepEqual((await call(url + "?category=education")).data.items, []);
 });
 
+test("public HookChart tab fetches older setups independently of normal posts and paginates", async () => {
+  const owner = await named("chart-archive-owner");
+  const chartId = await saveChart(db, await policy(db, owner.id), snapshot());
+  const oldestChart = await post(owner, { text: "Old authorized HookChart", category: "analysis" }, "public", chartId);
+  const hiddenChart = await post(owner, { text: "Private strategy chart" }, "private", chartId);
+  for (let i = 0; i < 18; i++) {
+    await post(owner, { text: "Ordinary newer post #" + i });
+  }
+  // A regular wall page has no reason to include the older chart.
+  const url = "/api/public/profiles/chart-archive-owner/posts";
+  const wall = await call(url);
+  assert.equal(wall.res.status, 200);
+  assert.equal(wall.data.items.length, 15);
+  assert.ok(!wall.data.items.some((item: any) => item.id === oldestChart));
+
+  for (let i = 0; i < 16; i++) {
+    await post(owner, { text: "Newer chart #" + i, category: "idea" }, "public", chartId);
+  }
+  const charts = await call(url + "?withChart=1");
+  assert.equal(charts.res.status, 200, charts.text);
+  assert.equal(charts.data.items.length, 15);
+  assert.ok(charts.data.items.every((item: any) => item.chart !== null));
+  assert.ok(charts.data.items.every((item: any) => item.id !== hiddenChart));
+  assert.ok(charts.data.next);
+  const next = await call(url + "?withChart=1&before=" + encodeURIComponent(charts.data.next));
+  assert.equal(next.res.status, 200, next.text);
+  assert.equal(next.data.items.length, 2);
+  assert.ok(next.data.items.some((item: any) => item.id === oldestChart));
+  assert.equal(next.data.next, null);
+  assert.ok(!next.data.items.some((item: any) => charts.data.items.some((first: any) => first.id === item.id)));
+  const category = await call(url + "?withChart=1&category=analysis");
+  assert.deepEqual(category.data.items.map((item: any) => item.id), [oldestChart]);
+  assert.equal((await call(url + "?withChart=0")).res.status, 400);
+  assert.equal((await call(url + "?withChart=bogus")).res.status, 400);
+
+  await db.query("UPDATE hc_items SET audience='private' WHERE id=$1", [oldestChart]);
+  const revoked = await call(url + "?withChart=1&category=analysis");
+  assert.equal(revoked.res.status, 200);
+  assert.deepEqual(revoked.data.items, []);
+});
+
 test("public trading sessions are opt-in and never reveal the owner's timezone", async () => {
   const owner = await named("session-visibility-user");
   const url = "/api/public/profiles/session-visibility-user";
