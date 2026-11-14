@@ -1,0 +1,180 @@
+/* Only anonymous, opt-in trader statistics. No live graphics or exchange connections. */
+.public-profile .public-profile-trade-windows {
+  min-width: 0;
+  padding: clamp(14px, 1.5vw, 22px);
+  background: linear-gradient(150deg, #14283a, #0d1c2e 82%);
+  border: 1px solid #305161;
+  border-radius: 17px;
+}
+.public-profile .public-profile-trade-windows-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 11px;
+}
+.public-profile .public-profile-trade-windows-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: clamp(16px, 1.3vw, 19px);
+}
+.public-profile .public-profile-trade-windows-header h3 svg {color: #4bdcc9;}
+.public-profile .public-profile-trade-windows-switch {
+  display: inline-flex;
+  flex-wrap: wrap;
+  padding: 4px;
+  gap: 4px;
+  border: 1px solid #314d61;
+  border-radius: 11px;
+  background: #0b1d30;
+}
+.public-profile .public-profile-trade-windows-switch button {
+  min-height: 36px;
+  padding: 7px 13px;
+  font-size: 12px;
+  font-weight: 750;
+  color: #b1cbdc;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+.public-profile .public-profile-trade-windows-switch button[aria-pressed="true"] {
+  color: #d5fff7;
+  background: #14544d;
+  border-color: #36aa99;
+}
+.public-profile .public-profile-trade-window-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px 0 15px;
+}
+.public-profile .public-profile-trade-window-metrics > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px;
+  border: 1px solid #305065;
+  border-radius: 12px;
+  background: #0a1b2b;
+}
+.public-profile .public-profile-trade-window-metrics span {
+  color: #9cb6c7;
+  font-size: 10px;
+}
+.public-profile .public-profile-trade-window-metrics strong {
+  color: #dffdf7;
+  font-size: clamp(17px, 1.6vw, 24px);
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+.public-profile .public-profile-trade-window-distribution {
+  display: flex;
+  width: 100%;
+  height: 14px;
+  overflow: hidden;
+  border: 1px solid #305064;
+  border-radius: 99px;
+  background: #1b3042;
+}
+.public-profile .public-profile-trade-window-distribution > span {
+  display: block;
+  height: 100%;
+  flex: 0 0 auto;
+}
+.public-profile .public-profile-trade-window-wins {background: #28c8a9;}
+.public-profile .public-profile-trade-window-losses {background: #e87b90;}
+.public-profile .public-profile-trade-window-flat {background: #7d9caf;}
+.public-profile .public-profile-trade-window-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 10px 0 17px;
+  font-size: 10px;
+  color: #a6c4d1;
+}
+.public-profile .public-profile-trade-window-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.public-profile .public-profile-trade-window-legend i {
+  display: block;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+.public-profile .public-profile-trade-window-currencies {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+.public-profile .public-profile-trade-window-currency {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #314d61;
+  border-radius: 12px;
+  background: #112539;
+}
+.public-profile .public-profile-trade-window-currency strong {
+  color: #e2fff8;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.public-profile .public-profile-trade-window-currency span,
+.public-profile .public-profile-trade-window-currency small {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #a1c0cf;
+  overflow-wrap: anywhere;
+}
+.public-profile .public-profile-trade-window-currency small {color: #6de2ce;}
+.public-profile .public-profile-trade-window-empty {
+  padding: 17px;
+  border: 1px dashed #315268;
+  border-radius: 11px;
+  background: #102435;
+  color: #acc8d5;
+  font-size: 12px;
+}
+.public-profile .public-profile-trade-window-disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding-top: 13px;
+  margin: 15px 0 0;
+  border-top: 1px solid #30495b;
+  color: #95b4c3;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.public-profile .public-profile-trade-window-disclaimer svg {flex: none;color: #53cebb;}
+@media (max-width: 1160px) {
+  .public-profile .public-profile-trade-window-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .public-profile .public-profile-trade-windows {padding: 13px;}
+  .public-profile .public-profile-trade-window-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .public-profile .public-profile-trade-windows-switch {
+    width: 100%;
+  }
+  .public-profile .public-profile-trade-windows-switch button {
+    flex: 1;
+    min-height: 44px;
+  }
+}
+@media (max-width: 390px) {
+  .public-profile .public-profile-trade-window-metrics > div {padding: 9px;}
+  .public-profile .public-profile-trade-window-metrics strong {font-size: 17px;}
+}

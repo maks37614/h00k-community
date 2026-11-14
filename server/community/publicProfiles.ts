@@ -242,15 +242,43 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
     if (c.statisticsAudience === "public") {
       const totals = await db.query(
         `SELECT currency,count(*)::integer AS count,count(*) FILTER(WHERE pnl>0)::integer AS wins,
-        count(*) FILTER(WHERE pnl<0)::integer AS losses,count(*) FILTER(WHERE pnl=0)::integer AS flat,sum(pnl)::text AS pnl
+        count(*) FILTER(WHERE pnl<0)::integer AS losses,count(*) FILTER(WHERE pnl=0)::integer AS flat,sum(pnl)::text AS pnl,
+        count(*) FILTER(WHERE closed_at >= now() - interval '7 days' AND closed_at <= now())::integer AS count7,
+        count(*) FILTER(WHERE pnl>0 AND closed_at >= now() - interval '7 days' AND closed_at <= now())::integer AS wins7,
+        count(*) FILTER(WHERE pnl<0 AND closed_at >= now() - interval '7 days' AND closed_at <= now())::integer AS losses7,
+        count(*) FILTER(WHERE pnl=0 AND closed_at >= now() - interval '7 days' AND closed_at <= now())::integer AS flat7,
+        sum(pnl) FILTER(WHERE closed_at >= now() - interval '7 days' AND closed_at <= now())::text AS pnl7,
+        count(*) FILTER(WHERE closed_at >= now() - interval '30 days' AND closed_at <= now())::integer AS count30,
+        count(*) FILTER(WHERE pnl>0 AND closed_at >= now() - interval '30 days' AND closed_at <= now())::integer AS wins30,
+        count(*) FILTER(WHERE pnl<0 AND closed_at >= now() - interval '30 days' AND closed_at <= now())::integer AS losses30,
+        count(*) FILTER(WHERE pnl=0 AND closed_at >= now() - interval '30 days' AND closed_at <= now())::integer AS flat30,
+        sum(pnl) FILTER(WHERE closed_at >= now() - interval '30 days' AND closed_at <= now())::text AS pnl30
         FROM hc_trades WHERE owner_id=$1 GROUP BY currency ORDER BY currency`, [owner.id],
       );
       const coverage = await db.query("SELECT status,synced_at,covered_from FROM hc_connections WHERE owner_id=$1 ORDER BY synced_at DESC NULLS LAST", [owner.id]);
+      // All-time and recent windows are computed in the same owner-scoped SQL
+      // aggregate. No raw trades, symbols, private amounts, or extra polling.
+      const recentTotals = (days: 7 | 30) => totals.rows.filter(row => row["count" + days] > 0)
+        .map(row => {
+          const wins = row["wins" + days], losses = row["losses" + days];
+          return {
+            currency: row.currency,
+            count: row["count" + days], wins, losses, flat: row["flat" + days],
+            winRate: wins + losses ? wins / (wins + losses) * 100 : null,
+            ...(c.amountsAudience === "public" && row["pnl" + days] !== null
+              ? { pnl: row["pnl" + days] } : {}),
+          };
+        });
       statistics = { basis: "bybit-linear-closed-orders", totals: totals.rows.map(row => ({
         currency: row.currency, count: row.count, wins: row.wins, losses: row.losses, flat: row.flat,
         winRate: row.wins + row.losses ? row.wins / (row.wins + row.losses) * 100 : null,
         ...(c.amountsAudience === "public" ? { pnl: row.pnl } : {}),
-      })), coverage: coverage.rows };
+      })), coverage: coverage.rows,
+        windows: [
+          { days: 7, totals: recentTotals(7) },
+          { days: 30, totals: recentTotals(30) },
+        ],
+      };
     }
     let awards = null;
     if (c.publicAwardsEnabled === true) {

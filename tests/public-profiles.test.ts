@@ -475,6 +475,69 @@ test("statistics and amounts have independent opt-ins, with no trade rows, notes
   assert.match((await call("/api/public/profiles/stats-person")).data.profile.statistics.totals[0].pnl, /^25(?:\.0+)?$/);
 });
 
+test("public trade periods aggregate only real closed orders and honor independent amount privacy", async () => {
+  const a = await named("stats-windows-person"), connection = randomUUID();
+  await db.query(
+    "INSERT INTO hc_connections(id,owner_id,exchange,account_hash,credential) VALUES($1,$2,'bybit',$3,'HIDDEN_WINDOW_CREDENTIAL')",
+    [connection, a.id, randomUUID()],
+  );
+  const rows: Array<[string, number, number]> = [
+    ["USDT", 100, 1], ["USDT", -20, 5], ["USDT", 0, 12], ["USDT", 10, 45],
+    ["USDC", -7, 2], ["USDC", 12, 20], ["USDC", 55, 60],
+    ["BTC", 2, 100],
+  ];
+  for (const [i, [currency, pnl, daysAgo]] of rows.entries()) {
+    await db.query(
+      `INSERT INTO hc_trades(connection_id,source_id,owner_id,symbol,currency,pnl,closed_at,source)
+       VALUES($1,$2,$3,'HIDDEN_ORDER_SYMBOL',$4,$5,now()-($6::integer * interval '1 day'),$7)`,
+      [connection, "private-window-order-" + i, a.id, currency, pnl, daysAgo, { privateAccount: "PRIVATE_WINDOW_ACCOUNT" }],
+    );
+  }
+  // A malformed future-dated imported close must never count in rolling 7/30-day windows.
+  await db.query(
+    `INSERT INTO hc_trades(connection_id,source_id,owner_id,symbol,currency,pnl,closed_at,source)
+     VALUES($1,'future-window-order',$2,'HIDDEN_ORDER_SYMBOL','USDT',9999,now()+interval '3 days',$3)`,
+    [connection, a.id, { privateAccount: "PRIVATE_WINDOW_ACCOUNT" }],
+  );
+  assert.equal((await call("/api/public/profiles/stats-windows-person")).data.profile.statistics, null);
+  await enable(a, { statisticsAudience: "public", amountsAudience: "private", tradesAudience: "public" });
+  const first = await call("/api/public/profiles/stats-windows-person");
+  assert.equal(first.res.status, 200, first.text);
+  const statistics = first.data.profile.statistics;
+  assert.equal(statistics.basis, "bybit-linear-closed-orders");
+  assert.equal(statistics.totals.length, 3);
+  assert.deepEqual(statistics.windows.map((x: any) => x.days), [7, 30]);
+  const seven = statistics.windows[0].totals;
+  const thirty = statistics.windows[1].totals;
+  assert.deepEqual(seven.map((x: any) => [x.currency, x.count]), [["USDC", 1], ["USDT", 2]]);
+  assert.deepEqual(thirty.map((x: any) => [x.currency, x.count]), [["USDC", 2], ["USDT", 3]]);
+  const sUSDT = seven.find((x: any) => x.currency === "USDT");
+  assert.equal(sUSDT.wins, 1); assert.equal(sUSDT.losses, 1); assert.equal(sUSDT.flat, 0);
+  assert.equal(sUSDT.winRate, 50);
+  const thirtyUSDT = thirty.find((x: any) => x.currency === "USDT");
+  assert.equal(thirtyUSDT.count, 3); assert.equal(thirtyUSDT.flat, 1);
+  assert.equal(thirtyUSDT.winRate, 50);
+  assert.ok(statistics.totals.every((x: any) => x.pnl === undefined));
+  assert.ok(statistics.windows.every((w: any) => w.totals.every((x: any) => x.pnl === undefined)));
+  assert.doesNotMatch(first.text, /PRIVATE_WINDOW_ACCOUNT|HIDDEN_WINDOW_CREDENTIAL|HIDDEN_ORDER_SYMBOL|private-window-order-|connection_id|source_id/);
+
+  await enable(a, { amountsAudience: "public" });
+  const permitted = await call("/api/public/profiles/stats-windows-person");
+  const permittedUSDT7 = permitted.data.profile.statistics.windows[0].totals.find((x: any) => x.currency === "USDT");
+  const permittedUSDT30 = permitted.data.profile.statistics.windows[1].totals.find((x: any) => x.currency === "USDT");
+  const permittedUSDC7 = permitted.data.profile.statistics.windows[0].totals.find((x: any) => x.currency === "USDC");
+  assert.equal(Number(permittedUSDT7.pnl), 80);
+  assert.equal(Number(permittedUSDT30.pnl), 80);
+  assert.equal(Number(permittedUSDC7.pnl), -7);
+  assert.ok(permitted.data.profile.statistics.windows[0].totals.every((x: any) => x.currency !== "BTC"));
+  assert.doesNotMatch(permitted.text, /PRIVATE_WINDOW_ACCOUNT|HIDDEN_WINDOW_CREDENTIAL|HIDDEN_ORDER_SYMBOL|private-window-order-/);
+
+  await enable(a, { statisticsAudience: "private" });
+  const revoked = await call("/api/public/profiles/stats-windows-person");
+  assert.equal(revoked.data.profile.statistics, null);
+  assert.doesNotMatch(revoked.text, /"windows":|"pnl":/);
+});
+
 test("personal hosts cannot mutate, use private APIs, impersonate another host or receive session cookies", async () => {
   const a = await named("host-person");
   assert.equal((await call("/", undefined, "GET", undefined, { Host: "host-person.h00k.test" })).res.status, 200);
