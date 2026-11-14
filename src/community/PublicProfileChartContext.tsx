@@ -37,7 +37,8 @@ export function PublicProfileChartContext({ document }: { document: ChartDocumen
     </div>
     {archiveScore && <p className="public-profile-chart-archive-disclaimer">
       Підпис підтверджує походження архівного запису h00k.top, а не точність алгоритму,
-      актуальність ринку чи виконання угоди. Час у записі: {new Date(archiveScore.assessedAt).toLocaleString("uk-UA")}.
+      актуальність ринку чи виконання угоди. Рубрика: standard 72/13/15 (v1).
+      Час у записі: {new Date(archiveScore.assessedAt).toLocaleString("uk-UA")}.
     </p>}
   </div>;
 }
