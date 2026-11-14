@@ -106,9 +106,11 @@ test("only server path authorizes proof and chart paste is explicit and does not
   assert.match(editor, /Вставте підписаний JSON із архіву h00k\.top/);
   assert.match(editor, /qualityProofText\.trim\(\)/);
   assert.match(verifier, /verify\(null,/);
-  assert.match(verifier, /hasMarker\(document, "entry", p\.entry\)/);
-  assert.match(verifier, /hasMarker\(document, "stop_loss", p\.stop\)/);
-  assert.match(verifier, /hasMarker\(document, "target", p\.target\)/);
+  assert.match(verifier, /archiveScoreBindingIssues\(p, document\)\.length/);
+  const binding = readFileSync(new URL("../src/community/archiveScoreBinding.ts", import.meta.url), "utf8");
+  assert.match(binding, /\["entry", payload\.entry, "Entry"\]/);
+  assert.match(binding, /\["stop_loss", payload\.stop, "Stop Loss"\]/);
+  assert.match(binding, /\["target", payload\.target, "Take Profit"\]/);
   assert.match(css, /\.community-workspace \.community-chart-quality-proof/);
   assert.doesNotMatch(editor, /QUALITY_SIGNING_KEY_B64|createPrivateKey|generateKeyPairSync/);
 });
