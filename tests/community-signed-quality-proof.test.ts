@@ -17,7 +17,7 @@ const publicKeyBase64 = Buffer.from(publicKey.export({ format: "pem", type: "spk
 const now = Date.now();
 
 const payload = (): ArchiveScorePayload => ({
-  version: 1, issuer: "h00k.top", purpose: "archive-score-record",
+  version: 1, issuer: "h00k.top", purpose: "archive-score-record", rubric: "regular-flow-72-13-15-v1",
   archiveId: "arch_btc_signal_20261114", symbol: "BTCUSDT",
   exchange: "bybit", marketType: "futures", timeframe: "1m",
   score: 82, entry: 100, stop: 95, target: 108,
