@@ -86,6 +86,9 @@ type Target = {
   replyTo?: ReplySource;
 };
 type DraftChart = {
+  // Unique for each editor opening, even if the source chart and candle time
+  // match. Never let an earlier editor's proof text or savedId leak through.
+  editorSessionId: string;
   document: ChartDocument;
   parentId?: string;
   historyId?: string;
@@ -243,7 +246,8 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
       const document = chartFromScreenerHandoff(packet);
       setTab("feed");
       setViewProfile(null);
-      setDraft({ document, target: { kind: "post" } });
+      setDraft({
+        editorSessionId: crypto.randomUUID(), document, target: { kind: "post" } });
       setNotice("Чернетку за посиланням підготовлено. Походження свічок у посиланні не перевірене незалежно. Перевірте рівні; опублікувати її можете тільки ви.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Не вдалося імпортувати форму графіка.");
@@ -254,6 +258,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
     run(async () => {
       const data = await apiJson(api + "/charts/" + item.chart_id);
       setDraft({
+        editorSessionId: crypto.randomUUID(),
         document: cloneChartDocument(data.document),
         parentId: item.chart_id,
         historyId: item.chart_id,
@@ -265,6 +270,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
     setPicker(null);
     if (item.chartDocument) {
       setDraft({
+        editorSessionId: crypto.randomUUID(),
         document: cloneChartDocument(item.chartDocument),
         parentId: item.sourceChartId,
         historyId: item.sourceChartId,
@@ -278,6 +284,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           api + "/archives/" + encodeURIComponent(item.id),
         );
         setDraft({
+        editorSessionId: crypto.randomUUID(),
           document: cloneChartDocument(full.item.chartDocument),
           parentId: full.item.sourceChartId,
           historyId: full.item.sourceChartId,
@@ -297,6 +304,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
         });
       const data = await apiJson(api + "/history?" + params);
       setDraft({
+        editorSessionId: crypto.randomUUID(),
         document: captureChartDocument({
           symbol: item.symbol,
           exchange: item.exchange,
@@ -324,6 +332,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
         });
       const data = await apiJson(api + "/history?" + params);
       setDraft({
+        editorSessionId: crypto.randomUUID(),
         document: captureChartDocument({
           ...coin,
           timeframe,
@@ -612,7 +621,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
       )}
       {draft && (
         <ChartDialog
-          key={draft.parentId ?? draft.document.capturedAt}
+          key={draft.editorSessionId}
           draft={draft}
           onChange={setDraft}
           onClose={() => setDraft(null)}
@@ -1496,8 +1505,25 @@ function ChartDialog({
   );
   // This only checks structure and correspondence with the edited HookChart;
   // Ed25519 verification remains exclusively on the Community server.
+  const [, refreshProofStatus] = useState(0);
   const scoreAssessment = assessArchiveProofDraft(qualityProofText, draft.document);
   const scoreBlocked = scoreAssessment.status !== "none" && scoreAssessment.status !== "ready";
+  const proofExpiry = scoreAssessment.status === "ready" ? scoreAssessment.proof.payload.expiresAt : null;
+  useEffect(() => {
+    if (proofExpiry === null) return;
+    // Refresh a ready proof immediately after expiry. A suspended mobile tab
+    // also rechecks on resume. Neither operation sends network requests.
+    const delay = Math.max(0, Math.min(2_147_483_647, proofExpiry + 1 - Date.now()));
+    const timeout = window.setTimeout(() => refreshProofStatus(n => n + 1), delay);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refreshProofStatus(n => n + 1);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.clearTimeout(timeout);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [proofExpiry]);
   function currentProof() {
     if (draft.parentId && qualityProofText.trim())
       throw new Error("Оцінку з архіву можна додати лише до нового власного графіка.");
