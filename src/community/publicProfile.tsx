@@ -9,6 +9,7 @@ import { ChartPreview } from "../components/community/ChartPreview";
 import { PublicProfileArticles } from "./PublicProfileArticles";
 import { PublicProfilePhotoGallery } from "./PublicProfilePhotoGallery";
 import { PublicProfileChartContext } from "./PublicProfileChartContext";
+import { PublicProfileImportFreshness, PublicProfileVerifiedAwards } from "./PublicProfileVerifiedHighlights";
 import type { ChartDocument } from "./chartDocument";
 import {
   communityPostUrl, communityProfileContactUrl, publicPostUrl, publicCommentUrl, publicCommentIdFromSearch,
@@ -709,6 +710,7 @@ export function PublicProfile() {
                 {overview.winRate.toFixed(1)}%
               </meter>
             </div>}
+            <PublicProfileImportFreshness coverage={profile.statistics.coverage} />
             <div className="public-profile-overview-foot">
               <p>Ці дані не є повною прибутковістю рахунку. Суми показуються лише з окремого дозволу власника. Показники різних валют не підсумовуються.</p>
               <button type="button" onClick={() => { navigateProfile("statistics"); document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>Детальна статистика <ArrowUpRight size={15} aria-hidden="true" /></button>
@@ -740,11 +742,9 @@ export function PublicProfile() {
                 <span>Отримано нагород</span>
               </div>
               <div className="public-profile-awards-breakdown">
-                <span><Trophy size={15} aria-hidden="true" /> Подяка <strong>{profile.awards.thanks}</strong></span>
-                <span><Star size={15} aria-hidden="true" /> Крутий аналіз <strong>{profile.awards.analysis}</strong></span>
-                <span><Award size={15} aria-hidden="true" /> Топ трейдер <strong>{profile.awards.topTrader}</strong></span>
+                <PublicProfileVerifiedAwards awards={profile.awards} />
               </div>
-              <small>Підтверджені подарунки Community. Автор добровільно відкрив лише сукупні кількості.</small>
+              <small>Лише фактично отримані нагороди Community. Автор самостійно дозволив показ їхніх кількостей.</small>
             </div>
           ) : (
             <div className="public-profile-achievement-empty">
