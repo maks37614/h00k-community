@@ -139,3 +139,29 @@
     grid-template-columns: minmax(0,1fr);
   }
 }
+
+
+/* Make the saved-chart controls discoverable even when there are no charts:
+   this is a static public gallery, not a live chart terminal. */
+.public-profile .public-profile-gallery-share {
+  display:flex;flex-wrap:wrap;align-items:center;gap:9px 12px;
+  min-width:0;margin:0 0 13px;
+}
+.public-profile .public-profile-gallery-share > span {
+  min-width:0;flex:1 1 240px;color:#a7bdcd;font-size:12px;line-height:1.5;
+}
+.public-profile .public-profile-gallery-share > button {
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:42px;padding:9px 12px;
+  border:1px solid #3c868a;border-radius:10px;
+  background:#103a43;color:#c7f9ee;font-size:12px;font-weight:750;
+}
+.public-profile .public-setup-gallery-toolbar {scroll-margin-block:20px;}
+.public-profile .public-setup-gallery-toolbar:focus-visible {
+  outline:2px solid #61f3d8;outline-offset:3px;
+}
+@media (max-width: 640px) {
+  .public-profile .public-profile-gallery-share > button {
+    flex:1 1 140px;min-height:44px;
+  }
+}
