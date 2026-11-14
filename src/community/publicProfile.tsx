@@ -801,7 +801,7 @@ export function PublicProfile() {
             <button type="button" aria-current={tab === "about" ? "page" : undefined} onClick={() => navigateProfile("about")}><UsersRound size={16} aria-hidden="true" /> Про трейдера</button>
           </nav>
 
-          {(tab === "wall" || tab === "setups" || tab === "articles") && <section aria-label={tab === "articles" ? "Публічні статті та розбори" : "Публічна стіна"} className={"public-profile-wall" + (tab === "articles" ? " public-profile-articles" : "")}>
+          {(tab === "wall" || tab === "setups" || tab === "articles") && <section aria-label={tab === "articles" ? "Публічні статті та розбори" : "Публічна стіна"} className={"public-profile-wall" + (tab === "articles" ? " public-profile-articles" : tab === "setups" ? " public-profile-setup-gallery" : "")}>
             <div className="public-profile-wall-heading">
               <div><p className="public-profile-kicker">{tab === "setups" ? "ЗБЕРЕЖЕНІ ГРАФІКИ" : tab === "articles" ? "ЗНАННЯ ТРЕЙДЕРА" : "СТІНА ТРЕЙДЕРА"}</p><h2>{tab === "setups" ? "Публічні розбори HookChart" : tab === "articles" ? "Статті та розбори" : "Публікації"}</h2></div>
               <span>{tab === "setups" ? "Публічні графіки без біржових підключень" : tab === "articles" ? "Публічні навчальні матеріали автора" : "Нові публікації спочатку"}</span>
