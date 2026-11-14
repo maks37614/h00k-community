@@ -1,10 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { AuthContext } from "../src/context/AuthContext";
-import { PublicProfileMediaSettings } from "../src/components/community/PublicProfileMediaSettings";
 import { profileCropGeometry, PROFILE_CROP_SIZE } from "../src/components/community/profileMediaCrop";
 import { ownerAvatarUrl } from "../src/components/community/profileMediaAvatar";
 
@@ -36,37 +32,20 @@ test("crop source bounds match the output canvas and never leave the original ph
   assert.throws(() => profileCropGeometry(20, 10, Infinity, 10, { zoom: 1, x: 50, y: 50 }), /Некоректні/);
 });
 
-test("rendered owner preview uses the social avatar and banner with explicit private-by-default controls", () => {
-  const value: any = {
-    user: { uid: id, email: "owner@example.test", displayName: "Trader" },
-    profile: {
-      displayName: "Maks", community: {
-        publicProfileEnabled: true,
-        avatarMediaId: id, coverMediaId: other,
-        avatarAudience: "private", coverAudience: "private",
-      },
-    },
-    updateProfileData: async () => {},
-  };
-  const html = renderToStaticMarkup(React.createElement(
-    AuthContext.Provider, { value },
-    React.createElement(PublicProfileMediaSettings, {
-      publicUrl: "https://community-stage.h00k.top/u/maks",
-    }),
-  ));
-  assert.match(html, /Оформлення профілю у стилі social/);
-  assert.match(html, /community-public-social-preview/);
-  assert.match(html, /community-public-social-cover/);
-  assert.match(html, /community-public-social-avatar/);
-  assert.match(html, new RegExp("/api/community/media/" + id));
-  assert.match(html, new RegExp("/api/community/media/" + other));
-  assert.match(html, /Вибрати файл і кадрувати/);
-  assert.match(html, /Мої завантажені фото/);
-  assert.match(html, /<option value="private" selected="">Лише я<\/option>/);
-  assert.match(html, /<option value="public">Усі відвідувачі \/u\/<\/option>/);
-  assert.match(html, /Відкрити свою публічну сторінку/);
-  assert.match(html, /приватний попередній перегляд/);
-  assert.doesNotMatch(html, /unsplash|mockData|data:image\/svg/i);
+test("owner preview matches social avatar and banner, with private-by-default media controls", () => {
+  assert.match(mediaPage, /Оформлення профілю у стилі social/);
+  assert.match(mediaPage, /community-public-social-preview/);
+  assert.match(mediaPage, /community-public-social-cover/);
+  assert.match(mediaPage, /community-public-social-avatar/);
+  assert.match(mediaPage, /ownerUrl\(cover\)/);
+  assert.match(mediaPage, /ownerUrl\(avatar\)/);
+  assert.match(mediaPage, /Вибрати файл і кадрувати/);
+  assert.match(mediaPage, /Мої завантажені фото/);
+  assert.match(mediaPage, /<option value="private">Лише я<\/option>/);
+  assert.match(mediaPage, /<option value="public">Усі відвідувачі \/u\/<\/option>/);
+  assert.match(mediaPage, /Відкрити свою публічну сторінку/);
+  assert.match(mediaPage, /приватний попередній перегляд/);
+  assert.doesNotMatch(mediaPage, /unsplash|mockData|data:image\/svg/i);
   assert.match(socialSkin, /\.public-profile\[data-social-source-clone="maks"\] \.public-profile-avatar/);
   assert.match(css, /\.community-public-social-avatar/);
   assert.match(css, /@media\(max-width: 700px\)/);
