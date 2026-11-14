@@ -1541,8 +1541,6 @@ function ChartDialog({
           <SharedHookChart
             value={draft.document}
             onChange={(document) => onChange({ ...draft, document })}
-            // Historical pages require an existing, explicitly saved chart.
-            // Never persist an unsent imported draft just to open "Історія".
             onHistory={savedId ? async (timeframe, before) => (
               await apiJson(
                 api + "/charts/" + savedId + "/history?" +
