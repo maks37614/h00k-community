@@ -7,6 +7,7 @@ import { CommunityAwardPanel } from "./CommunityAwardPanel";
 import { STRATEGY_PRESETS } from "../hookchart/strategyEngine";
 import { saveChartArchive } from "../../community/archiveChart";
 import { chartFromScreenerHandoff } from "../../community/screenerHandoff";
+import { assessArchiveProofDraft } from "../../community/archiveScoreBinding";
 import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, useId } from "react";
 import {
   Users,
@@ -1490,18 +1491,28 @@ function ChartDialog({
   const conversations = useResource("chart-conversations", () =>
     apiJson(api + "/conversations"),
   );
+  // This only checks structure and correspondence with the edited HookChart;
+  // Ed25519 verification remains exclusively on the Community server.
+  const scoreAssessment = assessArchiveProofDraft(qualityProofText, draft.document);
+  const scoreBlocked = scoreAssessment.status !== "none" && scoreAssessment.status !== "ready";
+  function currentProof() {
+    if (draft.parentId && qualityProofText.trim())
+      throw new Error("Оцінку з архіву можна додати лише до нового власного графіка.");
+    const result = assessArchiveProofDraft(qualityProofText, draft.document);
+    if (result.status === "invalid" || result.status === "mismatch" || result.status === "expired")
+      throw new Error(result.message);
+    return result.status === "ready" ? result.proof : undefined;
+  }
+  const removeProof = () => {
+    setQualityProofText("");
+    const { qualityProof: _discardedProof, ...cleanDocument } = draft.document;
+    onChange({ ...draft, document: cleanDocument });
+  };
   async function chartId() {
     // A fork must not inherit the original author's signed provenance.
     // Only an explicit fresh export may be imported on a new source chart.
     const { qualityProof: _oldProof, ...chartWithoutProof } = draft.document;
-    const entered = qualityProofText.trim();
-    if (entered && draft.parentId) throw new Error("Оцінку з архіву можна додати лише до нового власного графіка.");
-    if (entered.length > 3000) throw new Error("Доказ оцінки завеликий.");
-    let qualityProof: unknown = undefined;
-    if (entered) {
-      try { qualityProof = JSON.parse(entered); }
-      catch { throw new Error("Вставте повний JSON підписаної оцінки з h00k.top."); }
-    }
+    const qualityProof = currentProof();
     const d = await post(api + "/charts", {
       document: { ...chartWithoutProof, ...(qualityProof ? { qualityProof } : {}) },
       parentId: draft.parentId,
@@ -1511,7 +1522,13 @@ function ChartDialog({
   }
   const saveArchive = () =>
     run(async () => {
-      await saveChartArchive(draft.document, user!.uid, text, draft.parentId);
+      // Local favourites use the same preflight; never retain a stale score
+      // when the user explicitly removes its provenance from this draft.
+      const { qualityProof: _oldProof, ...cleanDocument } = draft.document;
+      const qualityProof = currentProof();
+      await saveChartArchive({
+        ...cleanDocument, ...(qualityProof ? { qualityProof } : {}),
+      }, user!.uid, text, draft.parentId);
       window.dispatchEvent(new Event("h00k:archive-saved"));
       onSaved();
     });
@@ -1568,6 +1585,14 @@ function ChartDialog({
             placeholder="Вставте підписаний JSON із архіву h00k.top" />
           <small>Скопіюйте «Оцінка для Community» в архіві скрінера та вставте сюди протягом 10 хвилин. Підпис підтверджує походження архівного запису, але не правильність оцінки чи виконання угоди.</small>
         </label>}
+        {!draft.parentId && scoreAssessment.status !== "none" &&
+          <div className={"community-chart-score-feedback community-chart-score-" + scoreAssessment.status}
+            role={scoreBlocked ? "alert" : "status"}>
+            <p>{scoreAssessment.message}</p>
+            {scoreBlocked && <button type="button" onClick={removeProof}>
+              Вилучити архівну оцінку й залишити графік
+            </button>}
+          </div>}
         <div className="community-composer-tools">
           {target.kind === "post" && <label className="community-concept-category-label">
             Розділ
@@ -1611,7 +1636,7 @@ function ChartDialog({
           )}
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || scoreBlocked}
             onClick={() => void saveArchive()}
           >
             Зберегти до обраних формацій
@@ -1619,7 +1644,7 @@ function ChartDialog({
           <button
             type="button"
             className="community-primary"
-            disabled={busy || !canShareReplyWithAudience(target.replyTo, audience)}
+            disabled={busy || scoreBlocked || !canShareReplyWithAudience(target.replyTo, audience)}
             onClick={() => {
               setBusy(true);
               void run(async () => {
