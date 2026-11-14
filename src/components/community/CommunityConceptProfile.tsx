@@ -3,6 +3,7 @@ import { Award, Gift, Globe2, Settings, Star, UsersRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { apiJson } from "../../utils/apiFetch";
 import { TRADING_SESSIONS, formatZonedTime, getSessionWindow, resolveTimeZone } from "../../utils/tradingSessions";
+import { ownerAvatarUrl } from "./profileMediaAvatar";
 
 /** Live-account replacement for the example TradingAtlas sidebar in social. */
 export function CommunityConceptProfile({
@@ -43,7 +44,7 @@ export function CommunityConceptProfile({
     });
   }, [profile?.community?.tradingSessionIds, zone]);
   const name = profile?.displayName ?? user?.displayName ?? "Трейдер";
-  const photo = user?.photoURL;
+  const photo = ownerAvatarUrl(profile?.community) ?? user?.photoURL;
   const bio = info?.bio || profile?.community?.bio || "";
   const status = info?.status?.text || profile?.community?.status?.text || "";
   return (

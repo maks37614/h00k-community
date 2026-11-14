@@ -22,7 +22,7 @@ test("public profile images come only from owner-linked anonymous endpoints", ()
 });
 
 test("owner must explicitly publish each new upload; removing photo hides it", () => {
-  assert.match(address, /<PublicProfileMediaSettings \/>/);
+  assert.match(address, /<PublicProfileMediaSettings publicUrl=\{info\?\.url \?\? undefined\} \/>/);
   assert.match(settings, /validateCommunityPhoto\(file, 0\)/);
   assert.match(settings, /"\/api\/community\/media"/);
   assert.match(settings, /\[kind \+ "Audience"\]: "private"/);
