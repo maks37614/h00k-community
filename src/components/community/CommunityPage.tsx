@@ -1,6 +1,7 @@
 import { AccountSecuritySettings } from "./AccountSecuritySettings";
 import { PublicProfileSettings } from "./PublicProfileSettings";
 import { CommunityNotificationCenter } from "./CommunityNotificationCenter";
+import { CommunityPublicRooms } from "./CommunityPublicRooms";
 import { CommunityTradingSessions } from "./CommunityTradingSessions";
 import { CommunityConceptProfile } from "./CommunityConceptProfile";
 import { ownerAvatarUrl } from "./profileMediaAvatar";
@@ -2545,6 +2546,7 @@ function Chats({
     [chatSearch, setChatSearch] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [chatArea, setChatArea] = useState<"direct" | "rooms">("direct");
   const [createGroup, setCreateGroup] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
   const [muteMenuOpen, setMuteMenuOpen] = useState(false);
@@ -2586,6 +2588,7 @@ function Chats({
   const conversations: any[] = Array.isArray(list.data?.items) ? list.data.items : [];
   const friendAvatar = (personId: string | null | undefined): string | null =>
     (friends.data?.people ?? []).find((person: CommunityFriend) => person.id === personId)?.avatarUrl ?? null;
+  useEffect(() => { if (inviteTarget) setChatArea("direct"); }, [inviteTarget?.id]);
   useEffect(() => {
     if (!inviteTarget || !list.data) return;
     // Reuse a server-authorized direct dialog instead of spawning a duplicate.
@@ -2645,7 +2648,7 @@ function Chats({
   const myRole = currentConversation?.role as "owner" | "admin" | "member" | undefined;
   const canManageGroup = currentConversation?.is_group && (myRole === "owner" || myRole === "admin");
   const groupMembers = useResource("chat-members:" + id + ":" + groupOpen, () =>
-    id && groupOpen && currentConversation?.is_group
+    id && chatArea === "direct" && groupOpen && currentConversation?.is_group
       ? apiJson(api + "/conversations/" + encodeURIComponent(id) + "/members")
       : Promise.resolve({ items: [] }),
   );
@@ -2706,7 +2709,7 @@ function Chats({
     stayAtBottom.current = true;
     restoreOlderOffset.current = null;
     setPollError("");
-    if (!id) return;
+    if (!id || chatArea !== "direct") return;
     let active = true;
     const pull = () => {
       if (!active || document.visibilityState !== "visible" || inFlightPoll.current) return;
@@ -2727,7 +2730,7 @@ function Chats({
       document.removeEventListener("visibilitychange", pull);
       window.removeEventListener("focus", pull);
     };
-  }, [id, revision]);
+  }, [id, revision, chatArea]);
   return (
     <>
       <div className="community-section-heading community-chat-heading">
@@ -2736,6 +2739,18 @@ function Chats({
           <h2>Приватні та групові розмови</h2>
         </div>
       </div>
+      <nav className="community-chat-room-segments" aria-label="Режим повідомлень">
+        <button type="button" aria-pressed={chatArea === "direct"}
+          onClick={() => setChatArea("direct")}>
+          <MessageCircle size={16} aria-hidden="true" /> Особисті та групові
+        </button>
+        <button type="button" aria-pressed={chatArea === "rooms"}
+          onClick={() => setChatArea("rooms")}>
+          <Users size={16} aria-hidden="true" /> Кімнати трейдерів
+        </button>
+      </nav>
+      {chatArea === "rooms" ? <CommunityPublicRooms key={user?.uid}
+        onProfile={onProfile} /> : <>
       <details
         className="community-card community-chat-create"
         open={createOpen}
@@ -3101,6 +3116,7 @@ function Chats({
           )}
         </div>
       </div>
+      </>}
     </>
   );
 }
