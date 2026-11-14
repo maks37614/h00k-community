@@ -74,3 +74,14 @@ test("social market pulse card links to live screener without duplicating exchan
   assert.match(css, /@media\(max-width:900px\)/);
   assert.doesNotMatch(workspace, /new WebSocket\("wss:\/\/stream\./);
 });
+
+test("article previews use only actual authorized, lazy media instead of synthetic images", () => {
+  assert.match(articles, /Array\.isArray\(item\.body\?\.photos\)/);
+  assert.match(articles, /typeof item\.body\.photos\[0\] === "string"/);
+  assert.match(articles, /src=\{api \+ "\/media\/" \+ item\.body\.photos\[0\]\}/);
+  assert.match(articles, /loading="lazy"/);
+  assert.match(articles, /item\.chart && <span className="community-article-summary-chart">Є HookChart<\/span>/);
+  assert.match(css, /\.community-workspace \.community-article-summary-cover/);
+  assert.match(css, /aspect-ratio:16\/9/);
+  assert.doesNotMatch(articles, /placehold\.co|unsplash\.com|fakePhoto|INITIAL_ARTICLES/);
+});
