@@ -65,6 +65,7 @@ test("image choices are cropped locally and uploaded only after explicit save", 
   assert.match(mediaPage, /<ProfilePhotoCropDialog/);
   assert.match(cropDialog, /URL\.createObjectURL\(file\)/);
   assert.match(cropDialog, /URL\.revokeObjectURL\(url\)/);
+  assert.match(cropDialog, /photo\.naturalWidth \* photo\.naturalHeight > 16_000_000/);
   assert.match(cropDialog, /canvas\.toBlob\(/);
   assert.match(cropDialog, /drawProfileCrop\(canvas, image, crop\)/);
   assert.match(cropDialog, /validateCommunityPhoto\(output, 0\)/);
