@@ -10,6 +10,7 @@ import { PublicProfileArticles } from "./PublicProfileArticles";
 import { PublicProfilePhotoGallery } from "./PublicProfilePhotoGallery";
 import { PublicProfileChartContext } from "./PublicProfileChartContext";
 import { PublicProfileImportFreshness, PublicProfileVerifiedAwards } from "./PublicProfileVerifiedHighlights";
+import { PublicProfileTradeWindows, type PublicTradeWindow } from "./PublicProfileTradeWindows";
 import type { ChartDocument } from "./chartDocument";
 import {
   communityPostUrl, communityProfileContactUrl, publicPostUrl, publicCommentUrl, publicCommentIdFromSearch,
@@ -27,6 +28,7 @@ import "./socialTraderProfile.css";
 import "./publicProfileReferenceLayout.css";
 import "./publicProfileCards.css";
 import "./publicProfileHighlights.css";
+import "./publicProfileTradeWindows.css";
 
 type PublicStats = {
   totals: Array<{
@@ -39,6 +41,7 @@ type PublicStats = {
     pnl?: string;
   }>;
   coverage: Array<{ status: string; synced_at?: string; covered_from?: string }>;
+  windows?: PublicTradeWindow[];
 };
 type PublicTrader = {
   id: string;
@@ -952,6 +955,7 @@ export function PublicProfile() {
               </section>)}
             </div>}
             {!profile.statistics.totals.length && <div className="public-profile-panel">Імпортованих закриттів ще немає.</div>}
+            {profile.statistics.windows?.length ? <PublicProfileTradeWindows windows={profile.statistics.windows} /> : null}
             <div className="public-profile-panel">
               <h3>Покриття й актуальність</h3>
               {!profile.statistics.coverage.length && <p className="public-profile-muted">Інформація про синхронізацію відсутня.</p>}
