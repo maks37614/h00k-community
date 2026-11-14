@@ -884,6 +884,47 @@ test("Community session selections persist per-account and stay out of the anony
   assert.deepEqual(clear.data.profile.community.tradingSessionIds, []);
 });
 
+test("social friend counts are opt-in, accepted only, excluding blocks and deleted peers", async () => {
+  const owner = await named("public-friends-count");
+  const allowed = await actor(), blocked = await actor(), deleted = await actor(), pending = await actor();
+  const url = "/api/public/profiles/public-friends-count";
+  await db.query(
+    `INSERT INTO hc_friendships(sender,recipient,accepted) VALUES
+     ($1,$2,true),($3,$1,true),($1,$4,true),($5,$1,false)`,
+    [owner.id, allowed.id, blocked.id, deleted.id, pending.id],
+  );
+  await db.query("INSERT INTO hc_blocks(owner_id,target_id) VALUES($1,$2)", [owner.id, blocked.id]);
+  await db.query("UPDATE hc_users SET deleted_at=now() WHERE id=$1", [deleted.id]);
+
+  const before = await call(url);
+  assert.equal(before.res.status, 200);
+  assert.equal(before.data.profile.friendsCount, null);
+  assert.doesNotMatch(before.text, new RegExp(allowed.id + "|" + blocked.id + "|" + pending.id));
+
+  const invalid = await call("/api/account/profile", owner, "PATCH", {
+    community: { publicFriendsCountEnabled: "yes" },
+  });
+  assert.equal(invalid.res.status, 400);
+  assert.equal((await call(url)).data.profile.friendsCount, null);
+
+  const saved = await call("/api/account/profile", owner, "PATCH", {
+    community: { publicFriendsCountEnabled: true },
+  });
+  assert.equal(saved.res.status, 200, saved.text);
+  const visible = await call(url);
+  assert.equal(visible.data.profile.friendsCount, 1);
+  assert.doesNotMatch(visible.text, new RegExp(allowed.id + "|" + blocked.id + "|" + deleted.id));
+
+  await db.query("UPDATE hc_friendships SET accepted=true WHERE sender=$1 AND recipient=$2", [pending.id, owner.id]);
+  assert.equal((await call(url)).data.profile.friendsCount, 2);
+
+  const hidden = await call("/api/account/profile", owner, "PATCH", {
+    community: { publicFriendsCountEnabled: false },
+  });
+  assert.equal(hidden.res.status, 200);
+  assert.equal((await call(url)).data.profile.friendsCount, null);
+});
+
 test("public award counts require an explicit owner toggle", async () => {
   const owner = await named("rewards-visible-test");
   const sender = await actor();

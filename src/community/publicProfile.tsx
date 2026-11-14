@@ -69,6 +69,7 @@ type PublicTrader = {
   coverUrl: string | null;
   statistics: PublicStats | null;
   awards: { received: number; thanks: number; analysis: number; topTrader: number } | null;
+  friendsCount: number | null;
   sessions: string[] | null;
   featuredPost: PublicPost | null;
 };
@@ -724,6 +725,9 @@ export function PublicProfile() {
         <div className="public-profile-hero-facts">
           <span><ShieldCheck size={16} aria-hidden="true" /> Лише відкриті автором дані</span>
           <span><BookOpenText size={16} aria-hidden="true" /> {visiblePostCount} завантажених публікацій</span>
+          {profile.friendsCount !== null && <span>
+            <UsersRound size={16} aria-hidden="true" /> {profile.friendsCount} підтверджених друзів
+          </span>}
           {profile.statistics && <span><TrendingUp size={16} aria-hidden="true" /> {totalClosures} імпортованих закриттів</span>}
         </div>
       </section>

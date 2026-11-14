@@ -156,6 +156,9 @@ CREATE TABLE IF NOT EXISTS hc_media_cleanup (
 CREATE INDEX IF NOT EXISTS hc_items_owner ON hc_items(owner_id,id);
 CREATE INDEX IF NOT EXISTS hc_charts_owner ON hc_charts(owner_id,id);
 CREATE INDEX IF NOT EXISTS hc_media_owner ON hc_media(owner_id,id);
+-- Optional public friendship counts must not scan all recipient rows.
+CREATE INDEX IF NOT EXISTS hc_friendships_accepted_recipient
+  ON hc_friendships(recipient) WHERE accepted;
 CREATE INDEX IF NOT EXISTS hc_notifications_owner ON hc_notifications(owner_id,created_at DESC);
 CREATE INDEX IF NOT EXISTS hc_members_user ON hc_members(user_id,conversation_id);
 CREATE TABLE IF NOT EXISTS hc_profile_names (
