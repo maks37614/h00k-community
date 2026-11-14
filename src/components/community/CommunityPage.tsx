@@ -71,6 +71,7 @@ import "./social-profile-gallery.css";
 import "./social-profile-hero.css";
 import "./social-resource-library.css";
 import "./social-concept-layout.css";
+import "./social-mobile-articles-parity.css";
 const SharedHookChart = lazy(() => import("./SharedHookChart"));
 type Tab =
   | "feed"
@@ -418,6 +419,18 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           </button>
         </div>
       </header>
+      <nav className="community-social-topbar" aria-label="Швидка навігація Community">
+        {([["feed","Стрічка"],["chats","Повідомлення"],["friends","Друзі"],
+          ["articles","Статті"],["profile","Мій профіль"]] as const)
+          .map(([key,label]) => (
+            <button type="button" key={key} aria-current={tab === key ? "page" : undefined}
+              onClick={() => { setTab(key); setViewProfile(null); }}>
+              {label}
+              {key === "chats" && chatUnread > 0 &&
+                <span className="community-chat-unread-count">{chatUnread >= 100 ? "99+" : chatUnread}</span>}
+            </button>
+          ))}
+      </nav>
       {tab === "feed" && <nav className="community-social-mobile-columns" aria-label="Колонки Community">
         {([["profile","Профіль"],["feed","Стрічка"],["sessions","Сесії й нагороди"]] as const)
           .map(([key,label]) => (
