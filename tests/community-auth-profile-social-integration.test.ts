@@ -37,7 +37,7 @@ test("the profile API only reveals private photos to their owner, public photos 
 });
 
 test("educational profile tab is backed by filtered, cursor-paginated authenticated feed", () => {
-  assert.match(page, /type Section = "wall" \| "articles" \| "about" \| "trades"/);
+  assert.match(page, /type Section = "wall" \| "articles" \| "setups" \| "about" \| "trades"/);
   assert.match(page, /profileSection === "articles"/);
   assert.match(page, /"\/feed\?mode=wall&owner=" \+ id \+ "&category=education"/);
   assert.match(page, /"&category=education&before=" \+ encodeURIComponent\(cursor\)/);
