@@ -242,7 +242,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
       setTab("feed");
       setViewProfile(null);
       setDraft({ document, target: { kind: "post" } });
-      setNotice("Формацію з h00k.top завантажено як чернетку. Перевірте свічки та рівні; опублікувати її можете тільки ви.");
+      setNotice("Чернетку за посиланням підготовлено. Походження свічок у посиланні не перевірене незалежно. Перевірте рівні; опублікувати її можете тільки ви.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Не вдалося імпортувати форму графіка.");
     }
