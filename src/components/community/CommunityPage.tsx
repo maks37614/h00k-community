@@ -424,7 +424,11 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           ["articles","Статті"],["profile","Мій профіль"]] as const)
           .map(([key,label]) => (
             <button type="button" key={key} aria-current={tab === key ? "page" : undefined}
-              onClick={() => { setTab(key); setViewProfile(null); location.hash = "community?section=" + key; }}>
+              onClick={() => {
+                setTab(key); setViewProfile(null);
+                if (key === "feed") setMobileFeedColumn("feed");
+                location.hash = "community?section=" + key;
+              }}>
               {label}
               {key === "chats" && chatUnread > 0 &&
                 <span className="community-chat-unread-count">{chatUnread >= 100 ? "99+" : chatUnread}</span>}
