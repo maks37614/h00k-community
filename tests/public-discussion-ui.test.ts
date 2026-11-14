@@ -12,7 +12,8 @@ test("public profile groups quote-linked comments instead of displaying only a f
   assert.match(view, /<PublicCommentThreads items=\{comments\[item\.id\]\?\.items \?\? \[\]\}/);
   assert.match(view, /className="public-profile-comment-thread-reply"/);
   assert.match(api, /replyToId: visibleSource\?\.kind === "comment"/);
-  assert.match(api, /visibleSource\.parent_id === parent\.id/);
+  assert.match(api, /visibleSource\.parent_id === postId/);
+  assert.match(api, /publicCommentCard\(db, rules, row, parent\.id\)/);
   assert.match(css, /\.public-profile-comment-thread-reply/);
 });
 
