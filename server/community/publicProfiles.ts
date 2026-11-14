@@ -130,6 +130,30 @@ async function publicPostCard(db: Database, rules: Policy, row: Item) {
   };
 }
 
+/** Public comment payload shared by the list and exact-comment permalink.
+ * Do not expose raw body, account fields, private quoted sources, or chart docs. */
+async function publicCommentCard(db: Database, rules: Policy, row: Item & { author_profile: Record<string, any> }, postId: string) {
+  const source = row.body?.sourceItemId ? await rules.item(row.body.sourceItemId) : null;
+  const visibleSource = source && (await rules.visible(source)) &&
+    (!source.chart_id || await rules.canReadChart(source.chart_id)) ? source : null;
+  const reactions = await db.query(
+    "SELECT emoji,count(*)::integer AS count FROM hc_reactions WHERE item_id=$1 GROUP BY emoji ORDER BY emoji",
+    [row.id],
+  );
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    author: text(row.author_profile?.displayName, 100) || "Трейдер",
+    text: text(row.body?.text, 20_000),
+    quote: visibleSource ? text(visibleSource.body?.text, 180) : "",
+    replyToId: visibleSource?.kind === "comment" && visibleSource.parent_id === postId
+      ? visibleSource.id : null,
+    photosCount: Array.isArray(row.body?.photos) ? Math.min(row.body.photos.length, 4) : 0,
+    hasChart: Boolean(row.chart_id),
+    reactions: reactions.rows,
+  };
+}
+
 export function installPublicProfiles(app: Express, getDb: () => Database, buildRoot = path.resolve("dist-profile")) {
   const limits = new RequestLimits();
   let active = 0;
@@ -334,29 +358,27 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
     const items = [];
     for (const row of rows.slice(0, 20)) {
       if (!(await rules.visible(row)) || (row.chart_id && !(await rules.canReadChart(row.chart_id)))) continue;
-      const source = row.body?.sourceItemId ? await rules.item(row.body.sourceItemId) : null;
-      const visibleSource = source && (await rules.visible(source)) ? source : null;
-      const quoted = visibleSource ? text(visibleSource.body?.text, 180) : "";
-      const reactions = await db.query(
-        "SELECT emoji,count(*)::integer AS count FROM hc_reactions WHERE item_id=$1 GROUP BY emoji ORDER BY emoji",
-        [row.id],
-      );
-      items.push({
-        id: row.id,
-        createdAt: row.created_at,
-        author: text(row.author_profile?.displayName, 100) || "Трейдер",
-        text: text(row.body?.text, 20_000),
-        quote: quoted,
-        // Replies share the post as parent, but quote another comment from this post.
-        // Expose only IDs of visible comment sources on the same public post.
-        replyToId: visibleSource?.kind === "comment" && visibleSource.parent_id === parent.id
-          ? visibleSource.id : null,
-        photosCount: Array.isArray(row.body?.photos) ? Math.min(row.body.photos.length, 4) : 0,
-        hasChart: Boolean(row.chart_id),
-        reactions: reactions.rows,
-      });
+      items.push(await publicCommentCard(db, rules, row, parent.id));
     }
     res.json({ success: true, items, next: rows.length > 20 ? rows[19].id : null });
+  });
+  // A direct comment permalink works even beyond the first 20 comments.
+  // Exact ownership, parent, audience, author opt-in and chart permission
+  // are checked before returning any comment content.
+  route("/posts/:id/comments/:comment", async (req, res, db, owner, rules) => {
+    const parent = await publicPost(db, rules, owner.id, req.params.id);
+    const commentId = uuid(req.params.comment);
+    const { rows } = await db.query<(Item & { author_profile: Record<string, any> })>(
+      `SELECT c.*,u.profile AS author_profile FROM hc_items c JOIN hc_users u ON u.id=c.owner_id
+       WHERE c.id=$1 AND c.parent_id=$2 AND c.kind='comment' AND c.audience='public'
+         AND c.conversation_id IS NULL AND NOT c.deleted`,
+      [commentId, parent.id],
+    );
+    const comment = rows[0];
+    if (!comment || !(await rules.visible(comment)) ||
+        (comment.chart_id && !(await rules.canReadChart(comment.chart_id))))
+      fail("Коментар недоступний", 404);
+    res.json({ success: true, item: await publicCommentCard(db, rules, comment, parent.id) });
   });
   route("/posts/:id/chart", async (req, res, db, owner, rules) => {
     const row = await publicPost(db, rules, owner.id, req.params.id);

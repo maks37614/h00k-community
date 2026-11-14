@@ -8,7 +8,7 @@ import {
 import { ChartPreview } from "../components/community/ChartPreview";
 import type { ChartDocument } from "./chartDocument";
 import {
-  communityPostUrl, publicPostUrl,
+  communityPostUrl, publicPostUrl, publicCommentUrl, publicCommentIdFromSearch,
   publicChartGalleryUrl, publicChartPostUrl, publicProfileDeepLink,
   publicProfileDate, visibleReactionSummary,
   type PublicReactionSummary,
@@ -103,9 +103,14 @@ function ReactionTotals({ reactions }: { reactions?: PublicReactionSummary[] }) 
 }
 
 /** Read-only, privacy-filtered public replies. Posting requires a Community login. */
-function PublicCommentCard({ comment }: { comment: PublicComment }) {
+function PublicCommentCard({ comment, focused, copied, onShare }: {
+  comment: PublicComment; focused: boolean; copied: string; onShare: (id: string) => void;
+}) {
   return (
-    <article className="public-profile-comment">
+    <article id={"public-comment-" + comment.id}
+      className={"public-profile-comment" + (focused ? " public-profile-comment-focused" : "")}
+      aria-label={focused ? "Коментар за посиланням" : undefined}>
+      {focused && <span className="public-profile-featured">Коментар за посиланням</span>}
       <div className="public-profile-comment-head">
         <span className="public-profile-post-avatar" aria-hidden="true">{comment.author.slice(0, 1).toUpperCase()}</span>
         <div><strong>{comment.author}</strong><time dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleString("uk-UA")}</time></div>
@@ -116,19 +121,28 @@ function PublicCommentCard({ comment }: { comment: PublicComment }) {
         {comment.photosCount > 0 ? "Фото" : ""}{comment.photosCount > 0 && comment.hasChart ? " та " : ""}{comment.hasChart ? "HookChart" : ""} — доступні у Community
       </p>}
       <ReactionTotals reactions={comment.reactions} />
+      <button type="button" className="public-profile-comment-share"
+        onClick={() => onShare(comment.id)}
+        aria-label={"Поділитися коментарем " + comment.author}>
+        {copied === "comment:" + comment.id ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+        {copied === "comment:" + comment.id ? "Посилання скопійовано" : "Поділитися коментарем"}
+      </button>
+      {copied === "error:comment:" + comment.id && <small role="status">Не вдалося скопіювати адресу коментаря.</small>}
     </article>
   );
 }
 
-function PublicCommentThreads({ items }: { items: PublicComment[] }) {
+function PublicCommentThreads({ items, focusedId, copied, onShare }: {
+  items: PublicComment[]; focusedId: string | null; copied: string; onShare: (id: string) => void;
+}) {
   const { roots, repliesByRoot } = groupPublicComments(items);
   return <div className="public-profile-comment-groups">
     {roots.map(comment => (
       <div className="public-profile-comment-thread" key={comment.id}>
-        <PublicCommentCard comment={comment} />
+        <PublicCommentCard comment={comment} focused={comment.id === focusedId} copied={copied} onShare={onShare} />
         {(repliesByRoot.get(comment.id) ?? []).map(reply => (
           <div className="public-profile-comment-thread-reply" key={reply.id}>
-            <PublicCommentCard comment={reply} />
+            <PublicCommentCard comment={reply} focused={reply.id === focusedId} copied={copied} onShare={onShare} />
           </div>
         ))}
       </div>
@@ -183,10 +197,12 @@ export function PublicProfile() {
   const [wallPreviewCount, setWallPreviewCount] = useState(0);
   const [copied, setCopied] = useState("");
   const [expandedComments, setExpandedComments] = useState<string | null>(null);
+  const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, CommentState>>({});
   const base = "/api/public/profiles/" + encodeURIComponent(nameAtLocation());
   const initialLink = publicProfileDeepLink(location.search);
   const linkedPostId = initialLink.postId;
+  const linkedCommentId = publicCommentIdFromSearch(location.search);
 
   useEffect(() => {
     if (chart && !chartExpanded)
@@ -291,7 +307,7 @@ export function PublicProfile() {
     if (!linkedPostId) return;
     const controller = new AbortController();
     void read(base + "/posts/" + encodeURIComponent(linkedPostId), controller.signal)
-      .then(result => {
+      .then(async result => {
         if (controller.signal.aborted) return;
         setFocusedPost(result.item);
         if (initialLink.openChart) {
@@ -302,23 +318,40 @@ export function PublicProfile() {
           }
           // The full saved chart is separately authorized; the preview does
           // not bypass chart or parent-post privacy.
-          void read(base + "/posts/" + encodeURIComponent(linkedPostId) + "/chart", controller.signal)
-            .then(data => {
-              if (controller.signal.aborted) return;
+          try {
+            const data = await read(base + "/posts/" + encodeURIComponent(linkedPostId) + "/chart", controller.signal);
+            if (!controller.signal.aborted) {
               setChart(data.document);
               setChartPostId(linkedPostId);
-            })
-            .catch(e => {
-              if (!controller.signal.aborted)
-                setPostError(e instanceof Error ? e.message : "Графік недоступний");
-            });
+            }
+          } catch (e) {
+            if (!controller.signal.aborted)
+              setPostError(e instanceof Error ? e.message : "Графік недоступний");
+          }
         } else {
           setTab("wall");
+          if (!linkedCommentId) return;
+          try {
+            // A comment on an older page is verified by the server individually.
+            // Never iterate over all pages or expose a hidden parent/comment.
+            const result = await read(base + "/posts/" + encodeURIComponent(linkedPostId) +
+              "/comments/" + encodeURIComponent(linkedCommentId), controller.signal);
+            if (controller.signal.aborted) return;
+            setFocusedCommentId(result.item.id);
+            setExpandedComments(linkedPostId);
+            setComments(old => ({ ...old, [linkedPostId]: {
+              items: [result.item], next: null, loading: false, error: "",
+            } }));
+            void loadComments(linkedPostId);
+          } catch (cause) {
+            if (!controller.signal.aborted)
+              setPostError(cause instanceof Error ? cause.message : "Коментар недоступний");
+          }
         }
       })
       .catch(e => { if (!controller.signal.aborted) setPostError(e instanceof Error ? e.message : "Допис недоступний"); });
     return () => controller.abort();
-  }, [base, linkedPostId, initialLink.openChart]);
+  }, [base, linkedPostId, linkedCommentId, initialLink.openChart]);
 
   const more = async () => {
     if (!next || busy || pendingFeedKey || !feedKey || loadedFeedKey !== feedKey) return;
@@ -360,9 +393,12 @@ export function PublicProfile() {
       setComments(old => ({
         ...old,
         [id]: {
-          items: after
-            ? [...new Map([...(old[id]?.items ?? []), ...result.items].map((c: PublicComment) => [c.id, c])).values()]
-            : result.items,
+          items: [...new Map([
+            ...(after ? old[id]?.items ?? [] : (linkedCommentId && linkedPostId === id
+              ? (old[id]?.items ?? []).filter(item => item.id === linkedCommentId)
+              : [])),
+            ...result.items,
+          ].map((c: PublicComment) => [c.id, c])).values()],
           next: result.next,
           loading: false,
           error: "",
@@ -391,6 +427,7 @@ export function PublicProfile() {
       // Re-authorize the public post before opening its read-only discussion.
       const result = await read(base + "/posts/" + encodeURIComponent(id));
       setFocusedPost(result.item);
+      setFocusedCommentId(null);
       setTab("wall");
       setPostCategory("all");
       setExpandedComments(id);
@@ -417,12 +454,15 @@ export function PublicProfile() {
   useEffect(() => {
     if (!expandedComments || !focusedPost || expandedComments !== focusedPost.id || tab !== "wall") return;
     const frame = requestAnimationFrame(() => {
-      document.getElementById("public-comments-" + expandedComments)?.scrollIntoView({
+      const target = focusedCommentId
+        ? document.getElementById("public-comment-" + focusedCommentId)
+        : null;
+      (target ?? document.getElementById("public-comments-" + expandedComments))?.scrollIntoView({
         behavior: "auto", block: "start",
       });
     });
     return () => cancelAnimationFrame(frame);
-  }, [expandedComments, focusedPost?.id, tab]);
+  }, [expandedComments, focusedPost?.id, focusedCommentId, comments[expandedComments ?? ""]?.items.length, tab]);
 
   const copy = async (value: string, id: string) => {
     try {
@@ -433,6 +473,19 @@ export function PublicProfile() {
     }
   };
 
+  const shareComment = async (postId: string, commentId: string) => {
+    if (!profile) return;
+    const url = publicCommentUrl(profile.url, postId, commentId);
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: profile.displayName + " · коментар у h00k Community", url });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+    await copy(url, "comment:" + commentId);
+  };
   const sharePost = async (id: string) => {
     if (!profile) return;
     const url = publicPostUrl(profile.url, id);
@@ -643,7 +696,9 @@ export function PublicProfile() {
               {expandedComments === item.id && <div className="public-profile-comments" id={"public-comments-" + item.id}>
                 <h4>Відкриті коментарі</h4>
                 <p className="public-profile-muted">Показані лише коментарі, які їхні автори дозволили читати гостям.</p>
-                <PublicCommentThreads items={comments[item.id]?.items ?? []} />
+                <PublicCommentThreads items={comments[item.id]?.items ?? []}
+                  focusedId={focusedPost?.id === item.id ? focusedCommentId : null}
+                  copied={copied} onShare={commentId => void shareComment(item.id, commentId)} />
                 {comments[item.id]?.loading && <p role="status">Завантаження коментарів…</p>}
                 {comments[item.id]?.error && <p role="status" className="public-profile-error">{comments[item.id].error}</p>}
                 {!comments[item.id]?.loading && comments[item.id]?.items.length === 0 && !comments[item.id]?.error && <p className="public-profile-muted">Відкритих коментарів поки немає.</p>}
