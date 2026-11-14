@@ -52,3 +52,47 @@
   font-size: 12px;
   line-height: 1.55;
 }
+
+/* Pure client-side correspondence feedback, never a claim of signature validity. */
+.community-workspace .community-chart-score-feedback {
+  margin: 6px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #356c79;
+  border-radius: 10px;
+  background: #12313c;
+  color: #bfeee4;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.community-workspace .community-chart-score-feedback p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.community-workspace .community-chart-score-invalid,
+.community-workspace .community-chart-score-expired,
+.community-workspace .community-chart-score-mismatch {
+  color: #ffdad8;
+  border-color: #9c555d;
+  background: #3b202b;
+}
+.community-workspace .community-chart-score-feedback button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px solid #d58a85;
+  border-radius: 9px;
+  color: #fff1ee;
+  background: #743a40;
+  font: inherit;
+  font-weight: 700;
+}
+.community-workspace .community-chart-score-feedback button:focus-visible {
+  outline: 2px solid #ffe7d2;
+  outline-offset: 3px;
+}
+@media (max-width: 640px) {
+  .community-workspace .community-chart-score-feedback { padding: 11px; font-size: 12px; }
+  .community-workspace .community-chart-score-feedback button { width: 100%; justify-content: center; }
+}
