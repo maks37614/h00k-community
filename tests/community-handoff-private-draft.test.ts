@@ -22,7 +22,7 @@ test("new imported draft has no server history path before an explicit save", ()
   assert.match(editor, /const id = await chartId\(\);\s*await post\(api \+ "\/items"/);
   // Explicitly sharing a chart is still a user action and still authorizes a save.
   assert.match(editor, /Надіслати розбір/);
-  assert.match(editor, /disabled=\{busy \|\| !canShareReplyWithAudience/);
+  assert.match(editor, /disabled=\{busy \|\| scoreBlocked \|\| !canShareReplyWithAudience/);
   assert.match(editorCss, /\.community-workspace \.community-chart-draft-privacy-note/);
 });
 
