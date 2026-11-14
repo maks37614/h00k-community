@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Award, Check, Gift, Globe2, Pencil, Settings, Star, UsersRound, X } from "lucide-react";
+import { Award, Check, Gift, Globe2, MessageCircle, Pencil, Settings, Star, UsersRound, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { apiJson } from "../../utils/apiFetch";
 import { TRADING_SESSIONS, formatZonedTime, getSessionWindow, resolveTimeZone } from "../../utils/tradingSessions";
@@ -7,17 +7,29 @@ import { ownerAvatarUrl } from "./profileMediaAvatar";
 
 /** Live-account replacement for the example TradingAtlas sidebar in social. */
 export function CommunityConceptProfile({
-  onProfile, onFriends, onSettings, version = 0,
+  onProfile, onFriends, onSettings, onFriendProfile, onFriendChat, version = 0,
 }: {
   onProfile: () => void;
   onFriends: () => void;
   onSettings: () => void;
+  onFriendProfile: (id: string) => void;
+  onFriendChat: (id: string, name: string) => void;
   version?: number;
 }) {
   const { user, profile, updateProfileData } = useAuth();
   const [info, setInfo] = useState<{ points?: number; bio?: string; status?: { text?: string } } | null>(null);
   const [awards, setAwards] = useState<{ balance: number; received: number; gifted: number } | null>(null);
   const [friends, setFriends] = useState<number | null>(null);
+  const [friendRows, setFriendRows] = useState<Array<{
+    id: string; displayName: string; username?: string | null;
+    avatarUrl?: string | null; accepted: boolean;
+  }>>([]);
+  const [friendVersion, updateFriendVersion] = useState(0);
+  useEffect(() => {
+    const refresh = () => updateFriendVersion(value => value + 1);
+    window.addEventListener("community:friends-changed", refresh);
+    return () => window.removeEventListener("community:friends-changed", refresh);
+  }, []);
   const [editing, setEditing] = useState<"status" | "bio" | null>(null);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -34,10 +46,14 @@ export function CommunityConceptProfile({
       if (!live) return;
       setInfo(p.status === "fulfilled" ? p.value.profile : null);
       setAwards(a.status === "fulfilled" ? a.value : null);
-      setFriends(f.status === "fulfilled" ? (f.value.people ?? []).filter((friend: { accepted?: boolean }) => friend.accepted).length : null);
+      const accepted = f.status === "fulfilled" && Array.isArray(f.value.people)
+        ? f.value.people.filter((friend: { accepted?: boolean }) => friend.accepted === true)
+        : [];
+      setFriends(f.status === "fulfilled" ? accepted.length : null);
+      setFriendRows(accepted);
     });
     return () => { live = false; };
-  }, [user?.uid, version]);
+  }, [user?.uid, version, friendVersion]);
 
   const zone = resolveTimeZone(profile?.timeZone);
   const sessions = useMemo(() => {
@@ -180,6 +196,37 @@ export function CommunityConceptProfile({
         <div className="community-concept-stat"><Gift size={16} /> Подаровано нагород: <strong>{awards ? awards.gifted : "—"}</strong></div>
         <button type="button" className="community-concept-stat community-concept-friends" onClick={onFriends}>
           <UsersRound size={16} /> Підтверджені друзі: <strong>{friends === null ? "—" : friends}</strong>
+        </button>
+      </div>
+      <div className="community-concept-sidebar-section community-concept-friend-shortcuts">
+        <h3><UsersRound size={16} /> Мої друзі {friends !== null ? "(" + friends + ")" : ""}</h3>
+        {friendRows.length > 0 ? (
+          <div className="community-concept-friends-list">
+            {friendRows.slice(0, 6).map(person => (
+              <div className="community-concept-friend-row" key={person.id}>
+                <span className="community-concept-friend-avatar" aria-hidden="true">
+                  {(person.displayName ?? "Т").trim().slice(0, 1).toUpperCase()}
+                  {person.avatarUrl && <img src={person.avatarUrl} alt="" loading="lazy"
+                    onError={event => { event.currentTarget.hidden = true; }} />}
+                </span>
+                <button type="button" className="community-concept-friend-name"
+                  onClick={() => onFriendProfile(person.id)}>
+                  <strong>{person.displayName || "Трейдер"}</strong>
+                  {person.username && <small>@{person.username}</small>}
+                </button>
+                <button type="button" className="community-concept-friend-message"
+                  aria-label={"Написати " + (person.displayName || "трейдеру")}
+                  title="Написати" onClick={() => onFriendChat(person.id, person.displayName || "Трейдер")}>
+                  <MessageCircle size={16} aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="community-concept-muted">Після підтвердження дружби тут з’являться ваші контакти — без вигаданих статусів онлайн.</p>
+        )}
+        <button type="button" className="community-concept-text-button" onClick={onFriends}>
+          Усі друзі та запити
         </button>
       </div>
       <div className="community-concept-sidebar-section">
