@@ -53,7 +53,10 @@
   border: 1px solid #366276;
   border-radius: 9px;
   background: #0b1e30;
-  font: 500 12px/1.4 inherit;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  line-height: 1.4;
 }
 .public-profile .public-setup-gallery-toolbar input {
   padding-left: 31px;
