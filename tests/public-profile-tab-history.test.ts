@@ -49,6 +49,9 @@ test("profile page pushes user-tab selection and restores real deep links on bac
   assert.match(view, /window\.removeEventListener\("popstate", onBackForward\)/);
   assert.match(view, /setFocusedPost\(null\)/);
   assert.match(view, /setChartPostId\(null\)/);
+  assert.match(view, /if \(!profile \|\| profile\.statistics \|\| tab !== "statistics"\) return/);
+  assert.match(view, /history\.replaceState\(null, "", safeUrl\)/);
+  assert.match(view, /const needInitialWall = currentFeedKey\.current === "wall:all"/);
   assert.match(view, /const navigateProfile = \(section: PublicTab, category: PublicPostCategory = "all"\)/);
   assert.match(view, /onClick=\{\(\) => navigateProfile\("articles"\)\}/);
   assert.match(view, /onClick=\{\(\) => navigateProfile\("setups"\)\}/);
