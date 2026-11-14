@@ -510,6 +510,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
             revision={revision}
             onPick={setPicker}
             onChart={openChart}
+            onProfile={(id) => { setViewProfile(id); setTab("profile"); }}
             run={run}
             inviteTarget={chatInvite}
             onInviteHandled={() => setChatInvite(null)}
@@ -805,10 +806,17 @@ function Composer({
         maxLength={20_000}
         disabled={busy}
         onChange={(event) => setText(event.target.value)}
+        onKeyDown={event => {
+          if (target.kind === "message" && event.key === "Enter" && !event.shiftKey &&
+              !event.nativeEvent.isComposing) {
+            event.preventDefault();
+            event.currentTarget.form?.requestSubmit();
+          }
+        }}
         required={!photos.length}
       />
       <div className="community-composer-meta">
-        <span>{communityAudienceHint(target.kind, audience)}</span>
+        <span>{target.kind === "message" ? "Enter — надіслати · Shift+Enter — новий рядок" : communityAudienceHint(target.kind, audience)}</span>
         <span>{text.length.toLocaleString("uk-UA")} / 20 000</span>
       </div>
       <div className="community-composer-tools">
@@ -1150,7 +1158,9 @@ function ItemCard({
       ? { kind: "message", conversationId: item.conversation_id }
       : { kind: "comment", parentId: item.id, audience: normalizeReplyAudience(item.audience) };
   return (
-    <article className={"community-card community-post-card" + (item.kind === "message" ? " community-message-card" : "")}>
+    <article className={"community-card community-post-card" + (item.kind === "message"
+      ? " community-message-card" + (item.owner_id === user?.uid ? " community-message-own" : " community-message-other")
+      : "")}>
       <header>
         <button
           type="button"
@@ -1165,7 +1175,7 @@ function ItemCard({
             <small>
               {new Date(item.created_at).toLocaleString("uk-UA")} ·{" "}
               {item.kind === "message"
-                ? "Учасникам чату"
+                ? "Повідомлення"
                 : item.audience === "public"
                   ? "Публічно"
                   : item.audience === "friends"
@@ -2319,6 +2329,7 @@ function Chats({
   revision,
   onPick,
   onChart,
+  onProfile,
   run,
   inviteTarget,
   onInviteHandled,
@@ -2326,6 +2337,7 @@ function Chats({
   revision: number;
   onPick: (t: Target) => void;
   onChart: (item: any, target?: Target) => Promise<void>;
+  onProfile: (id: string) => void;
   run: Run;
   inviteTarget: ChatInvite | null;
   onInviteHandled: () => void;
@@ -2869,6 +2881,7 @@ function Chats({
                     item={item}
                     onChart={onChart}
                     onPick={onPick}
+                    onProfile={onProfile}
                     run={run}
                     refresh={() => void load(false, true)}
                   />
@@ -2878,7 +2891,7 @@ function Chats({
                 key={id}
                 target={{ kind: "message", conversationId: id }}
                 onPick={onPick}
-                onSent={() => void load()}
+                onSent={() => { void load(); list.refresh(); }}
                 run={run}
               />
             </>
