@@ -16,7 +16,9 @@ test("public trader profile uses social reference three-column layout with compa
   assert.match(view, /profile\.avatarUrl &&/);
   assert.match(view, /profile\.statistics \?/);
   assert.match(view, /profile\.statistics &&/);
-  assert.match(view, /item\.chart && <ChartPreview/);
+  assert.match(view, /item\.chart && <>/);
+  assert.match(view, /<ChartPreview document=\{item\.chart\} onOpen=\{\(\) => void openChart\(item\.id\)\} \/>/);
+  assert.match(view, /publicChartPostUrl\(profile\.url, item\.id\)/);
   assert.match(concept, /\.public-profile-cover\s*\{[\s\S]*?height:108px/);
   assert.match(concept, /\.public-profile-columns\.public-profile-social-layout\s*\{[\s\S]*?grid-template-columns:minmax\(220px,270px\) minmax\(0,1fr\) minmax\(260px,300px\)/);
   assert.match(concept, /@media \(max-width:900px\)/);
