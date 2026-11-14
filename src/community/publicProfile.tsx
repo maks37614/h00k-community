@@ -168,6 +168,9 @@ export function PublicProfile() {
   const [busy, setBusy] = useState(false);
   const [chart, setChart] = useState<ChartDocument | null>(null);
   const [chartPostId, setChartPostId] = useState<string | null>(null);
+  const [chartExpanded, setChartExpanded] = useState(false);
+  const chartWorkspaceRef = useRef<HTMLElement | null>(null);
+  const chartExpandButtonRef = useRef<HTMLButtonElement | null>(null);
   const [tab, setTab] = useState<PublicTab>(() => publicProfileDeepLink(location.search).tab);
   const [postCategory, setPostCategory] = useState<"all" | "idea" | "analysis" | "education">("all");
   const feedKey = tab === "setups" ? "setups" : tab === "wall" ? "wall:" + postCategory : null;
@@ -186,8 +189,42 @@ export function PublicProfile() {
   const linkedPostId = initialLink.postId;
 
   useEffect(() => {
-    if (chart) document.getElementById("public-chart-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (chart && !chartExpanded)
+      document.getElementById("public-chart-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [!!chart]);
+  // A single HookChart instance becomes a full-viewport dialog. Do not mount
+  // another chart, preserve scroll in the background, or trap keyboard focus outside.
+  useEffect(() => {
+    if (!chart || !chartExpanded) return;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    chartExpandButtonRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setChartExpanded(false);
+      } else if (event.key === "Tab") {
+        const controls = [...(chartWorkspaceRef.current?.querySelectorAll<HTMLElement>(
+          'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
+        ) ?? [])].filter(node => node.getClientRects().length > 0);
+        if (!controls.length) return;
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && (document.activeElement === first || !chartWorkspaceRef.current?.contains(document.activeElement))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (document.activeElement === last || !chartWorkspaceRef.current?.contains(document.activeElement))) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = oldOverflow;
+    };
+  }, [chartExpanded, !!chart]);
   useEffect(() => {
     const controller = new AbortController();
     const requestVersion = ++feedRequestVersion.current;
@@ -345,6 +382,28 @@ export function PublicProfile() {
     setExpandedComments(id);
     if (!comments[id]) void loadComments(id);
   };
+  const openChartDiscussion = async (id: string) => {
+    if (busy) return;
+    setBusy(true);
+    setPostError("");
+    try {
+      // A chart may predate the current wall page, or may have been revoked.
+      // Re-authorize the public post before opening its read-only discussion.
+      const result = await read(base + "/posts/" + encodeURIComponent(id));
+      setFocusedPost(result.item);
+      setTab("wall");
+      setPostCategory("all");
+      setExpandedComments(id);
+      if (!comments[id]) void loadComments(id);
+      setChartExpanded(false);
+      setChart(null);
+      setChartPostId(null);
+    } catch (cause) {
+      setPostError(cause instanceof Error ? cause.message : "Допис недоступний");
+    } finally {
+      setBusy(false);
+    }
+  };
   useEffect(() => {
     if (!focusedPost || !profile) return;
     const frame = requestAnimationFrame(() => {
@@ -354,7 +413,16 @@ export function PublicProfile() {
       });
     });
     return () => cancelAnimationFrame(frame);
-  }, [focusedPost?.id, profile?.id]);
+  }, [focusedPost?.id, profile?.id, tab]);
+  useEffect(() => {
+    if (!expandedComments || !focusedPost || expandedComments !== focusedPost.id || tab !== "wall") return;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById("public-comments-" + expandedComments)?.scrollIntoView({
+        behavior: "auto", block: "start",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [expandedComments, focusedPost?.id, tab]);
 
   const copy = async (value: string, id: string) => {
     try {
@@ -726,10 +794,21 @@ export function PublicProfile() {
         </aside>
       </div>
 
-      {chart && <section id="public-chart-workspace" className="public-profile-panel public-profile-workspace" aria-label="Збережений HookChart">
+      {chart && <section id="public-chart-workspace" ref={chartWorkspaceRef}
+        className={"public-profile-panel public-profile-workspace" + (chartExpanded ? " public-profile-workspace-expanded" : "")}
+        role={chartExpanded ? "dialog" : undefined} aria-modal={chartExpanded ? true : undefined}
+        aria-labelledby="public-chart-workspace-title" aria-label="Збережений HookChart">
         <div className="public-profile-workspace-heading">
-          <h2>HookChart · публічний розбір</h2>
-          <button type="button" onClick={() => { setChart(null); setChartPostId(null); }}>Закрити графік</button>
+          <h2 id="public-chart-workspace-title">HookChart · публічний розбір</h2>
+          <div className="public-profile-workspace-controls">
+            <button type="button" ref={chartExpandButtonRef} aria-expanded={chartExpanded}
+              onClick={() => setChartExpanded(open => !open)}>
+              {chartExpanded ? "Згорнути" : "На весь екран"}
+            </button>
+            <button type="button" onClick={() => {
+              setChartExpanded(false); setChart(null); setChartPostId(null);
+            }}>Закрити графік</button>
+          </div>
         </div>
         {chartPostId && <div className="public-profile-chart-navigation" aria-label="Навігація між графіками">
           <div className="public-profile-chart-navigation-move">
@@ -746,6 +825,10 @@ export function PublicProfile() {
             <a href={publicPostUrl(profile.url, chartPostId)}>
               <BookOpenText size={15} aria-hidden="true" /> До публікації
             </a>
+            <button type="button" disabled={busy}
+              onClick={() => void openChartDiscussion(chartPostId)}>
+              <MessageCircle size={15} aria-hidden="true" /> Переглянути обговорення
+            </button>
             <button type="button" onClick={() => void shareChart(chartPostId)}>
               {copied === "chart" ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
               {copied === "chart" ? "Посилання скопійовано" : "Поділитися HookChart"}
