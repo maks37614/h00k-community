@@ -34,8 +34,8 @@ test("opening chart discussion retrieves the exact public post before revealing 
   assert.match(page, /const openChartDiscussion = async \(id: string\) =>/);
   assert.match(page, /const result = await read\(base \+ "\/posts\/" \+ encodeURIComponent\(id\)\)/);
   assert.match(page, /setFocusedPost\(result\.item\)/);
-  assert.match(page, /setTab\("wall"\)/);
-  assert.match(page, /setPostCategory\("all"\)/);
+  assert.match(page, /navigateProfile\("wall"\)/);
+  assert.match(page, /history\.pushState\(null, "", next\)/);
   assert.match(page, /setExpandedComments\(id\)/);
   assert.match(page, /if \(!comments\[id\]\) void loadComments\(id\)/);
   assert.match(page, /void openChartDiscussion\(chartPostId\)/);
