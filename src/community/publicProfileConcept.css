@@ -576,3 +576,59 @@ body { background: #080f1b; }
   .public-profile .public-profile-chart-navigation-links > a,
   .public-profile .public-profile-chart-navigation-links > button {flex:1 1 45%;min-height:42px;}
 }
+
+
+/* One captured HookChart becomes a full-viewport accessible viewer on mobile.
+   Never render two canvases or create additional market connections. */
+.public-profile .public-profile-workspace-controls {
+  display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:8px;
+}
+.public-profile .public-profile-workspace-controls button {
+  min-height:39px;padding:9px 13px;border:1px solid #2c8c83;
+  border-radius:9px;background:#154c4a;color:#d8fef3;
+  font-size:12px;font-weight:800;
+}
+.public-profile .public-profile-workspace-expanded {
+  position:fixed;z-index:1100;inset:0;margin:0;max-width:none;
+  height:100vh;height:100dvh;overflow-x:hidden;overflow-y:auto;
+  overscroll-behavior:contain;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+    max(15px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  border:0;border-radius:0;background:#091622;
+  box-shadow:0 0 0 100vmax #000b;
+}
+.public-profile .public-profile-workspace-expanded .public-profile-workspace-heading {
+  position:sticky;z-index:10;top:0;display:flex;flex-wrap:wrap;
+  align-items:center;gap:10px;min-height:48px;
+  padding:8px 3px;background:#091622;border-bottom:1px solid #2c514d;
+}
+.public-profile .public-profile-workspace-expanded .community-hookchart {
+  height:clamp(350px,65dvh,900px);width:100%;max-width:100%;
+}
+.public-profile .public-profile-workspace-expanded .community-chart-editor {
+  min-width:0;width:100%;
+}
+.public-profile .public-profile-workspace-expanded .community-toolbar {
+  display:flex;align-items:center;flex-wrap:wrap;gap:5px;
+}
+.public-profile .public-profile-workspace-expanded .community-toolbar button {
+  min-height:38px;
+}
+@media(max-width:670px) {
+  .public-profile .public-profile-workspace-heading {align-items:flex-start;gap:9px;flex-wrap:wrap;}
+  .public-profile .public-profile-workspace-heading h2 {font-size:15px;}
+  .public-profile .public-profile-workspace-controls {width:100%;justify-content:stretch;}
+  .public-profile .public-profile-workspace-controls button {flex:1 1 44%;min-height:44px;}
+  .public-profile .public-profile-workspace-expanded {padding: max(8px, env(safe-area-inset-top)) 9px max(12px, env(safe-area-inset-bottom));}
+  .public-profile .public-profile-workspace-expanded .community-hookchart {
+    height:clamp(310px,58dvh,720px);min-height:310px;
+  }
+  .public-profile .public-profile-workspace-expanded .public-profile-chart-navigation-links > button {
+    flex:1 1 100%;
+  }
+}
+@media(orientation:landscape) and (max-height:480px) {
+  .public-profile .public-profile-workspace-expanded .community-hookchart {
+    height:clamp(270px,72dvh,620px);min-height:270px;
+  }
+}
