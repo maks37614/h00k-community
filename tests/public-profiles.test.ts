@@ -538,6 +538,65 @@ test("public trade periods aggregate only real closed orders and honor independe
   assert.doesNotMatch(revoked.text, /"windows":|"pnl":/);
 });
 
+test("public daily history is lazy, owner-scoped, UTC-bounded and never exposes trade sums or private rows", async () => {
+  const a = await named("daily-history-person"), other = await named("daily-other-person");
+  const connection = randomUUID(), foreign = randomUUID();
+  await db.query(
+    "INSERT INTO hc_connections(id,owner_id,exchange,account_hash,credential) VALUES($1,$2,'bybit',$3,'SECRET_DAILY_CREDENTIAL')",
+    [connection, a.id, randomUUID()],
+  );
+  await db.query(
+    "INSERT INTO hc_connections(id,owner_id,exchange,account_hash,credential) VALUES($1,$2,'bybit',$3,'FOREIGN_DAILY_CREDENTIAL')",
+    [foreign, other.id, randomUUID()],
+  );
+  const rows: Array<[string, string, string]> = [
+    ["daily-positive", "USDT", "10"],
+    ["daily-negative", "USDC", "-5"],
+    ["daily-zero", "USDT", "0"],
+  ];
+  for (const [sourceId,currency,pnl] of rows) await db.query(
+    `INSERT INTO hc_trades(connection_id,source_id,owner_id,symbol,currency,pnl,closed_at,source)
+      VALUES($1,$2,$3,'SECRET_DAILY_SYMBOL',$4,$5,now(),$6)`,
+    [connection, sourceId, a.id, currency, pnl, { privateAccount:"PRIVATE_DAILY_NOTES" }],
+  );
+  await db.query(
+    `INSERT INTO hc_trades(connection_id,source_id,owner_id,symbol,currency,pnl,closed_at,source)
+      VALUES($1,'daily-old',$2,'SECRET_DAILY_SYMBOL','USDT',300,now()-interval '40 days','{}')`,
+    [connection, a.id],
+  );
+  await db.query(
+    `INSERT INTO hc_trades(connection_id,source_id,owner_id,symbol,currency,pnl,closed_at,source)
+      VALUES($1,'daily-future',$2,'SECRET_DAILY_SYMBOL','USDT',100,now()+interval '5 days','{}')`,
+    [connection, a.id],
+  );
+  await db.query(
+    `INSERT INTO hc_trades(connection_id,source_id,owner_id,symbol,currency,pnl,closed_at,source)
+      VALUES($1,'daily-foreign',$2,'SECRET_DAILY_SYMBOL','USDT',999,now(),'{}')`,
+    [foreign, other.id],
+  );
+  const url = "/api/public/profiles/daily-history-person/statistics/daily";
+  assert.equal((await call(url)).res.status, 404);
+  await enable(a, { statisticsAudience: "public", amountsAudience: "public", tradesAudience: "private" });
+  const response = await call(url);
+  assert.equal(response.res.status, 200, response.text);
+  assert.equal(response.data.success, true);
+  assert.equal(response.data.days, 30);
+  assert.equal(response.data.timezone, "UTC");
+  assert.match(response.data.through, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(response.data.items.length, 1);
+  const day = response.data.items[0];
+  assert.equal(day.day, response.data.through);
+  assert.deepEqual([day.count, day.wins, day.losses, day.flat], [3,1,1,1]);
+  assert.equal(day.pnl, undefined);
+  assert.deepEqual(Object.keys(day).sort(), ["count","day","flat","losses","wins"]);
+  assert.doesNotMatch(response.text, /SECRET_DAILY_|PRIVATE_DAILY_|FOREIGN_DAILY_|daily-positive|daily-negative|daily-zero|daily-old|daily-future|daily-foreign|USDT|USDC|connection_id|source_id|pnl/);
+  // A viewer must not query another owner's daily data via a personal subdomain.
+  assert.equal((await call(url, undefined, "GET", undefined, { Host: "daily-other-person.h00k.test" })).res.status, 404);
+
+  await enable(a, { statisticsAudience: "private" });
+  assert.equal((await call(url)).res.status, 404);
+});
+
 test("personal hosts cannot mutate, use private APIs, impersonate another host or receive session cookies", async () => {
   const a = await named("host-person");
   assert.equal((await call("/", undefined, "GET", undefined, { Host: "host-person.h00k.test" })).res.status, 200);
