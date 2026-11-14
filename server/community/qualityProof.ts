@@ -5,13 +5,7 @@ import {
   type SignedArchiveScoreProof,
 } from "../../src/community/archiveScoreProof";
 import { fail } from "./security";
-
-const closePrice = (a: number, b: number) =>
-  Number.isFinite(a) && Number.isFinite(b) && a > 0 && b > 0 &&
-  Math.abs(a - b) <= Math.max(1e-12, Math.abs(a) * 1e-8);
-
-const hasMarker = (doc: ChartDocument, type: "entry" | "stop_loss" | "target", price: number) =>
-  doc.markers.some(marker => marker.type === type && closePrice(marker.price, price));
+import { archiveScoreBindingIssues } from "../../src/community/archiveScoreBinding";
 
 /**
  * Fail-closed server signature verification before storing any public chart.
@@ -42,11 +36,7 @@ export function verifyArchiveScoreProof(
   if (!Number.isSafeInteger(now) || p.issuedAt > now + 60_000 ||
       now > p.expiresAt || p.assessedAt > now + 60_000)
     fail("Термін дії підтвердження минув", 422);
-  if (document.symbol !== p.symbol || document.exchange !== p.exchange ||
-      document.marketType !== p.marketType || document.timeframe !== p.timeframe ||
-      !hasMarker(document, "entry", p.entry) ||
-      !hasMarker(document, "stop_loss", p.stop) ||
-      !hasMarker(document, "target", p.target))
+  if (archiveScoreBindingIssues(p, document).length)
     fail("Оцінка не відповідає ринку, таймфрейму або збереженим рівням графіка", 422);
   return proof;
 }
