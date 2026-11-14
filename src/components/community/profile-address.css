@@ -196,3 +196,37 @@
     min-width: 0;
   }
 }
+
+
+/* Featured public post controls never display private/hidden post titles. */
+.community-workspace .community-public-featured-settings {
+  display:grid;gap:10px;margin:12px 0;
+  padding:clamp(13px,2vw,18px);border:1px solid #2c5c66;
+  border-radius:14px;background:linear-gradient(140deg,#122b38,#0f2031);
+}
+.community-workspace .community-public-featured-settings h3 {font-size:14px;margin:0;color:#dffaf5;}
+.community-workspace .community-public-featured-settings label {
+  display:grid;gap:7px;min-width:0;color:#bddbe1;font-size:12px;font-weight:750;
+}
+.community-workspace .community-public-featured-settings select {
+  width:100%;min-width:0;min-height:42px;padding:9px 12px;
+  background:#0b2030;border:1px solid #32616b;border-radius:10px;
+  color:#e5f4f8;font-size:13px;
+}
+.community-workspace .community-public-featured-settings select:focus-visible {
+  outline:2px solid #35ddc7;outline-offset:2px;
+}
+.community-workspace .community-public-featured-settings button {
+  justify-self:start;min-height:37px;padding:9px 12px;
+  background:#104b4a;border:1px solid #248b82;border-radius:9px;
+  color:#c1f6ea;font-weight:750;font-size:11px;
+}
+.community-workspace .community-public-featured-settings button:disabled,
+.community-workspace .community-public-featured-settings select:disabled {
+  opacity:.55;cursor:not-allowed;
+}
+.community-workspace .community-public-featured-error {color:#ffc4cc;font-size:11px;}
+@media(max-width:670px) {
+  .community-workspace .community-public-featured-settings {padding:12px;}
+  .community-workspace .community-public-featured-settings select {font-size:16px;}
+}
