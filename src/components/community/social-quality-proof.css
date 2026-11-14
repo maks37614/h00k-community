@@ -40,3 +40,15 @@
   outline: 2px solid #45d5c0;
   outline-offset: 2px;
 }
+
+/* An imported graph must not be silently saved just to retrieve history. */
+.community-workspace .community-chart-draft-privacy-note {
+  margin: 9px 0 12px;
+  padding: 10px 12px;
+  border-left: 3px solid #2bbda6;
+  border-radius: 6px;
+  background: #103339;
+  color: #bee6e0;
+  font-size: 12px;
+  line-height: 1.55;
+}
