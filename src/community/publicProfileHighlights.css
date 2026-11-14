@@ -1,0 +1,189 @@
+/* Verified public Community signals only. Scoped to anonymous profile, never
+   styles the authenticated app or screener. No badges imply an inferred rank. */
+.public-profile .public-profile-insights .public-profile-awards-summary {
+  min-width: 0;
+  background: linear-gradient(150deg,#172c3b,#0e1a2d 84%);
+  border: 1px solid #34545f;
+}
+.public-profile .public-profile-insights .public-profile-awards-total {
+  background: linear-gradient(125deg,#3c3021,#1b2332);
+  border: 1px solid #80633764;
+  border-radius: 12px;
+  padding: 12px 10px;
+  gap: 5px;
+}
+.public-profile .public-profile-insights .public-profile-awards-total > svg {
+  color: #f3c26c;
+}
+.public-profile .public-profile-insights .public-profile-awards-total strong {
+  color: #fff0c7;
+  font-variant-numeric: tabular-nums;
+}
+.public-profile .public-profile-insights .public-profile-awards-breakdown {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.public-profile .public-profile-verified-awards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.public-profile .public-profile-verified-award {
+  display: grid;
+  grid-template-columns: 36px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 9px;
+  background: #0c2131;
+  border: 1px solid #2b5161;
+  border-radius: 11px;
+  min-width: 0;
+}
+.public-profile .public-profile-verified-award-icon {
+  display: grid;
+  place-items: center;
+  height: 36px;
+  width: 36px;
+  border-radius: 10px;
+  background: #123b48;
+  color: #51dbd4;
+}
+.public-profile .public-profile-verified-award-analysis {
+  border-color: #51466b;
+  background: linear-gradient(110deg,#22213b,#0f2335);
+}
+.public-profile .public-profile-verified-award-analysis .public-profile-verified-award-icon {
+  background: #342748;
+  color: #c5adfa;
+}
+.public-profile .public-profile-verified-award-topTrader {
+  border-color: #68553c;
+  background: linear-gradient(110deg,#282335,#1a2635);
+}
+.public-profile .public-profile-verified-award-topTrader .public-profile-verified-award-icon {
+  background: #3b3228;
+  color: #ffce80;
+}
+.public-profile .public-profile-verified-award-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.public-profile .public-profile-verified-award-info strong {
+  color: #eff9ff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+.public-profile .public-profile-verified-award-info small {
+  color: #9fb5c8;
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.public-profile .public-profile-verified-award-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  padding: 5px 7px;
+  color: #dffff6;
+  font: 800 12px/1.2 ui-monospace,monospace;
+  font-variant-numeric: tabular-nums;
+  background: #15443d;
+  border: 1px solid #2b8779;
+  border-radius: 9px;
+}
+.public-profile .public-profile-verified-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
+  padding: 8px;
+  color: #abc5d6;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.public-profile .public-profile-verified-empty svg {color: #d6a85f;flex: none;}
+.public-profile .public-profile-import-freshness {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+  margin: 10px 0;
+  padding: 11px;
+  background: linear-gradient(135deg,#102a33,#0d1c2d);
+  border: 1px solid #2c6865;
+  border-radius: 11px;
+  color: #a7d4d3;
+  line-height: 1.5;
+  font-size: 10px;
+}
+.public-profile .public-profile-import-freshness > svg {
+  flex: none;
+  color: #4be6c6;
+}
+.public-profile .public-profile-import-freshness > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  gap: 5px;
+}
+.public-profile .public-profile-import-freshness strong {
+  color: #d5fff3;
+  font-weight: 850;
+  font-size: 11px;
+}
+.public-profile .public-profile-import-freshness time {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.public-profile .public-profile-import-freshness time svg {flex: none;}
+.public-profile .public-profile-import-freshness small {
+  color: #809fb0;
+  font-size: 9px;
+  line-height: 1.5;
+}
+@media (max-width: 860px) {
+  .public-profile .public-profile-verified-awards {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .public-profile .public-profile-verified-award {
+    flex: 1 1 190px;
+  }
+}
+@media (max-width: 640px) {
+  .public-profile .public-profile-verified-awards {
+    flex-direction: column;
+    width: 100%;
+  }
+  .public-profile .public-profile-verified-award {
+    flex: none;
+    width: 100%;
+    min-height: 58px;
+  }
+  .public-profile .public-profile-import-freshness {padding: 10px;}
+}
+@media (max-width: 390px) {
+  .public-profile .public-profile-verified-award {
+    grid-template-columns: 32px minmax(0,1fr) auto;
+    gap: 7px;
+    padding: 8px;
+  }
+  .public-profile .public-profile-verified-award-icon {
+    height: 32px;
+    width: 32px;
+  }
+}
