@@ -1457,6 +1457,7 @@ function ChartDialog({
   run: Run;
 }) {
   const { user } = useAuth();
+  const [qualityProofText, setQualityProofText] = useState("");
   const [text, setText] = useState(""),
     [category, setCategory] = useState("analysis"),
     [audience, setAudience] = useState(() => draft.target.replyTo ? normalizeReplyAudience(draft.target.replyTo.audience) : "private"),
@@ -1467,8 +1468,19 @@ function ChartDialog({
     apiJson(api + "/conversations"),
   );
   async function chartId() {
+    // A fork must not inherit the original author's signed provenance.
+    // Only an explicit fresh export may be imported on a new source chart.
+    const { qualityProof: _oldProof, ...chartWithoutProof } = draft.document;
+    const entered = qualityProofText.trim();
+    if (entered && draft.parentId) throw new Error("Оцінку з архіву можна додати лише до нового власного графіка.");
+    if (entered.length > 3000) throw new Error("Доказ оцінки завеликий.");
+    let qualityProof: unknown = undefined;
+    if (entered) {
+      try { qualityProof = JSON.parse(entered); }
+      catch { throw new Error("Вставте повний JSON підписаної оцінки з h00k.top."); }
+    }
     const d = await post(api + "/charts", {
-      document: draft.document,
+      document: { ...chartWithoutProof, ...(qualityProof ? { qualityProof } : {}) },
       parentId: draft.parentId,
     });
     setSavedId(d.id);
@@ -1527,6 +1539,13 @@ function ChartDialog({
           maxLength={20_000}
           onChange={(e) => setText(e.target.value)}
         />
+        {!draft.parentId && <label className="community-chart-quality-proof">
+          <span>Оцінка з архіву h00k.top (необов’язково)</span>
+          <textarea rows={3} maxLength={3000} value={qualityProofText}
+            onChange={e => setQualityProofText(e.target.value)}
+            placeholder="Вставте підписаний JSON із архіву h00k.top" />
+          <small>Скопіюйте «Оцінка для Community» в архіві скрінера та вставте сюди протягом 10 хвилин. Підпис підтверджує походження архівного запису, але не правильність оцінки чи виконання угоди.</small>
+        </label>}
         <div className="community-composer-tools">
           {target.kind === "post" && <label className="community-concept-category-label">
             Розділ
