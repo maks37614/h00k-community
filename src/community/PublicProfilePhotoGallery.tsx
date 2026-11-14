@@ -1,21 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BookOpenText, ChevronLeft, ChevronRight, Clock3, ExternalLink, X } from "lucide-react";
 import "./publicProfilePhotos.css";
-
-/** The public API independently authorizes each requested media file. */
-export function publicPhotoIds(ids: unknown): string[] {
-  if (!Array.isArray(ids)) return [];
-  return ids.filter((id): id is string =>
-    typeof id === "string" && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id),
-  ).slice(0, 4);
-}
-
-export function publicPhotoUrl(base: string, postId: string, mediaId: string): string {
-  const id = publicPhotoIds([mediaId])[0];
-  if (!id || !publicPhotoIds([postId]).length || !/^\/api\/public\/profiles\/[a-z0-9-]+$/i.test(base))
-    throw new Error("Некоректне фото публікації");
-  return base + "/posts/" + encodeURIComponent(postId) + "/media/" + encodeURIComponent(id);
-}
+import { publicPhotoIds, publicPhotoUrl } from "./publicProfilePhotosModel";
 
 type Props = {
   ids: string[];
