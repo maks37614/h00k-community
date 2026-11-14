@@ -8,9 +8,15 @@ import {
 export function ChartPreview({
   document,
   onOpen,
+  authorizedServerSnapshot = false,
 }: {
   document: ChartDocument;
   onOpen: () => void;
+  /**
+   * Only set for charts returned by the Community API after policy checks.
+   * Never claim signature verification for a local draft supplied by a user.
+   */
+  authorizedServerSnapshot?: boolean;
 }) {
   const rows = (chartCandles(document, document.timeframe) ?? []).slice(-70);
   if (!rows.length) return null;
@@ -24,6 +30,13 @@ export function ChartPreview({
   );
   const y = (price: number) => 155 - ((price - min) / (max - min || 1)) * 140;
   const step = 600 / rows.length;
+  const signedArchive = authorizedServerSnapshot ? document.qualityProof?.payload : undefined;
+  const archiveTime = signedArchive
+    ? new Date(signedArchive.assessedAt).toLocaleString("uk-UA", {
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit",
+    })
+    : null;
   return (
     <button
       type="button"
@@ -72,6 +85,18 @@ export function ChartPreview({
         {document.symbol} · {document.timeframe} · Відкрити та відповісти
         розміткою ↗
       </span>
+      {authorizedServerSnapshot && (
+        <span className="community-chart-preview-origin">
+          {signedArchive ? <>
+            <strong>Оцінка з архіву h00k: {signedArchive.score}/100</strong>
+            <span>Підпис архівного запису перевірено під час збереження · рубрика 72/13/15 (v1) · аналіз {archiveTime}</span>
+            <em>Не є незалежною перевіркою сигналу чи виконання угоди.</em>
+          </> : <>
+            <strong>Авторська розмітка · архівна оцінка відсутня</strong>
+            <span>Це збережений знімок, не поточний торговий сигнал.</span>
+          </>}
+        </span>
+      )}
     </button>
   );
 }
