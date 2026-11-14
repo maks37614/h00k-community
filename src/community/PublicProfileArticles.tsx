@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import type { ChartDocument } from "./chartDocument";
 import { ChartPreview } from "../components/community/ChartPreview";
+import { PublicProfileChartContext } from "./PublicProfileChartContext";
 import { PublicProfilePhotoGallery } from "./PublicProfilePhotoGallery";
 import { publicPhotoIds, publicPhotoUrl } from "./publicProfilePhotosModel";
 import {
@@ -80,6 +81,7 @@ export function PublicProfileArticles({ posts, selected, pending, profile, base,
       <div className="public-article-reader-body">{selected.text || "Автор не додав текст до цієї публікації."}</div>
       {selected.chart && <div className="public-article-chart">
         <h3><ChartNoAxesCombined size={18} aria-hidden="true" /> Збережений розбір HookChart</h3>
+        <PublicProfileChartContext document={selected.chart} />
         <ChartPreview document={selected.chart} onOpen={() => onOpenChart(selected.id)} />
         <p>Публічний знімок графіка без живого підключення до біржі.</p>
       </div>}

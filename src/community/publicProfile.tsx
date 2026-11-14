@@ -8,6 +8,7 @@ import {
 import { ChartPreview } from "../components/community/ChartPreview";
 import { PublicProfileArticles } from "./PublicProfileArticles";
 import { PublicProfilePhotoGallery } from "./PublicProfilePhotoGallery";
+import { PublicProfileChartContext } from "./PublicProfileChartContext";
 import type { ChartDocument } from "./chartDocument";
 import {
   communityPostUrl, communityProfileContactUrl, publicPostUrl, publicCommentUrl, publicCommentIdFromSearch,
@@ -23,6 +24,7 @@ import "./publicProfile.css";
 import "./publicProfileConcept.css";
 import "./socialTraderProfile.css";
 import "./publicProfileReferenceLayout.css";
+import "./publicProfileCards.css";
 
 type PublicStats = {
   totals: Array<{
@@ -697,6 +699,16 @@ export function PublicProfile() {
               <div className="public-profile-kpi"><span>Беззбиткові</span><strong>{overview.flat}</strong><small>Закриття з нульовим PnL</small></div>
               {overview.pnl !== null && <div className="public-profile-kpi public-profile-kpi-pnl"><span>Сумарний PnL</span><strong>{overview.pnl} {overview.currency}</strong><small>У межах однієї валюти</small></div>}
             </div>
+            {overview.winRate !== null && <div className="public-profile-winrate-band">
+              <div className="public-profile-winrate-caption">
+                <span>Прибуткові закриття серед прибуткових і збиткових</span>
+                <strong>{overview.winRate.toFixed(1)}%</strong>
+              </div>
+              <meter min={0} max={100} value={overview.winRate}
+                aria-label="Частка прибуткових закриттів без урахування беззбиткових">
+                {overview.winRate.toFixed(1)}%
+              </meter>
+            </div>}
             <div className="public-profile-overview-foot">
               <p>Ці дані не є повною прибутковістю рахунку. Суми показуються лише з окремого дозволу власника. Показники різних валют не підсумовуються.</p>
               <button type="button" onClick={() => { navigateProfile("statistics"); document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>Детальна статистика <ArrowUpRight size={15} aria-hidden="true" /></button>
@@ -789,7 +801,7 @@ export function PublicProfile() {
             <button type="button" aria-current={tab === "about" ? "page" : undefined} onClick={() => navigateProfile("about")}><UsersRound size={16} aria-hidden="true" /> Про трейдера</button>
           </nav>
 
-          {(tab === "wall" || tab === "setups" || tab === "articles") && <section aria-label={tab === "articles" ? "Публічні статті та розбори" : "Публічна стіна"} className={"public-profile-wall" + (tab === "articles" ? " public-profile-articles" : "")}>
+          {(tab === "wall" || tab === "setups" || tab === "articles") && <section aria-label={tab === "articles" ? "Публічні статті та розбори" : "Публічна стіна"} className={"public-profile-wall" + (tab === "articles" ? " public-profile-articles" : tab === "setups" ? " public-profile-setup-gallery" : "")}>
             <div className="public-profile-wall-heading">
               <div><p className="public-profile-kicker">{tab === "setups" ? "ЗБЕРЕЖЕНІ ГРАФІКИ" : tab === "articles" ? "ЗНАННЯ ТРЕЙДЕРА" : "СТІНА ТРЕЙДЕРА"}</p><h2>{tab === "setups" ? "Публічні розбори HookChart" : tab === "articles" ? "Статті та розбори" : "Публікації"}</h2></div>
               <span>{tab === "setups" ? "Публічні графіки без біржових підключень" : tab === "articles" ? "Публічні навчальні матеріали автора" : "Нові публікації спочатку"}</span>
@@ -850,11 +862,14 @@ export function PublicProfile() {
                 ids={item.photos} postId={item.id} base={base}
                 label={item.title || "Фото до публікації"} />}
               {item.chart && <>
-                <ChartPreview document={item.chart} onOpen={() => void openChart(item.id)} />
-                <a className="public-profile-chart-deep-link"
-                  href={publicChartPostUrl(profile.url, item.id)}>
-                  <ChartNoAxesCombined size={15} aria-hidden="true" /> Відкрити окремий HookChart <ArrowUpRight size={14} aria-hidden="true" />
-                </a>
+                <div className="public-profile-chart-card">
+                  <PublicProfileChartContext document={item.chart} />
+                  <ChartPreview document={item.chart} onOpen={() => void openChart(item.id)} />
+                  <a className="public-profile-chart-deep-link"
+                    href={publicChartPostUrl(profile.url, item.id)}>
+                    <ChartNoAxesCombined size={15} aria-hidden="true" /> Відкрити окремий HookChart <ArrowUpRight size={14} aria-hidden="true" />
+                  </a>
+                </div>
               </>}
               <div className="public-profile-post-actions">
                 <ReactionTotals reactions={item.reactions} />
