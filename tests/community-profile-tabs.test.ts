@@ -8,8 +8,9 @@ const css = readFileSync(new URL("../src/components/community/social-profile-tab
 const profile = page.slice(page.indexOf("function Profile({"), page.indexOf("\nfunction CommunitySettings("));
 
 test("real trader profiles separate wall, about, and API statistics without mock data", () => {
-  assert.match(profile, /useState<"wall" \| "about" \| "trades">\("wall"\)/);
-  assert.match(profile, /useEffect\(\(\) => setProfileSection\("wall"\), \[id\]\)/);
+  assert.match(profile, /useState<"wall" \| "about" \| "trades">\(requestedProfileSection\)/);
+  assert.match(profile, /get\("profileTab"\) === "about"/);
+  assert.match(profile, /useEffect\(\(\) => setProfileSection\(requestedProfileSection\(\)\), \[id\]\)/);
   assert.match(profile, /className="community-profile-tabs"/);
   assert.match(profile, /aria-pressed=\{profileSection === key\}/);
   for (const name of ["Стіна", "Про трейдера", "Статистика"]) {
