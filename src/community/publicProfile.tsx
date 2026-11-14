@@ -216,7 +216,9 @@ export function PublicProfile() {
   useEffect(() => {
     if (!feedLoadedOnce.current) {
       feedLoadedOnce.current = true;
-      return;
+      // The initial wall request is already part of the profile fetch.
+      // Deep links to HookChart still need their own first-page request.
+      if (feedKey === "wall:all") return;
     }
     if (!feedKey) return;
     const controller = new AbortController();
