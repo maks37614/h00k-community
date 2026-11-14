@@ -78,3 +78,20 @@ export function publicChartPostUrl(profileUrl: string, id: string): string {
   url.searchParams.set("view", "chart");
   return url.toString();
 }
+
+/** A URL can focus only a valid public post/comment pair. */
+export function publicCommentIdFromSearch(search: string): string | null {
+  const params = new URLSearchParams(search);
+  if (!publicPostId(params.get("post")) || params.get("view") === "chart") return null;
+  return publicPostId(params.get("comment"));
+}
+
+/** Stable guest permalink without chart-mode or previous tab parameters. */
+export function publicCommentUrl(profileUrl: string, postId: string, commentId: string): string {
+  if (!publicPostId(commentId)) throw new Error("Некоректна адреса коментаря");
+  const url = new URL(publicPostUrl(profileUrl, postId));
+  url.searchParams.delete("view");
+  url.searchParams.delete("tab");
+  url.searchParams.set("comment", commentId);
+  return url.toString();
+}
