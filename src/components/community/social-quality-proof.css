@@ -1,0 +1,42 @@
+/* Opt-in provenance textarea in the editor; never changes the main screener. */
+.community-workspace .community-chart-quality-proof {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  margin: 10px 0;
+  padding: 12px;
+  border: 1px solid #336377;
+  border-radius: 12px;
+  background: #0c2637;
+}
+.community-workspace .community-chart-quality-proof > span {
+  color: #d8f8f5;
+  font-size: 12px;
+  font-weight: 750;
+}
+.community-workspace .community-chart-quality-proof textarea {
+  min-height: 67px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  resize: vertical;
+  padding: 11px 12px;
+  border: 1px solid #3f6475;
+  border-radius: 9px;
+  background: #0b1e2a;
+  color: #e6f4f7;
+  font-family: ui-monospace, monospace;
+  font-size: 16px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.community-workspace .community-chart-quality-proof small {
+  color: #9fbec9;
+  font-size: 10px;
+  line-height: 1.6;
+}
+.community-workspace .community-chart-quality-proof textarea:focus-visible {
+  outline: 2px solid #45d5c0;
+  outline-offset: 2px;
+}

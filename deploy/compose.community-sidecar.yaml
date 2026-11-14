@@ -41,6 +41,8 @@ services:
       COMMUNITY_PROFILE_DOMAIN: ${COMMUNITY_PROFILE_DOMAIN:-}
       COMMUNITY_STANDALONE_ENABLED: "1"
       COMMUNITY_ENCRYPTION_KEY: ${COMMUNITY_ENCRYPTION_KEY:?Set persistent encryption key}
+      # Public Ed25519 verification key only; no screener signing secrets here.
+      H00K_QUALITY_VERIFY_KEY_B64: ${H00K_QUALITY_VERIFY_KEY_B64:-}
       SMTP_URL: ${SMTP_URL:?Set SMTP connection URL}
       MAIL_FROM: ${MAIL_FROM:?Set verified sender}
       COMMUNITY_MODERATOR_IDS: ${COMMUNITY_MODERATOR_IDS:-}

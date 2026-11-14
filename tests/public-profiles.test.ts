@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
 import { PGlite } from "@electric-sql/pglite";
-import { randomUUID, randomBytes } from "node:crypto";
+import { randomUUID, randomBytes, generateKeyPairSync, sign } from "node:crypto";
+import { archiveScoreSigningMessage, type ArchiveScorePayload } from "../src/community/archiveScoreProof";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -406,6 +407,61 @@ test("chart-only setups publish to the public gallery without synthetic text or 
   const revoked = await call("/api/public/profiles/chart-only-owner/posts?withChart=1");
   assert.deepEqual(revoked.data.items, []);
   assert.equal((await call("/api/public/profiles/chart-only-owner/posts/" + id + "/chart")).res.status, 404);
+});
+
+test("signed h00k archive score survives an authorized public chart, then disappears on privacy revocation", async () => {
+  const owner = await named("signed-quality-owner"), now = Date.now();
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const publicBase64 = Buffer.from(publicKey.export({ type: "spki", format: "pem" })).toString("base64");
+  const oldKey = process.env.H00K_QUALITY_VERIFY_KEY_B64;
+  process.env.H00K_QUALITY_VERIFY_KEY_B64 = publicBase64;
+  try {
+    const source = snapshot();
+    source.markers.push(
+      { id: "saved-s", type: "stop_loss", label: "SL", price: 95, color: "#ff0000" },
+      { id: "saved-t", type: "target", label: "TP", price: 110, color: "#00ff00" },
+    );
+    const payload: ArchiveScorePayload = {
+      version: 1, issuer: "h00k.top", purpose: "archive-score-record", rubric: "regular-flow-72-13-15-v1",
+      archiveId: "arch_approved_1", symbol: "BTCUSDT", exchange: "binance",
+      marketType: "futures", timeframe: "1m", score: 83,
+      entry: 100, stop: 95, target: 110,
+      assessedAt: now - 60_000, issuedAt: now, expiresAt: now + 600_000,
+    };
+    const qualityProof = {
+      payload, signature: sign(null, Buffer.from(archiveScoreSigningMessage(payload)), privateKey).toString("base64url"),
+    };
+    const rules = await policy(db, owner.id);
+    const id = await saveChart(db, rules, { ...source, qualityProof });
+    const published = await post(owner, { text: "", category: "analysis" }, "public", id);
+    const publicUrl = "/api/public/profiles/signed-quality-owner/posts";
+    const list = await call(publicUrl + "?withChart=1");
+    assert.equal(list.res.status, 200, list.text);
+    assert.equal(list.data.items[0].chart.qualityProof.payload.score, 83);
+    assert.equal(list.data.items[0].chart.qualityProof.payload.issuer, "h00k.top");
+    assert.equal(list.data.items[0].chart.qualityProof.payload.purpose, "archive-score-record");
+    const full = await call(publicUrl + "/" + published + "/chart");
+    assert.equal(full.res.status, 200, full.text);
+    assert.equal(full.data.document.qualityProof.payload.score, 83);
+    assert.doesNotMatch(full.text, /PRIVATE_SIGNING_KEY|passphrase|accountId/);
+
+    await assert.rejects(() => saveChart(db, rules, {
+      ...source, qualityProof: { ...qualityProof, payload: { ...payload, score: 100 } },
+    }), /Підпис архівної оцінки недійсний/);
+    await assert.rejects(() => saveChart(db, rules, {
+      ...source, qualityProof,
+      markers: source.markers.filter(row => row.type !== "target"),
+    }), /Оцінка не відповідає/);
+    await assert.rejects(() => saveChart(db, rules, { ...source, qualityProof }, id),
+      /лише для нового власного графіка/);
+
+    await db.query("UPDATE hc_items SET audience='friends' WHERE id=$1", [published]);
+    assert.deepEqual((await call(publicUrl + "?withChart=1")).data.items, []);
+    assert.equal((await call(publicUrl + "/" + published + "/chart")).res.status, 404);
+  } finally {
+    if (oldKey === undefined) delete process.env.H00K_QUALITY_VERIFY_KEY_B64;
+    else process.env.H00K_QUALITY_VERIFY_KEY_B64 = oldKey;
+  }
 });
 
 test("private source charts and disabled source owners cannot be exposed by public descendants", async () => {

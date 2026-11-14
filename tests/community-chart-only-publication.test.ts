@@ -46,6 +46,6 @@ test("public snapshot metadata labels unverified quality without leaking a fake 
   const html = renderToStaticMarkup(React.createElement(PublicProfileChartContext, { document: snapshot }));
   assert.match(html, /BTCUSDT/);
   assert.match(html, /Bybit/);
-  assert.match(html, /Якість сетапу: не підтверджена/);
+  assert.match(html, /Оцінка з архіву: недоступна/);
   assert.doesNotMatch(html, /0\/100|100\/100|перевірений сигнал|profitFactor|qualityScore/i);
 });
