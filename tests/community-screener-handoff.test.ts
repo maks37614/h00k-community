@@ -64,6 +64,7 @@ test("handoff is an opt-in non-publishing preview and scrubs fragment before ren
   assert.match(hook,/chartFromScreenerHandoff\(packet\)/);
   assert.match(hook,/setDraft\(\{ document, target: \{ kind: "post" \} \}\)/);
   assert.match(hook,/опублікувати її можете тільки ви/);
+  assert.match(hook,/Походження свічок у посиланні не перевірене незалежно/);
   assert.doesNotMatch(hook,/post\(|apiJson\(|saveChart\(|qualityScore:|fetch\(/);
   assert.match(source,/useState\(\(\) => draft\.document\.qualityProof \? JSON\.stringify\(draft\.document\.qualityProof\) : ""\)/);
   assert.match(quality,/verifyArchiveScoreProof\(document\.qualityProof, document, process\.env\.H00K_QUALITY_VERIFY_KEY_B64\)/);
