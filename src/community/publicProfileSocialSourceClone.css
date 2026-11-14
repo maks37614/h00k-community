@@ -12,9 +12,11 @@
   --social-panel: #0f172a;
   --social-panel-deep: #070e1b;
   --social-stroke: #263448;
-  --social-mint: #23dbc2;
+  --social-mint: #00e5bf;
   --social-muted: #9aaec1;
   max-width: 1720px;
+  font-size: 14px;
+  line-height: 1.55;
   background: var(--social-bg);
   color: #f1f5f9;
   font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
@@ -126,7 +128,7 @@
 }
 .public-profile[data-social-source-clone="maks"] .public-profile-hero-bio {
   color: #cbd5e1;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.65;
   max-width: 980px;
 }
