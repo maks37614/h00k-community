@@ -13,6 +13,7 @@ import { PublicSetupGalleryToolbar } from "./PublicSetupGalleryToolbar";
 import { DEFAULT_PUBLIC_SETUP_FILTERS, filterPublicSetupGallery, type PublicSetupGalleryFilters } from "./publicSetupGalleryModel";
 import { PublicProfileChartLevels } from "./PublicProfileChartLevels";
 import { PublicProfileImportFreshness, PublicProfileVerifiedAwards } from "./PublicProfileVerifiedHighlights";
+import { PublicSocialReferenceStats } from "./PublicSocialReferenceStats";
 import { PublicProfileTradeWindows, type PublicTradeWindow } from "./PublicProfileTradeWindows";
 import { PublicProfileDailyHistory } from "./PublicProfileDailyHistory";
 import type { PublicDailyHistoryPayload } from "./publicProfileDailyHistoryModel";
@@ -37,6 +38,7 @@ import "./publicProfileTradeWindows.css";
 import "./publicProfileDailyHistory.css";
 import "./publicProfileLevels.css";
 import "./publicSetupGalleryToolbar.css";
+import "./publicProfileSocialSourceClone.css";
 
 type PublicStats = {
   totals: Array<{
@@ -668,7 +670,8 @@ export function PublicProfile() {
     document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" });
   };
 
-  return <main className="public-profile" data-network-mode="public-snapshot">
+  return <main className="public-profile" data-network-mode="public-snapshot"
+    data-social-source-clone={profile?.username === "maks" ? "maks" : undefined}>
     <header className="public-profile-top">
       <a className="public-profile-brand" href={profile?.communityOrigin ?? "https://h00k.top/"} aria-label="h00k Community — головна">h<span className="public-profile-brand-accent">00</span>k <span className="public-profile-brand-label">Community</span></a>
       <div className="public-profile-top-links">
@@ -731,7 +734,16 @@ export function PublicProfile() {
           </div>
           <span className="public-profile-overview-basis">Bybit linear · закриті ордери · доступний період</span>
         </div>
-        {profile.statistics ? (
+        {profile.username === "maks" ? (
+          <>
+            <PublicSocialReferenceStats statistics={profile.statistics} />
+            {profile.statistics && <PublicProfileImportFreshness coverage={profile.statistics.coverage} />}
+            <div className="public-profile-overview-foot">
+              <p>Показники доступні тільки з дозволу власника. Дані про окремі угоди, R:R та торгові пари не вигадуються.</p>
+              <button type="button" onClick={() => { navigateProfile("statistics"); document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>Детальна статистика <ArrowUpRight size={15} aria-hidden="true" /></button>
+            </div>
+          </>
+        ) : profile.statistics ? (
           <>
             <div className="public-profile-kpi-grid">
               <div className="public-profile-kpi"><span>Закриттів</span><strong>{overview.count}</strong><small>Імпортовані закриті ордери</small></div>
