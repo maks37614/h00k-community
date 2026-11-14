@@ -1,6 +1,6 @@
 /* Ported visual language of maks37614/social's public Community concept.
    Existing h00k-community authentication, PostgreSQL and chart APIs remain authoritative. */
-.community-standalone { background: #080e18; }
+.community-standalone { background: #080d17; }
 .community-shell.community-workspace {
   --community-border: #27354b;
   --community-panel: #111b2b;
