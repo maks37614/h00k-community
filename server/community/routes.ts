@@ -493,8 +493,7 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
            AND (u.profile->>'displayName' ILIKE $2 ESCAPE '\\'
              OR pn.username ILIKE $2 ESCAPE '\\')
          LIMIT 30`,
-        [a.id, "%" + search.replace(/[\\%_]/g, "\\        `SELECT id,profile FROM hc_users WHERE id<>$1 AND deleted_at IS NULL AND profile->>'displayName' ILIKE $2 ESCAPE '\\' LIMIT 30`,
-        [a.id, "%" + q.replace(/[\\%_]/g, "\\$&") + "%"],") + "%"],
+        [a.id, "%" + search.replace(/[\\%_]/g, "\\$&") + "%"],
       );
       res.json({
         success: true,
