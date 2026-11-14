@@ -1,0 +1,273 @@
+/* Social concept parity: navigation, three-pane mobile workspace and article reader.
+   Only authenticated Community. No global screener/chart selectors. */
+.community-workspace .community-social-topbar {
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:7px;
+  min-width:0;
+  overflow-x:auto;
+  scrollbar-width:thin;
+  padding:7px 9px 11px;
+  margin:0 0 12px;
+  border-bottom:1px solid #223448;
+  -webkit-overflow-scrolling:touch;
+}
+.community-workspace .community-social-topbar button {
+  display:inline-flex;
+  flex:0 0 auto;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:37px;
+  padding:8px 15px;
+  border:1px solid #304056;
+  border-radius:11px;
+  background:#101e30;
+  color:#c0d0df;
+  font-size:12px;
+  font-weight:760;
+  white-space:nowrap;
+}
+.community-workspace .community-social-topbar button[aria-current="page"] {
+  background:linear-gradient(105deg,#165e5b,#14433f);
+  border-color:#1ebaa5;
+  color:#e1fff8;
+  box-shadow:inset 0 -2px #0af6c5;
+}
+.community-workspace .community-social-topbar button:focus-visible,
+.community-workspace .community-social-mobile-columns button:focus-visible {
+  outline:2px solid #38f2d1;
+  outline-offset:2px;
+}
+.community-workspace .community-social-mobile-columns {
+  display:none;
+}
+.community-workspace .community-articles-view {
+  min-width:0;
+  max-width:1120px;
+  margin:0 auto;
+  color:#e4f0fa;
+}
+.community-workspace .community-articles-hero {
+  padding:clamp(18px,3vw,32px);
+  margin:0 0 17px;
+  border:1px solid #24555a;
+  border-radius:22px;
+  background:linear-gradient(115deg,#102e33,#142038 53%,#0d1829);
+  box-shadow:0 12px 36px #0003;
+}
+.community-workspace .community-articles-hero h2 {
+  max-width:850px;
+  margin:9px 0;
+  font-size:clamp(23px,2.8vw,32px);
+  line-height:1.25;
+  font-weight:850;
+  color:#f2fcff;
+  letter-spacing:-.025em;
+}
+.community-workspace .community-articles-hero p {
+  max-width:760px;
+  color:#b2c8d7;
+  font-size:13px;
+  line-height:1.7;
+}
+.community-workspace .community-articles-audience {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  margin:0 0 16px;
+}
+.community-workspace .community-articles-audience button {
+  min-height:41px;
+  padding:9px 14px;
+  border:1px solid #293d52;
+  border-radius:11px;
+  background:#122237;
+  color:#bed0e2;
+  font-size:12px;
+  font-weight:780;
+}
+.community-workspace .community-articles-audience button[aria-pressed="true"] {
+  border-color:#1d9d8c;
+  background:#15433e;
+  color:#d2fff6;
+}
+.community-workspace .community-articles-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-items:stretch;
+  gap:14px;
+  margin:15px 0;
+}
+.community-workspace .community-article-summary {
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  min-width:0;
+  margin:0;
+  padding:clamp(16px,2vw,22px);
+  border:1px solid #2a3d51;
+  border-radius:21px;
+  background:linear-gradient(140deg,#152438,#0c1726);
+  box-shadow:0 10px 28px #0002;
+}
+.community-workspace .community-article-summary-category {
+  align-self:flex-start;
+  padding:4px 9px;
+  border:1px solid #267b78;
+  border-radius:8px;
+  background:#103e40;
+  color:#83eedb;
+  font-size:11px;
+  font-weight:800;
+}
+.community-workspace .community-article-summary-title {
+  display:block;
+  width:100%;
+  min-width:0;
+  margin:2px 0;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:#f2faff;
+  text-align:left;
+  overflow-wrap:anywhere;
+  font-size:18px;
+  font-weight:830;
+  line-height:1.4;
+}
+.community-workspace .community-article-summary-title:hover {
+  color:#8cf5dd;
+  background:transparent;
+}
+.community-workspace .community-article-summary > p {
+  color:#aebfd0;
+  font-size:13px;
+  line-height:1.7;
+  overflow-wrap:anywhere;
+  white-space:pre-wrap;
+  flex:1;
+}
+.community-workspace .community-article-summary-footer {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+  padding-top:13px;
+  border-top:1px solid #26394e;
+  color:#93aabf;
+  font-size:11px;
+}
+.community-workspace .community-article-summary-footer > span {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.community-workspace .community-article-summary-footer time {white-space:nowrap;}
+.community-workspace .community-article-read,
+.community-workspace .community-articles-more,
+.community-workspace .community-articles-back {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  align-self:flex-start;
+  min-height:41px;
+  padding:9px 14px;
+  border:1px solid #30887e;
+  border-radius:10px;
+  color:#dbfff6;
+  background:linear-gradient(110deg,#155d57,#134a4b);
+  font-size:12px;
+  font-weight:790;
+}
+.community-workspace .community-articles-more {margin:7px 0 20px;}
+.community-workspace .community-articles-back {margin:0 0 17px;}
+.community-workspace .community-articles-reader {
+  max-width:840px;
+  margin:0 auto;
+}
+.community-workspace .community-articles-reader .community-post-card {
+  border-radius:22px;
+  padding:clamp(17px,2.4vw,27px);
+  background:linear-gradient(160deg,#142438,#0c1727);
+}
+@media(max-width:900px) {
+  .community-workspace .community-articles-grid {
+    grid-template-columns:minmax(0,1fr);
+  }
+}
+@media(max-width:760px) {
+  .community-workspace .community-social-topbar {
+    margin-bottom:9px;
+    padding:5px 2px 10px;
+  }
+  .community-workspace .community-social-topbar button {
+    min-height:42px;
+    padding:9px 12px;
+    font-size:11px;
+  }
+  .community-workspace .community-social-mobile-columns {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:5px;
+    min-width:0;
+    padding:6px;
+    margin:0 0 11px;
+    border:1px solid #273e50;
+    border-radius:13px;
+    background:#0b1727;
+  }
+  .community-workspace .community-social-mobile-columns button {
+    min-width:0;
+    min-height:44px;
+    padding:8px 4px;
+    border:1px solid transparent;
+    border-radius:10px;
+    background:#15273a;
+    color:#c6d7e3;
+    font-size:11px;
+    font-weight:730;
+    line-height:1.35;
+    white-space:normal;
+  }
+  .community-workspace .community-social-mobile-columns button[aria-pressed="true"] {
+    background:linear-gradient(120deg,#17665a,#144c4b);
+    border-color:#25ba9b;
+    color:#e0fff6;
+  }
+  .community-shell.community-workspace .community-dashboard-feed[data-mobile-column="feed"] > .community-sidebar,
+  .community-shell.community-workspace .community-dashboard-feed[data-mobile-column="feed"] > .community-context-rail,
+  .community-shell.community-workspace .community-dashboard-feed[data-mobile-column="profile"] > .community-main-pane,
+  .community-shell.community-workspace .community-dashboard-feed[data-mobile-column="profile"] > .community-context-rail,
+  .community-shell.community-workspace .community-dashboard-feed[data-mobile-column="sessions"] > .community-sidebar,
+  .community-shell.community-workspace .community-dashboard-feed[data-mobile-column="sessions"] > .community-main-pane {
+    display:none;
+  }
+  .community-shell.community-workspace .community-dashboard-feed[data-mobile-column="sessions"] > .community-context-rail {
+    display:grid;
+    grid-column:1;
+    grid-template-columns:minmax(0,1fr);
+    position:static;
+  }
+  .community-workspace .community-articles-hero {
+    padding:18px 15px;
+    border-radius:17px;
+  }
+  .community-workspace .community-articles-hero h2 {font-size:23px;}
+  .community-workspace .community-article-summary {border-radius:16px;padding:16px;}
+  .community-workspace .community-article-summary-title {font-size:16px;}
+  .community-workspace .community-article-read {width:100%;}
+  .community-workspace .community-articles-view .community-composer input,
+  .community-workspace .community-articles-view .community-composer textarea,
+  .community-workspace .community-articles-view .community-composer select {
+    font-size:16px;
+  }
+}
+@media(max-width:390px) {
+  .community-workspace .community-social-mobile-columns button {font-size:10px;}
+  .community-workspace .community-articles-audience button {flex:1 1 auto;}
+}
