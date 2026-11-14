@@ -14,6 +14,7 @@ export function PublicProfileChartContext({ document }: { document: ChartDocumen
     : null;
   const exchange = document.exchange === "bybit" ? "Bybit" : "Binance";
   const market = document.marketType === "spot" ? "Spot" : "Futures";
+  const archiveScore = document.qualityProof?.payload;
 
   return <div className="public-profile-chart-context">
     <div className="public-profile-chart-context-heading">
@@ -27,7 +28,16 @@ export function PublicProfileChartContext({ document }: { document: ChartDocumen
         <CalendarClock size={13} aria-hidden="true" /> Знімок: {capturedAt}
       </time>}
       <span><ShieldCheck size={13} aria-hidden="true" /> Без live-даних</span>
-      <span title="Знімок не містить перевіреної алгоритмічної оцінки">Якість сетапу: не підтверджена</span>
+      {archiveScore
+        ? <span className="public-profile-chart-archive-score"
+            title="Сервер перевірив підпис архівного запису під час збереження цього графіка">
+            Оцінка з архіву h00k: <strong>{archiveScore.score}/100</strong>
+          </span>
+        : <span title="Знімок не містить підписаного архівного запису з оцінкою">Оцінка з архіву: недоступна</span>}
     </div>
+    {archiveScore && <p className="public-profile-chart-archive-disclaimer">
+      Підпис підтверджує походження архівного запису h00k.top, а не точність алгоритму,
+      актуальність ринку чи виконання угоди. Час у записі: {new Date(archiveScore.assessedAt).toLocaleString("uk-UA")}.
+    </p>}
   </div>;
 }
