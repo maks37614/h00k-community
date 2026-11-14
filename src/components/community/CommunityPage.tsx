@@ -444,6 +444,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
         data-mobile-column={tab === "feed" ? mobileFeedColumn : undefined}>
         <div className="community-sidebar">
           <CommunityConceptProfile
+            key={user.uid}
             version={revision}
             onProfile={() => { setViewProfile(null); setTab("profile"); }}
             onFriends={() => setTab("friends")}
