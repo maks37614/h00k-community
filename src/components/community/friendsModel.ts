@@ -5,6 +5,7 @@ export type CommunityFriend = {
   id: string;
   displayName?: string;
   username?: string | null;
+  avatarUrl?: string | null;
   accepted?: boolean;
   incoming?: boolean;
   friend?: boolean;
