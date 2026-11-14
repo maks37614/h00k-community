@@ -296,7 +296,7 @@ export function PublicProfile() {
       .then(([account, wall]) => {
         if (controller.signal.aborted) return;
         setProfile(account.profile);
-        if (initialLink.tab === "statistics" && !account.profile.statistics) setTab("wall");
+
         if (wall && requestVersion === feedRequestVersion.current && currentFeedKey.current === "wall:all") {
           setItems(wall.items);
           setNext(wall.next);
@@ -314,6 +314,15 @@ export function PublicProfile() {
       });
     return () => controller.abort();
   }, [base]);
+  useEffect(() => {
+    // A disabled private statistics view must not leave an inaccessible blank
+    // tab or a stale, apparently shareable public statistics URL behind.
+    if (!profile || profile.statistics || tab !== "statistics") return;
+    const safeUrl = publicProfileTabUrl(location.href, "wall");
+    history.replaceState(null, "", safeUrl);
+    setNavigationSearch(location.search);
+    setTab("wall");
+  }, [profile?.id, profile?.statistics, tab]);
   useEffect(() => {
     if (!feedLoadedOnce.current) {
       feedLoadedOnce.current = true;
