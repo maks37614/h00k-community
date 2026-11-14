@@ -2896,8 +2896,10 @@ function Profile({
       hydratedFor.current = id;
     }
   }, [id, user?.uid, profile]);
-  const wall = useResource("wall:" + id, () =>
-    apiJson(api + "/feed?mode=wall&owner=" + id),
+  const wall = useResource("wall:" + id + ":" + (profileSection === "wall"), () =>
+    profileSection === "wall"
+      ? apiJson(api + "/feed?mode=wall&owner=" + id)
+      : Promise.resolve(null),
   );
   // The educational feed is lazy and server-filtered: old wall pages cannot
   // conceal older articles, and no private content becomes public.
