@@ -480,3 +480,12 @@
     min-height: 42px;
   }
 }
+
+/* User-selected avatar (including private, owner-only media) replaces initials. */
+.community-workspace .community-composer-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
