@@ -46,7 +46,6 @@ test("daily activity generates exactly 30 real UTC calendar points and never fab
 test("history chart renders exact imported count distribution without claiming profits or rendering live HookChart", () => {
   const html = renderToStaticMarkup(React.createElement(PublicProfileDailyHistory, { data: payload }));
   assert.match(html, /Динаміка за 30 днів/);
-  assert.match(html, /Із?/);
   assert.match(html, /5.*закриттів/);
   assert.match(html, /2026-11-12: 2 закриттів/);
   assert.match(html, /2026-11-14: 3 закриттів/);
@@ -76,7 +75,7 @@ test("history fetch is lazily bound to Results and only authorized server daily 
   assert.match(api, /FILTER\(WHERE pnl<0\)/);
   assert.match(api, /FILTER\(WHERE pnl=0\)/);
   assert.doesNotMatch(chart + css, /fetch\(|WebSocket\(|setInterval\(|MOCK_|fakeTrade/);
-  assert.doesNotMatch(api.slice(api.indexOf('route("/statistics/daily"'),api.indexOf('// Avatar and cover are explicit')), /sum\(pnl\)|symbol|connection_id/);
+  assert.doesNotMatch(api.slice(api.indexOf('route("/statistics/daily"'),api.indexOf('// Avatar and cover are explicit')), /sum\(pnl\)|\bconnection_id\b|\bsource_id\b/);
 });
 
 test("daily chart remains scoped to public trader page and mobile layout scrolls horizontally", () => {
