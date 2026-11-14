@@ -9,14 +9,15 @@ type Props = {
   matches: number;
   hasNextPage: boolean;
   onChange: (next: Filters) => void;
+  scope?: "public" | "authorized";
 };
 
 /** Client-only presentation; filtering never sends the viewer's search to an API. */
-export function PublicSetupGalleryToolbar({ filters, totalLoaded, matches, hasNextPage, onChange }: Props) {
+export function PublicSetupGalleryToolbar({ filters, totalLoaded, matches, hasNextPage, onChange, scope = "public" }: Props) {
   const reset = filters.symbol !== "" || filters.exchange !== "all" ||
     filters.timeframe !== "all" || filters.levels !== "all";
   return <section id="public-setup-filters" className="public-setup-gallery-toolbar"
-    aria-label="Фільтри публічних HookChart" tabIndex={-1}>
+    aria-label={scope === "public" ? "Фільтри публічних HookChart" : "Фільтри доступних HookChart"} tabIndex={-1}>
     <div className="public-setup-gallery-toolbar-top">
       <h3><ListFilter size={16} aria-hidden="true" /> Фільтри галереї</h3>
       <span role="status" aria-live="polite">{matches} із {totalLoaded} завантажених графіків</span>
@@ -65,7 +66,8 @@ export function PublicSetupGalleryToolbar({ filters, totalLoaded, matches, hasNe
         onClick={() => onChange({ ...DEFAULT_PUBLIC_SETUP_FILTERS })}>
         <RotateCcw size={14} aria-hidden="true" /> Очистити фільтри
       </button>}
-      <small>Пошук серед уже завантажених публічних графіків.
+      <small>{scope === "public" ? "Пошук серед уже завантажених публічних графіків." :
+        "Пошук серед уже завантажених доступних вам графіків."}
         {hasNextPage ? " Нижче можна завантажити наступні сторінки." : ""}
         {" "}Наявність Entry/SL/TP не є перевіркою якості або виконання угоди.
       </small>
