@@ -1242,7 +1242,19 @@ function CommunityArticles({
           <div className="community-articles-grid">
             {articles.map(item => (
               <article key={item.id} className="community-article-summary">
-                <span className="community-article-summary-category">Навчання</span>
+                {Array.isArray(item.body?.photos) &&
+                  typeof item.body.photos[0] === "string" &&
+                  /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(item.body.photos[0]) && (
+                  <div className="community-article-summary-cover">
+                    <img src={api + "/media/" + item.body.photos[0]}
+                      alt="" loading="lazy"
+                      onError={event => { event.currentTarget.hidden = true; }} />
+                  </div>
+                )}
+                <div className="community-article-summary-tags">
+                  <span className="community-article-summary-category">Навчання</span>
+                  {item.chart && <span className="community-article-summary-chart">Є HookChart</span>}
+                </div>
                 <button type="button" className="community-article-summary-title"
                   onClick={() => setSelectedId(item.id)}>
                   {item.body?.title?.trim() || "Навчальний розбір"}
