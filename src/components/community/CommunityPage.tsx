@@ -1122,6 +1122,125 @@ function Feed({
   );
 }
 
+
+/**
+ * The social reference's ArticlesView is backed by real education posts.  The
+ * shared item card handles interactions, attachments and permission checks.
+ */
+function CommunityArticles({
+  onPick,
+  onChart,
+  onProfile,
+  run,
+}: {
+  onPick: (t: Target) => void;
+  onChart: (item: any, target?: Target) => Promise<void>;
+  onProfile: (id: string) => void;
+  run: Run;
+}) {
+  const [audience, setAudience] = useState<"public" | "friends">("public");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pages, setPages] = useState<any[]>([]);
+  const [next, setNext] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [moreError, setMoreError] = useState("");
+  const currentAudience = useRef(audience);
+  currentAudience.current = audience;
+  const resource = useResource("social-education:" + audience, () =>
+    apiJson(api + "/feed?mode=" + audience + "&category=education"),
+  );
+  useEffect(() => {
+    setPages([]);
+    setNext(resource.data?.next ?? null);
+    setSelectedId(null);
+    setMoreError("");
+  }, [audience, resource.data]);
+  const articles: any[] = [...new Map([...(resource.data?.items ?? []), ...pages]
+    .filter((item: any) => item.kind === "post" && item.body?.category === "education")
+    .map((item: any) => [item.id, item])).values()];
+  const selected = articles.find(item => item.id === selectedId);
+  const loadMore = async () => {
+    const cursor = next;
+    if (!cursor || busy || !resource.data) return;
+    const requestedAudience = audience;
+    setBusy(true);
+    setMoreError("");
+    try {
+      const result = await apiJson(api + "/feed?mode=" + requestedAudience +
+        "&category=education&before=" + encodeURIComponent(cursor));
+      if (currentAudience.current !== requestedAudience) return;
+      setPages(old => [...new Map([...old, ...result.items]
+        .map((item: any) => [item.id, item])).values()]);
+      setNext(result.next);
+    } catch (error) {
+      if (currentAudience.current === requestedAudience)
+        setMoreError(error instanceof Error ? error.message : "Не вдалося завантажити матеріали");
+    } finally {
+      if (currentAudience.current === requestedAudience) setBusy(false);
+    }
+  };
+  return (
+    <section className="community-articles-view" aria-label="Статті та аналітика спільноти">
+      {selected ? (
+        <>
+          <button type="button" className="community-articles-back"
+            onClick={() => setSelectedId(null)}>
+            <ArrowLeft size={17} aria-hidden="true" /> Назад до списку статей
+          </button>
+          <div className="community-articles-reader">
+            <ItemCard key={selected.id} item={selected} onPick={onPick}
+              onChart={onChart} onProfile={onProfile} run={run}
+              refresh={resource.refresh} />
+          </div>
+        </>
+      ) : (
+        <>
+          <header className="community-articles-hero">
+            <span className="community-page-kicker">БАЗА ЗНАНЬ · h00k COMMUNITY</span>
+            <h2>Статті та практичні розбори трейдерів</h2>
+            <p>Реальні навчальні дописи спільноти: досвід, стратегії, формації та ризик-менеджмент.</p>
+          </header>
+          <nav className="community-articles-audience" aria-label="Доступність навчальних матеріалів">
+            <button type="button" aria-pressed={audience === "public"}
+              onClick={() => setAudience("public")}>Публічні статті</button>
+            <button type="button" aria-pressed={audience === "friends"}
+              onClick={() => setAudience("friends")}>Від друзів</button>
+          </nav>
+          <Composer target={{ kind: "post" }} presetCategory="education"
+            onPick={onPick} onSent={resource.refresh} run={run} />
+          {resource.error && <p role="alert">{resource.error}</p>}
+          {!resource.data && !resource.error && <p role="status">Завантажуємо статті…</p>}
+          {resource.data && articles.length === 0 &&
+            <div className="community-empty">Навчальних дописів у цій стрічці поки немає.</div>}
+          <div className="community-articles-grid">
+            {articles.map(item => (
+              <article key={item.id} className="community-article-summary">
+                <span className="community-article-summary-category">Навчання</span>
+                <button type="button" className="community-article-summary-title"
+                  onClick={() => setSelectedId(item.id)}>
+                  {item.body?.title?.trim() || "Навчальний розбір"}
+                </button>
+                <p>{(item.body?.text ?? "").slice(0, 240) || "Матеріал із вкладенням"}</p>
+                <div className="community-article-summary-footer">
+                  <span>{item.author?.displayName ?? "Трейдер"}</span>
+                  <time dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString("uk-UA")}</time>
+                </div>
+                <button type="button" className="community-article-read"
+                  onClick={() => setSelectedId(item.id)}>Читати статтю</button>
+              </article>
+            ))}
+          </div>
+          {moreError && <p role="alert">{moreError}</p>}
+          {next && <button type="button" className="community-articles-more"
+            disabled={busy} onClick={() => void loadMore()}>
+            {busy ? "Завантажуємо…" : "Ще статті"}
+          </button>}
+        </>
+      )}
+    </section>
+  );
+}
+
 function ItemCard({
   item,
   onChart,
