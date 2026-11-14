@@ -293,6 +293,26 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
         ],
       };
     }
+    // A social count is public only after explicit per-owner permission.
+    // Count accepted, non-blocked, non-deleted peers; never serialize identities.
+    let friendsCount: number | null = null;
+    if (c.publicFriendsCountEnabled === true) {
+      const { rows } = await db.query<{ count: number }>(
+        `SELECT count(*)::integer AS count
+         FROM hc_friendships f
+         JOIN hc_users peer
+           ON peer.id=CASE WHEN f.sender=$1 THEN f.recipient ELSE f.sender END
+          AND peer.deleted_at IS NULL
+         WHERE f.accepted AND (f.sender=$1 OR f.recipient=$1)
+           AND NOT EXISTS (
+             SELECT 1 FROM hc_blocks b
+             WHERE (b.owner_id=$1 AND b.target_id=peer.id)
+                OR (b.owner_id=peer.id AND b.target_id=$1)
+           )`,
+        [owner.id],
+      );
+      friendsCount = rows[0]?.count ?? 0;
+    }
     let awards = null;
     if (c.publicAwardsEnabled === true) {
       const rewardRows = await db.query(
@@ -329,7 +349,7 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
       interests: c.interestsAudience === "public" ? text(c.interests, 2000) : "",
       lifestyle: c.lifestyleAudience === "public" ? text(c.lifestyle, 2000) : "",
       telegram: c.telegramAudience === "public" && /^https:\/\/t\.me\/[A-Za-z0-9_]+$/.test(c.telegram ?? "") ? c.telegram : "",
-      status, statistics, awards, featuredPost,
+      status, statistics, awards, friendsCount, featuredPost,
       sessions: c.publicSessionsEnabled === true && Array.isArray(c.tradingSessionIds)
         ? c.tradingSessionIds.filter((value: unknown) => typeof value === "string" &&
           ["sydney", "tokyo", "london", "new-york"].includes(value)).slice(0, 4)
