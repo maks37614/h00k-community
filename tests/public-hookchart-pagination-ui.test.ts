@@ -26,5 +26,5 @@ test("guest HookChart tab fetches chart-filtered server pages instead of filteri
 test("empty state does not claim there are no charts before a remote page has loaded", () => {
   assert.match(view, /pendingFeedKey !== feedKey && loadedFeedKey === feedKey && !error/);
   assert.match(view, /loadedNext && <button/);
-  assert.match(view, /Кількість/);
+  assert.match(view, /Завантажуємо публікації/);
 });
