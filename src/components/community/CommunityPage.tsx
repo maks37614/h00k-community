@@ -1532,22 +1532,21 @@ function ChartDialog({
             <X />
           </button>
         </header>
+        {!savedId && <p className="community-chart-draft-privacy-note" role="note">
+          Це ще не опублікована чернетка. Завантаження додаткової історії вимкнено:
+          графік не надсилатиметься на сервер до вашої явної дії «Надіслати розбір».
+          Наявні свічки, таймфрейми та розмітку можна переглядати й редагувати.
+        </p>}
         <Suspense fallback={<p>Завантаження рушія HookChart…</p>}>
           <SharedHookChart
             value={draft.document}
             onChange={(document) => onChange({ ...draft, document })}
-            onHistory={async (timeframe, before) => {
-              const id = savedId ?? (await chartId());
-              return (
-                await apiJson(
-                  api +
-                    "/charts/" +
-                    id +
-                    "/history?" +
-                    new URLSearchParams({ timeframe, before: String(before) }),
-                )
-              ).rows;
-            }}
+            onHistory={savedId ? async (timeframe, before) => (
+              await apiJson(
+                api + "/charts/" + savedId + "/history?" +
+                new URLSearchParams({ timeframe, before: String(before) }),
+              )
+            ).rows : undefined}
           />
         </Suspense>
         {notice && (
