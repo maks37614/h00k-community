@@ -521,6 +521,11 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
               setViewProfile(id);
               setTab("profile");
             }}
+            onChat={(id, name) => {
+              setChatInvite({ id, name });
+              setViewProfile(null);
+              setTab("chats");
+            }}
           />
         )}
         {tab === "profile" && (
@@ -2103,15 +2108,18 @@ function Workspace({
 function Friends({
   run,
   onProfile,
+  onChat,
 }: {
   run: Run;
   onProfile: (id: string) => void;
+  onChat: (id: string, name: string) => void;
 }) {
   const resource = useResource("friends", () => apiJson(api + "/friends"));
   const [q, setQ] = useState("");
   const [people, setPeople] = useState<CommunityFriend[]>([]);
   const [searched, setSearched] = useState(false);
   const [filter, setFilter] = useState<FriendFilter>("all");
+  const [pendingFriendId, setPendingFriendId] = useState<string | null>(null);
 
   const relationships: CommunityFriend[] = resource.data?.people ?? [];
   const { rows: visible, friendsCount, requestsCount } = buildFriendDirectory(
@@ -2120,14 +2128,20 @@ function Friends({
 
   function changeFriend(person: CommunityFriend, action: "send" | "accept" | "cancel" | "remove") {
     if (action === "remove" && !window.confirm("Видалити цього користувача з друзів?")) return;
+    if (pendingFriendId) return;
+    setPendingFriendId(person.id);
     void run(async () => {
-      if (action === "cancel" || action === "remove") {
-        await apiJson(api + "/friends/" + person.id, { method: "DELETE" });
-      } else {
-        await post(api + "/friends/" + person.id, {});
+      try {
+        if (action === "cancel" || action === "remove") {
+          await apiJson(api + "/friends/" + person.id, { method: "DELETE" });
+        } else {
+          await post(api + "/friends/" + person.id, {});
+        }
+        setPeople([]);
+        resource.refresh();
+      } finally {
+        setPendingFriendId(null);
       }
-      setPeople([]);
-      resource.refresh();
     });
   }
 
@@ -2223,6 +2237,7 @@ function Friends({
           const state = person.statusText;
           const name = person.displayName?.trim() || "Трейдер";
 
+
           return (
             <article className="community-card community-friend-card" key={person.id}>
               <div className="community-friend-identity">
@@ -2233,6 +2248,7 @@ function Friends({
                   <button type="button" className="community-friend-name" onClick={() => onProfile(person.id)}>
                     {name}
                   </button>
+                  {person.username && <small className="community-friend-handle">@{person.username}</small>}
                   <span className={"community-friend-state" + (accepted ? " community-friend-state-accepted" : incoming ? " community-friend-state-incoming" : "")}>
                     {state}
                   </span>
@@ -2240,25 +2256,41 @@ function Friends({
               </div>
               <div className="community-friend-actions">
                 {accepted ? (
-                  <button type="button" onClick={() => changeFriend(person, "remove")}>
-                    Видалити з друзів
-                  </button>
+                  <>
+                    <button type="button" className="community-primary community-friend-message"
+                      onClick={() => onChat(person.id, name)}>
+                      <MessageCircle size={16} aria-hidden="true" /> Написати
+                    </button>
+                    <button type="button" disabled={!!pendingFriendId}
+                      onClick={() => changeFriend(person, "remove")}>
+                      Видалити з друзів
+                    </button>
+                  </>
                 ) : incoming ? (
-                  <button type="button" className="community-primary" onClick={() => changeFriend(person, "accept")}>
-                    Прийняти
-                  </button>
+                  <>
+                    <button type="button" className="community-primary" disabled={!!pendingFriendId}
+                      onClick={() => changeFriend(person, "accept")}>
+                      Прийняти
+                    </button>
+                    <button type="button" disabled={!!pendingFriendId}
+                      onClick={() => changeFriend(person, "cancel")}>
+                      Відхилити
+                    </button>
+                  </>
                 ) : outgoing ? (
-                  <button type="button" onClick={() => changeFriend(person, "cancel")}>
+                  <button type="button" disabled={!!pendingFriendId} onClick={() => changeFriend(person, "cancel")}>
                     Відкликати запит
                   </button>
                 ) : (
-                  <button type="button" className="community-primary" onClick={() => changeFriend(person, "send")}>
-                    Додати в друзі
+                  <button type="button" className="community-primary" disabled={!!pendingFriendId}
+                    onClick={() => changeFriend(person, "send")}>
+                    <Users size={16} aria-hidden="true" /> Додати в друзі
                   </button>
                 )}
                 <button
                   type="button"
                   className="community-friend-block"
+                  disabled={!!pendingFriendId}
                   onClick={() => {
                     if (!window.confirm("Заблокувати цього користувача? Він не зможе бути вашим другом.")) return;
                     void run(async () => {
