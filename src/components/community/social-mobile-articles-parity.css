@@ -363,3 +363,43 @@
   outline:2px solid #51f7d6;
   outline-offset:2px;
 }
+
+/* Reference social market pulse card: link to the genuine screener, not fake stats. */
+.community-workspace .community-social-market-card {
+  padding:16px;
+  border:1px solid #26605d;
+  border-radius:17px;
+  background:linear-gradient(140deg,#122d32,#0c192b 75%);
+}
+.community-workspace .community-social-market-card h3 {
+  display:flex;align-items:center;gap:9px;
+  margin:8px 0;
+  color:#edfaff;
+  font-size:16px;
+}
+.community-workspace .community-social-market-card h3 svg {color:#4bf3d6;}
+.community-workspace .community-social-market-card p {
+  margin:8px 0 13px;
+  color:#abc2cc;
+  font-size:12px;
+  line-height:1.65;
+}
+.community-workspace .community-social-market-card a {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:41px;
+  padding:9px 13px;
+  border:1px solid #289d8d;
+  border-radius:10px;
+  background:#135b4f;
+  color:#ddfff6;
+  font-size:12px;
+  font-weight:780;
+  text-decoration:none;
+}
+@media(max-width:900px) {
+  .community-workspace .community-context-rail .community-social-market-card {
+    display:block;
+  }
+}
