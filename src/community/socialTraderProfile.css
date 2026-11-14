@@ -1,0 +1,207 @@
+/* Public trader profile visual port from maks37614/social/TraderProfileView.
+   Layout and presentation only: all content comes from the public Community API. */
+:root {
+  --social-profile-panel: #111b2c;
+  --social-profile-outline: #2b3c52;
+  --social-profile-accent: #2de1d2;
+}
+body { background: #080f1b; }
+.public-profile { max-width: 1540px; padding-inline: clamp(12px, 2.1vw, 34px); font-size: 14px; }
+.public-profile-panel, .public-profile-hero {
+  background: linear-gradient(155deg, #132034, #0f192a 84%);
+  border: 1px solid var(--social-profile-outline);
+  border-radius: 24px;
+  box-shadow: 0 12px 35px #0003;
+}
+.public-profile-hero { padding-bottom: 19px; margin-bottom: 18px; }
+.public-profile-cover {
+  height: clamp(160px, 15vw, 208px);
+  min-height: 160px!important;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(90deg, #0f1729, #103f45 49%, #0f1729);
+  border-bottom-color: #2d4357;
+}
+.public-profile-cover-image { opacity: .35; object-fit: cover; }
+.public-profile-cover::after { background: linear-gradient(to top, #111c2e, transparent 88%); }
+.public-profile-cover-mark { position: relative; z-index: 1; }
+.public-profile-cover-status {
+  position: relative; z-index: 2;
+  max-width: min(66%, 450px); margin-left:auto;
+  padding: 8px 12px; border:1px solid #41566d; border-radius:12px;
+  background:#080f1bdd; color:#edf7ff; font-size:12px;
+  font-weight:650; overflow-wrap:anywhere; backdrop-filter:blur(8px);
+}
+.public-profile-cover-status::before {
+  content:""; display:inline-block; vertical-align:middle;
+  width:8px; height:8px; margin-right:8px; border-radius:50%;
+  background:#29dec4; box-shadow:0 0 8px #1bc9b38c;
+}
+.public-profile-identity {
+  grid-template-columns: 130px minmax(0,1fr) auto;
+  gap: 14px 19px; padding-inline: clamp(16px,2.5vw,32px);
+  margin-top: -68px;
+}
+.public-profile-avatar {
+  width:125px; height:125px; flex-basis:125px; border:4px solid #101b2d;
+  border-radius:21px; font-size:40px;
+  background:#132d3e; box-shadow:0 12px 25px #0007, 0 0 0 1px #285268;
+}
+.public-profile-avatar-image { border-radius:16px; }
+.public-profile-hero-text { align-self:end; padding-top:68px; }
+.public-profile-hero-text h1 { font-size: clamp(22px,2.5vw,31px); font-weight:850; }
+.public-profile-hero-text .public-profile-handle { color:#57e3d8!important; }
+.public-profile-hero-actions { align-self:end; max-width:unset; }
+.public-profile-hero-actions > a, .public-profile-hero-actions > button {
+  min-height:41px; border-radius:12px;
+}
+.public-profile-hero-detail { padding-inline:clamp(16px,2.5vw,32px); }
+.public-profile-hero-bio { font-size:13px; max-width:960px; }
+.public-profile-hero-facts {
+  margin-inline:clamp(16px,2.5vw,32px);
+  padding-top:14px; font-size:12px;
+}
+/* Match the full-width statistics / rewards showcases in the social source.
+   The wall and profile information remain separate and responsive. */
+.public-profile-columns.public-profile-social-layout {
+  display:grid; grid-template-columns:minmax(220px,280px) minmax(0,1fr);
+  gap:16px; align-items:start;
+}
+.public-profile-social-layout > .public-profile-insights {
+  grid-column:1/-1; grid-row:1; position:static;
+  display:flex; flex-direction:column; gap:16px;
+}
+.public-profile-social-layout > .public-profile-aside {
+  grid-column:1; grid-row:2; position:sticky; top:12px;
+}
+.public-profile-social-layout > .public-profile-main {
+  grid-column:2; grid-row:2; min-width:0;
+}
+.public-profile-insights .public-profile-overview,
+.public-profile-insights .public-profile-achievements {
+  padding:21px; border-radius:22px; margin:0;
+}
+.public-profile-insights .public-profile-overview-header,
+.public-profile-insights .public-profile-achievements-heading { align-items:center; }
+.public-profile-insights .public-profile-overview-header h2,
+.public-profile-insights .public-profile-achievements-heading h2 {
+  font-size:16px; font-weight:850; letter-spacing:.01em;
+}
+.public-profile-insights .public-profile-kpi-grid {
+  grid-template-columns:repeat(6,minmax(0,1fr)); gap:9px; padding-top:15px;
+}
+.public-profile-insights .public-profile-kpi {
+  min-width:0; padding:14px 11px;
+  border:1px solid #2a394e; border-radius:16px; background:#080f1bcb;
+}
+.public-profile-insights .public-profile-kpi strong {
+  color:#36e9c6; font-size:clamp(16px,1.7vw,23px);
+}
+.public-profile-insights .public-profile-kpi > span { font-size:11px; }
+.public-profile-insights .public-profile-kpi small { font-size:10px; }
+.public-profile-insights .public-profile-overview-foot { margin-top:15px; }
+.public-profile-insights .public-profile-achievement-grid {
+  grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;
+}
+.public-profile-insights .public-profile-awards-summary {
+  grid-column:span 2;
+  grid-template-columns:minmax(150px,1fr) minmax(210px,2fr);
+  align-items:center; border-radius:15px;
+  padding:15px; background:linear-gradient(140deg,#211a2b,#111c2b);
+}
+.public-profile-insights .public-profile-awards-summary > small { grid-column:1/-1; }
+.public-profile-insights .public-profile-awards-breakdown {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.public-profile-insights .public-profile-right-help { display:none; }
+.public-profile-tabs {
+  padding:0 0 9px; border:0; border-bottom:1px solid #293b50;
+  border-radius:0; background:transparent;
+}
+.public-profile .public-profile-tabs button {
+  font-size:12px; padding:10px 13px; border-radius:12px;
+}
+.public-profile .public-profile-tabs button[aria-current="page"] {
+  background:#10545545; border-color:#1b9e9e70; color:#5ef3e0;
+}
+.public-profile-wall-compose {
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:13px; padding:16px; margin:0 0 14px;
+  border:1px solid #2c4055; border-radius:17px; background:#101b2d;
+}
+.public-profile-wall-compose > span {
+  display:flex; align-items:center; flex:1 1 240px; gap:10px;
+  color:#adbed0; font-size:12px; line-height:1.6;
+}
+.public-profile-wall-compose > span svg { flex:none; color:#42ddd2; }
+.public-profile-wall-compose > a {
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  min-height:39px; padding:10px 14px;
+  border-radius:11px; background:#31d9d2;
+  color:#061b24!important; font-size:12px; font-weight:800;
+  text-decoration:none!important;
+}
+.public-profile-wall-compose > a:hover { background:#6ef5e6; }
+.public-profile-post { padding:19px; border-radius:18px; background:#111e30; }
+.public-profile-post h3 { font-size:18px; }
+.public-profile-post-actions { gap:8px; }
+.public-profile-articles-note {
+  padding:10px 12px; border:1px solid #2a3f54; border-radius:12px;
+  background:#122033; color:#a6bbca; font-size:12px;
+}
+.public-profile-articles .public-profile-post { border-color:#314b5c; }
+.public-profile-articles .public-profile-post h3 { font-size:19px; line-height:1.45; }
+.public-profile-articles .public-profile-photos img { object-fit:cover; max-height:320px; }
+@media (max-width:1150px) {
+  .public-profile-identity { grid-template-columns:125px minmax(0,1fr); }
+  .public-profile-hero-actions { grid-column:1/-1; justify-content:flex-start; padding-top:5px; }
+  .public-profile-insights .public-profile-kpi-grid {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+}
+@media (max-width:900px) {
+  .public-profile-columns.public-profile-social-layout { grid-template-columns:minmax(0,1fr); }
+  .public-profile-social-layout > .public-profile-insights { grid-column:1; grid-row:1; }
+  .public-profile-social-layout > .public-profile-main { grid-column:1; grid-row:2; }
+  .public-profile-social-layout > .public-profile-aside {
+    grid-column:1; grid-row:3; position:static;
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media (max-width:700px) {
+  .public-profile { padding-inline:10px; }
+  .public-profile-cover { height:130px; min-height:130px!important; padding:11px; }
+  .public-profile-cover-status { font-size:10px; padding:5px 8px; }
+  .public-profile-identity {
+    grid-template-columns:78px minmax(0,1fr);
+    margin-top:-42px; gap:9px; padding:0 12px;
+  }
+  .public-profile-avatar {
+    width:78px; height:78px; flex-basis:78px;
+    border-radius:16px; border-width:3px; font-size:29px;
+  }
+  .public-profile-avatar-image { border-radius:12px; }
+  .public-profile-hero-text { padding-top:40px; }
+  .public-profile-hero-text h1 { font-size:21px; }
+  .public-profile-hero-actions { grid-column:1/-1; padding-top:7px; }
+  .public-profile-insights .public-profile-overview,
+  .public-profile-insights .public-profile-achievements { padding:14px; border-radius:16px; }
+  .public-profile-insights .public-profile-kpi-grid {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .public-profile-insights .public-profile-achievement-grid { grid-template-columns:minmax(0,1fr); }
+  .public-profile-insights .public-profile-awards-summary {
+    grid-column:1; grid-template-columns:minmax(0,1fr);
+  }
+  .public-profile-insights .public-profile-awards-breakdown {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+  .public-profile-social-layout > .public-profile-aside { grid-template-columns:minmax(0,1fr); }
+  .public-profile-post { padding:13px; }
+}
+@media(max-width:390px) {
+  .public-profile-cover-mark { font-size:9px!important; }
+  .public-profile-cover-status { max-width:55%; }
+  .public-profile-insights .public-profile-awards-breakdown { grid-template-columns:minmax(0,1fr); }
+  .public-profile-wall-compose > a { width:100%; }
+}
