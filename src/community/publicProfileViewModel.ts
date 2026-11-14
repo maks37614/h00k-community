@@ -42,3 +42,39 @@ export function publicProfileDate(value: unknown): string {
     ? date.toLocaleDateString("uk-UA", { year: "numeric", month: "long" })
     : "";
 }
+
+export type PublicProfileDeepLink = {
+  tab: "wall" | "setups" | "statistics" | "about";
+  postId: string | null;
+  openChart: boolean;
+};
+
+/** Guest-facing query values select public pages, never grant access to content. */
+export function publicProfileDeepLink(search: string): PublicProfileDeepLink {
+  const params = new URLSearchParams(search);
+  const requested = params.get("tab");
+  const tab = requested === "hookchart" ? "setups"
+    : requested === "about" ? "about"
+    : requested === "statistics" ? "statistics" : "wall";
+  const postId = publicPostId(params.get("post"));
+  return { tab, postId, openChart: tab === "setups" && postId !== null && params.get("view") === "chart" };
+}
+
+/** Link directly to the public HookChart gallery, not a live market terminal. */
+export function publicChartGalleryUrl(profileUrl: string): string {
+  const url = new URL(profileUrl);
+  if (!["https:", "http:"].includes(url.protocol) || url.username || url.password)
+    throw new Error("Некоректна адреса профілю");
+  url.searchParams.delete("post");
+  url.searchParams.delete("view");
+  url.searchParams.set("tab", "hookchart");
+  return url.toString();
+}
+
+/** Sharing a chart opens only an authorized saved public snapshot for that post. */
+export function publicChartPostUrl(profileUrl: string, id: string): string {
+  const url = new URL(publicPostUrl(profileUrl, id));
+  url.searchParams.set("tab", "hookchart");
+  url.searchParams.set("view", "chart");
+  return url.toString();
+}
