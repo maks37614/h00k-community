@@ -64,6 +64,7 @@ export function CommunityPublicRooms({ onProfile }: { onProfile: (id: string) =>
     setMessages([]);
     latest.current = [];
     setBefore(null);
+    setLoadingOlder(false);
     setError("");
     setNotice("");
     atBottom.current = true;
