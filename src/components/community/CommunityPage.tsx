@@ -71,6 +71,7 @@ import "./social-profile-gallery.css";
 import "./social-profile-hero.css";
 import "./social-resource-library.css";
 import "./social-concept-layout.css";
+import "./social-mobile-articles-parity.css";
 const SharedHookChart = lazy(() => import("./SharedHookChart"));
 type Tab =
   | "feed"
@@ -79,6 +80,7 @@ type Tab =
   | "strategies"
   | "trades"
   | "learning"
+  | "articles"
   | "chats"
   | "friends"
   | "profile"
@@ -166,7 +168,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
   const { archivedFormations } = useArchive();
   const [tab, setTab] = useState<Tab>(() => {
       const section = new URLSearchParams(location.hash.split("?")[1] ?? "").get("section");
-      return (["feed","day","sessions","strategies","trades","learning","chats","friends","profile","settings"] as string[]).includes(section ?? "") ? section as Tab : "feed";
+      return (["feed","day","sessions","strategies","trades","learning","articles","chats","friends","profile","settings"] as string[]).includes(section ?? "") ? section as Tab : "feed";
     }),
     [notice, setNotice] = useState(""),
     [picker, setPicker] = useState<Target | null>(null),
@@ -178,6 +180,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
     return owner && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(owner) ? owner : null;
   }),
     [revision, bump] = useState(0);
+  const [mobileFeedColumn, setMobileFeedColumn] = useState<"profile" | "feed" | "sessions">("feed");
   async function run(fn: () => Promise<unknown>) {
     setNotice("");
     try {
@@ -228,7 +231,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
         setViewProfile(null);
         setTab("feed");
       }
-      if (section && (["feed","day","sessions","strategies","trades","learning","chats","friends","profile","settings"] as string[]).includes(section)) {
+      if (section && (["feed","day","sessions","strategies","trades","learning","articles","chats","friends","profile","settings"] as string[]).includes(section)) {
         if (section === "profile") {
           const owner = query.get("owner");
           setViewProfile(owner && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(owner) ? owner : null);
@@ -365,6 +368,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
     ["strategies", "Стратегії", <BookOpen size={16} />],
     ["trades", "Угоди та статистика", <ShieldCheck size={16} />],
     ["learning", "Навчання", <BookOpen size={16} />],
+    ["articles", "Статті та аналітика", <BookOpen size={16} />],
     ["chats", "Чати", <MessageCircle size={16} />],
     ["friends", "Друзі", <Users size={16} />],
     ["profile", "Профіль", <Users size={16} />],
@@ -415,13 +419,46 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           </button>
         </div>
       </header>
-      <div className={"community-dashboard" + (tab === "feed" ? " community-dashboard-feed" : "")}>
+      <nav className="community-social-topbar" aria-label="Швидка навігація Community">
+        {([["feed","Стрічка"],["chats","Повідомлення"],["friends","Друзі"],
+          ["articles","Статті"],["profile","Мій профіль"]] as const)
+          .map(([key,label]) => (
+            <button type="button" key={key} aria-current={tab === key ? "page" : undefined}
+              onClick={() => {
+                setTab(key); setViewProfile(null);
+                if (key === "feed") setMobileFeedColumn("feed");
+                location.hash = "community?section=" + key;
+              }}>
+              {label}
+              {key === "chats" && chatUnread > 0 &&
+                <span className="community-chat-unread-count">{chatUnread >= 100 ? "99+" : chatUnread}</span>}
+            </button>
+          ))}
+      </nav>
+      {tab === "feed" && <nav className="community-social-mobile-columns" aria-label="Колонки Community">
+        {([["profile","Профіль"],["feed","Стрічка"],["sessions","Сесії й нагороди"]] as const)
+          .map(([key,label]) => (
+            <button type="button" key={key} aria-pressed={mobileFeedColumn === key}
+              onClick={() => setMobileFeedColumn(key)}>
+              {label}
+            </button>
+          ))}
+      </nav>}
+      <div className={"community-dashboard" + (tab === "feed" ? " community-dashboard-feed" : "")}
+        data-mobile-column={tab === "feed" ? mobileFeedColumn : undefined}>
         <div className="community-sidebar">
           <CommunityConceptProfile
+            key={user.uid}
             version={revision}
             onProfile={() => { setViewProfile(null); setTab("profile"); }}
             onFriends={() => setTab("friends")}
             onSettings={() => setTab("settings")}
+            onFriendProfile={id => { setViewProfile(id); setTab("profile"); }}
+            onFriendChat={(id, name) => {
+              setChatInvite({ id, name });
+              setViewProfile(null);
+              setTab("chats");
+            }}
           />
         <details className="community-concept-navigation">
           <summary>Усі розділи Community</summary>
@@ -505,6 +542,10 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
           </>
         )}
         {tab === "trades" && <Trades run={run} />}
+        {tab === "articles" && (
+          <CommunityArticles run={run} onPick={setPicker} onChart={openChart}
+            onProfile={id => { setViewProfile(id); setTab("profile"); }} />
+        )}
         {tab === "chats" && (
           <Chats
             revision={revision}
@@ -553,6 +594,14 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
               onClear={() => setAwardRecipient(null)}
               onGifted={changed}
             />
+            <div className="community-context-card community-social-market-card">
+              <span className="community-page-kicker">h00k TOP</span>
+              <h3><ChartNoAxesCombined size={17} aria-hidden="true" /> Пульс крипторинку</h3>
+              <p>Живі ціни, щільності та формації відкриваються в основному скрінері. Community не дублює біржові підключення.</p>
+              <a href="https://h00k.top/" target="_blank" rel="noopener noreferrer">
+                Відкрити скрінер h00k
+              </a>
+            </div>
             <div className="community-context-card">
               <span className="community-page-kicker">СПІЛЬНОТА</span>
               <h3>Ваш простір трейдера</h3>
@@ -1100,6 +1149,137 @@ function Feed({
         >
           Завантажити ще
         </button>
+      )}
+    </section>
+  );
+}
+
+
+/**
+ * The social reference's ArticlesView is backed by real education posts.  The
+ * shared item card handles interactions, attachments and permission checks.
+ */
+function CommunityArticles({
+  onPick,
+  onChart,
+  onProfile,
+  run,
+}: {
+  onPick: (t: Target) => void;
+  onChart: (item: any, target?: Target) => Promise<void>;
+  onProfile: (id: string) => void;
+  run: Run;
+}) {
+  const [audience, setAudience] = useState<"public" | "friends">("public");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pages, setPages] = useState<any[]>([]);
+  const [next, setNext] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [moreError, setMoreError] = useState("");
+  const currentAudience = useRef(audience);
+  currentAudience.current = audience;
+  const resource = useResource("social-education:" + audience, () =>
+    apiJson(api + "/feed?mode=" + audience + "&category=education"),
+  );
+  useEffect(() => {
+    setPages([]);
+    setNext(resource.data?.next ?? null);
+    setSelectedId(null);
+    setMoreError("");
+  }, [audience, resource.data]);
+  const articles: any[] = [...new Map([...(resource.data?.items ?? []), ...pages]
+    .filter((item: any) => item.kind === "post" && item.body?.category === "education")
+    .map((item: any) => [item.id, item])).values()];
+  const selected = articles.find(item => item.id === selectedId);
+  const loadMore = async () => {
+    const cursor = next;
+    if (!cursor || busy || !resource.data) return;
+    const requestedAudience = audience;
+    setBusy(true);
+    setMoreError("");
+    try {
+      const result = await apiJson(api + "/feed?mode=" + requestedAudience +
+        "&category=education&before=" + encodeURIComponent(cursor));
+      if (currentAudience.current !== requestedAudience) return;
+      setPages(old => [...new Map([...old, ...result.items]
+        .map((item: any) => [item.id, item])).values()]);
+      setNext(result.next);
+    } catch (error) {
+      if (currentAudience.current === requestedAudience)
+        setMoreError(error instanceof Error ? error.message : "Не вдалося завантажити матеріали");
+    } finally {
+      if (currentAudience.current === requestedAudience) setBusy(false);
+    }
+  };
+  return (
+    <section className="community-articles-view" aria-label="Статті та аналітика спільноти">
+      {selected ? (
+        <>
+          <button type="button" className="community-articles-back"
+            onClick={() => setSelectedId(null)}>
+            <ArrowLeft size={17} aria-hidden="true" /> Назад до списку статей
+          </button>
+          <div className="community-articles-reader">
+            <ItemCard key={selected.id} item={selected} onPick={onPick}
+              onChart={onChart} onProfile={onProfile} run={run}
+              refresh={resource.refresh} />
+          </div>
+        </>
+      ) : (
+        <>
+          <header className="community-articles-hero">
+            <span className="community-page-kicker">БАЗА ЗНАНЬ · h00k COMMUNITY</span>
+            <h2>Статті та практичні розбори трейдерів</h2>
+            <p>Реальні навчальні дописи спільноти: досвід, стратегії, формації та ризик-менеджмент.</p>
+          </header>
+          <nav className="community-articles-audience" aria-label="Доступність навчальних матеріалів">
+            <button type="button" aria-pressed={audience === "public"}
+              onClick={() => setAudience("public")}>Публічні статті</button>
+            <button type="button" aria-pressed={audience === "friends"}
+              onClick={() => setAudience("friends")}>Від друзів</button>
+          </nav>
+          <Composer target={{ kind: "post" }} presetCategory="education"
+            onPick={onPick} onSent={resource.refresh} run={run} />
+          {resource.error && <p role="alert">{resource.error}</p>}
+          {!resource.data && !resource.error && <p role="status">Завантажуємо статті…</p>}
+          {resource.data && articles.length === 0 &&
+            <div className="community-empty">Навчальних дописів у цій стрічці поки немає.</div>}
+          <div className="community-articles-grid">
+            {articles.map(item => (
+              <article key={item.id} className="community-article-summary">
+                {Array.isArray(item.body?.photos) &&
+                  typeof item.body.photos[0] === "string" &&
+                  /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(item.body.photos[0]) && (
+                  <div className="community-article-summary-cover">
+                    <img src={api + "/media/" + item.body.photos[0]}
+                      alt="" loading="lazy"
+                      onError={event => { event.currentTarget.hidden = true; }} />
+                  </div>
+                )}
+                <div className="community-article-summary-tags">
+                  <span className="community-article-summary-category">Навчання</span>
+                  {item.chart && <span className="community-article-summary-chart">Є HookChart</span>}
+                </div>
+                <button type="button" className="community-article-summary-title"
+                  onClick={() => setSelectedId(item.id)}>
+                  {item.body?.title?.trim() || "Навчальний розбір"}
+                </button>
+                <p>{(item.body?.text ?? "").slice(0, 240) || "Матеріал із вкладенням"}</p>
+                <div className="community-article-summary-footer">
+                  <span>{item.author?.displayName ?? "Трейдер"}</span>
+                  <time dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString("uk-UA")}</time>
+                </div>
+                <button type="button" className="community-article-read"
+                  onClick={() => setSelectedId(item.id)}>Читати статтю</button>
+              </article>
+            ))}
+          </div>
+          {moreError && <p role="alert">{moreError}</p>}
+          {next && <button type="button" className="community-articles-more"
+            disabled={busy} onClick={() => void loadMore()}>
+            {busy ? "Завантажуємо…" : "Ще статті"}
+          </button>}
+        </>
       )}
     </section>
   );
@@ -2152,6 +2332,7 @@ function Friends({
         }
         setPeople([]);
         resource.refresh();
+        window.dispatchEvent(new Event("community:friends-changed"));
       } finally {
         setPendingFriendId(null);
       }
@@ -2312,6 +2493,7 @@ function Friends({
                       await post(api + "/blocks/" + person.id, {});
                       setPeople([]);
                       resource.refresh();
+                      window.dispatchEvent(new Event("community:friends-changed"));
                     });
                   }}
                 >
@@ -3247,6 +3429,7 @@ function Profile({
         await post(api + "/friends/" + id, {});
       }
       friendships.refresh();
+      window.dispatchEvent(new Event("community:friends-changed"));
     });
   }
   return (
