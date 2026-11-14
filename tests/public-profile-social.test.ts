@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   publicPostId, publicPostUrl, communityPostUrl,
-  publicProfileDate, visibleReactionSummary,
+  publicProfileDate, visibleReactionSummary, publicProfileDeepLink,
 } from "../src/community/publicProfileViewModel";
 
 const id = "cb59d0d9-bacf-4dce-b1c1-9876e70078d1";
@@ -43,7 +43,7 @@ test("social public profile renders tabs, real API discussion, actions and no pl
   const view = readFileSync(new URL("../src/community/publicProfile.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../src/community/publicProfile.css", import.meta.url), "utf8");
   const api = readFileSync(new URL("../server/community/publicProfiles.ts", import.meta.url), "utf8");
-  assert.match(view, /type PublicTab = "wall" \| "setups" \| "statistics" \| "about"/);
+  assert.match(view, /type PublicTab = "wall" \| "articles" \| "setups" \| "statistics" \| "about"/);
   assert.match(view, /className="public-profile-tabs"/);
   assert.match(view, /className="public-profile-post-actions"/);
   assert.match(view, /aria-expanded=\{expandedComments === item\.id\}/);
@@ -68,4 +68,10 @@ test("social public profile renders tabs, real API discussion, actions and no pl
   assert.match(css, /\.public-profile-comments/);
   assert.match(css, /@media \(max-width: 640px\)/);
   assert.doesNotMatch(view, /MOCK_|fakeTrade|followersCount|onlineStatus|PNL_30D/);
+});
+
+
+test("public articles deep links resolve to the education feed without changing privacy", () => {
+  assert.deepEqual(publicProfileDeepLink("?tab=articles"), { tab: "articles", postId: null, openChart: false });
+  assert.equal(publicProfileDeepLink("?tab=unknown").tab, "wall");
 });

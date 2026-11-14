@@ -18,6 +18,7 @@ import { groupPublicComments, publicTelegramShareUrl } from "./publicDiscussionM
 import { TRADING_SESSIONS, getSessionWindow, formatZonedTime, resolveTimeZone, sessionDateLabel } from "../utils/tradingSessions";
 import "./publicProfile.css";
 import "./publicProfileConcept.css";
+import "./socialTraderProfile.css";
 
 type PublicStats = {
   totals: Array<{
@@ -77,7 +78,7 @@ type CommentState = {
   loading: boolean;
   error: string;
 };
-type PublicTab = "wall" | "setups" | "statistics" | "about";
+type PublicTab = "wall" | "articles" | "setups" | "statistics" | "about";
 
 const HookChart = lazy(() => import("../components/community/SharedHookChart"));
 async function read(url: string, signal?: AbortSignal) {
@@ -187,7 +188,7 @@ export function PublicProfile() {
   const chartExpandButtonRef = useRef<HTMLButtonElement | null>(null);
   const [tab, setTab] = useState<PublicTab>(() => publicProfileDeepLink(location.search).tab);
   const [postCategory, setPostCategory] = useState<"all" | "idea" | "analysis" | "education">("all");
-  const feedKey = tab === "setups" ? "setups" : tab === "wall" ? "wall:" + postCategory : null;
+  const feedKey = tab === "setups" ? "setups" : tab === "articles" ? "articles" : tab === "wall" ? "wall:" + postCategory : null;
   const currentFeedKey = useRef(feedKey);
   currentFeedKey.current = feedKey;
   const feedRequestVersion = useRef(0);
@@ -283,6 +284,7 @@ export function PublicProfile() {
     setError("");
     setPostError("");
     const suffix = feedKey === "setups" ? "?withChart=1"
+      : feedKey === "articles" ? "?category=education"
       : postCategory === "all" ? "" : "?category=" + encodeURIComponent(postCategory);
     void read(base + "/posts" + suffix, controller.signal)
       .then(wall => {
@@ -361,6 +363,7 @@ export function PublicProfile() {
       const params = new URLSearchParams({
         before: next,
         ...(requestedKey === "setups" ? { withChart: "1" }
+          : requestedKey === "articles" ? { category: "education" }
           : postCategory !== "all" ? { category: postCategory } : {}),
       });
       const page = await read(base + "/posts?" + params.toString());
@@ -515,7 +518,8 @@ export function PublicProfile() {
 
   const communityUrl = profile ? profile.communityOrigin + "/#community?section=profile&owner=" + encodeURIComponent(profile.id) : null;
   const pinned = profile?.featuredPost ?? null;
-  const eligiblePinned = pinned && (postCategory === "all" || pinned.category === postCategory) &&
+  const eligiblePinned = pinned && (tab === "articles" ? pinned.category === "education"
+    : postCategory === "all" || pinned.category === postCategory) &&
     (tab !== "setups" || pinned.chart);
   // The deep-linked post stays discoverable and the pinned post is first for
   // normal browsing, even when it belongs to a later pagination page.
@@ -529,7 +533,8 @@ export function PublicProfile() {
   const profileJoinDate = publicProfileDate(profile?.joinedAt);
   const totalClosures = profile?.statistics?.totals.reduce((sum, currency) => sum + currency.count, 0) ?? 0;
   const overview = publicClosedOrderOverview(profile?.statistics?.totals ?? []);
-  const visibleWall = tab === "setups" ? publicProfileSetups(wall) : wall;
+  const visibleWall = tab === "setups" ? publicProfileSetups(wall)
+    : tab === "articles" ? wall.filter(item => item.category === "education") : wall;
   const chartPostIds = publicProfileSetups(wall).map(item => item.id);
   const chartIndex = chartPostId ? chartPostIds.indexOf(chartPostId) : -1;
   const previousChartId = chartIndex > 0 ? chartPostIds[chartIndex - 1] : null;
@@ -557,6 +562,7 @@ export function PublicProfile() {
         <div className="public-profile-cover" aria-hidden="true">
           {profile.coverUrl && <img className="public-profile-cover-image" src={profile.coverUrl} alt="" onError={e => { e.currentTarget.hidden = true; }} />}
           <span className="public-profile-cover-mark"><Sparkles size={14} aria-hidden="true" /> h00k / TRADER NETWORK</span>
+          {profile.status && <span className="public-profile-cover-status">{profile.status}</span>}
         </div>
         <div className="public-profile-identity">
           <div className="public-profile-avatar" aria-hidden="true">
@@ -593,6 +599,78 @@ export function PublicProfile() {
       </section>
 
       <div className="public-profile-columns public-profile-social-layout">
+        <aside className="public-profile-insights" aria-label="Торгові результати й участь у Community">
+      <section className="public-profile-overview public-profile-panel" aria-labelledby="public-profile-overview-title">
+        <div className="public-profile-overview-header">
+          <div>
+            <span className="public-profile-kicker">ІМПОРТОВАНІ ДАНІ БІРЖІ</span>
+            <h2 id="public-profile-overview-title"><TrendingUp size={19} aria-hidden="true" /> Трейдерська статистика та результати</h2>
+          </div>
+          <span className="public-profile-overview-basis">Bybit linear · закриті ордери · доступний період</span>
+        </div>
+        {profile.statistics ? (
+          <>
+            <div className="public-profile-kpi-grid">
+              <div className="public-profile-kpi"><span>Закриттів</span><strong>{overview.count}</strong><small>Імпортовані закриті ордери</small></div>
+              <div className="public-profile-kpi public-profile-kpi-positive"><span>Win rate</span><strong>{overview.winRate === null ? "—" : overview.winRate.toFixed(1) + "%"}</strong><small>Беззбиткові не враховуються</small></div>
+              <div className="public-profile-kpi"><span>Прибуткові</span><strong>{overview.wins}</strong><small>Закриття з прибутком</small></div>
+              <div className="public-profile-kpi"><span>Збиткові</span><strong>{overview.losses}</strong><small>Закриття зі збитком</small></div>
+              <div className="public-profile-kpi"><span>Беззбиткові</span><strong>{overview.flat}</strong><small>Закриття з нульовим PnL</small></div>
+              {overview.pnl !== null && <div className="public-profile-kpi public-profile-kpi-pnl"><span>Сумарний PnL</span><strong>{overview.pnl} {overview.currency}</strong><small>У межах однієї валюти</small></div>}
+            </div>
+            <div className="public-profile-overview-foot">
+              <p>Ці дані не є повною прибутковістю рахунку. Суми показуються лише з окремого дозволу власника. Показники різних валют не підсумовуються.</p>
+              <button type="button" onClick={() => { setTab("statistics"); document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>Детальна статистика <ArrowUpRight size={15} aria-hidden="true" /></button>
+            </div>
+          </>
+        ) : (
+          <div className="public-profile-overview-private">
+            <ShieldCheck size={22} aria-hidden="true" />
+            <p>Трейдер не відкрив торгову статистику. Показники не розраховуються й не підміняються демонстраційними числами.</p>
+          </div>
+        )}
+      </section>
+
+      <section className="public-profile-achievements public-profile-panel" aria-label="Заслуги та участь">
+        <div className="public-profile-achievements-heading">
+          <h2><Award size={19} aria-hidden="true" /> Заслуги та нагороди трейдера</h2>
+          <span>Спільнота h00k</span>
+        </div>
+        <div className="public-profile-achievement-grid">
+          {profileJoinDate && <div className="public-profile-achievement-card">
+            <span className="public-profile-achievement-icon"><UsersRound size={23} aria-hidden="true" /></span>
+            <div><strong>Учасник Community</strong><small>Дата приєднання: {profileJoinDate}</small></div>
+          </div>}
+          {profile.awards ? (
+            <div className="public-profile-awards-summary">
+              <div className="public-profile-awards-total">
+                <Trophy size={25} aria-hidden="true" />
+                <strong>{profile.awards.received}</strong>
+                <span>Отримано нагород</span>
+              </div>
+              <div className="public-profile-awards-breakdown">
+                <span><Trophy size={15} aria-hidden="true" /> Подяка <strong>{profile.awards.thanks}</strong></span>
+                <span><Star size={15} aria-hidden="true" /> Крутий аналіз <strong>{profile.awards.analysis}</strong></span>
+                <span><Award size={15} aria-hidden="true" /> Топ трейдер <strong>{profile.awards.topTrader}</strong></span>
+              </div>
+              <small>Підтверджені подарунки Community. Автор добровільно відкрив лише сукупні кількості.</small>
+            </div>
+          ) : (
+            <div className="public-profile-achievement-empty">
+              <Award size={20} aria-hidden="true" />
+              <span>Підтверджені нагороди ще не опубліковані для гостей. Власник може окремо увімкнути їх показ у налаштуваннях.</span>
+            </div>
+          )}
+        </div>
+      </section>
+
+
+          <section className="public-profile-panel public-profile-right-help">
+            <h2><MessageCircle size={18} aria-hidden="true" /> Спілкування</h2>
+            <p>Хочете обговорити ідею або запросити трейдера у друзі? Перейдіть до Community та увійдіть у свій акаунт.</p>
+            <a href={communityUrl!}><UsersRound size={15} aria-hidden="true" /> Відкрити Community <ArrowUpRight size={14} aria-hidden="true" /></a>
+          </section>
+        </aside>
         <aside className="public-profile-aside" aria-label="Інформація про трейдера">
           <section className="public-profile-panel public-profile-about-preview">
             <h2><UsersRound size={18} aria-hidden="true" /> Про трейдера</h2>
@@ -617,17 +695,23 @@ export function PublicProfile() {
         </aside>
         <div className="public-profile-main">
           <nav id="public-profile-tabs" className="public-profile-tabs" aria-label="Розділи профілю">
-            <button type="button" aria-current={tab === "wall" ? "page" : undefined} onClick={() => setTab("wall")}><Layers3 size={16} aria-hidden="true" /> Стрічка</button>
+            <button type="button" aria-current={tab === "wall" ? "page" : undefined} onClick={() => setTab("wall")}><Layers3 size={16} aria-hidden="true" /> Стіна</button>
+            <button type="button" aria-current={tab === "articles" ? "page" : undefined} onClick={() => setTab("articles")}><BookOpenText size={16} aria-hidden="true" /> Статті та розбори</button>
             <button type="button" aria-current={tab === "setups" ? "page" : undefined} onClick={() => { setPostCategory("all"); setTab("setups"); }}><ChartNoAxesCombined size={16} aria-hidden="true" /> HookChart</button>
             {profile.statistics && <button type="button" aria-current={tab === "statistics" ? "page" : undefined} onClick={() => setTab("statistics")}><TrendingUp size={16} aria-hidden="true" /> Результати</button>}
             <button type="button" aria-current={tab === "about" ? "page" : undefined} onClick={() => setTab("about")}><UsersRound size={16} aria-hidden="true" /> Про трейдера</button>
           </nav>
 
-          {(tab === "wall" || tab === "setups") && <section aria-label="Публічна стіна" className="public-profile-wall">
+          {(tab === "wall" || tab === "setups" || tab === "articles") && <section aria-label={tab === "articles" ? "Публічні статті та розбори" : "Публічна стіна"} className={"public-profile-wall" + (tab === "articles" ? " public-profile-articles" : "")}>
             <div className="public-profile-wall-heading">
-              <div><p className="public-profile-kicker">{tab === "setups" ? "ЗБЕРЕЖЕНІ ГРАФІКИ" : "СТІНА ТРЕЙДЕРА"}</p><h2>{tab === "setups" ? "Публічні розбори HookChart" : "Публікації"}</h2></div>
-              <span>{tab === "setups" ? "Публічні графіки без біржових підключень" : "Нові публікації спочатку"}</span>
+              <div><p className="public-profile-kicker">{tab === "setups" ? "ЗБЕРЕЖЕНІ ГРАФІКИ" : tab === "articles" ? "ЗНАННЯ ТРЕЙДЕРА" : "СТІНА ТРЕЙДЕРА"}</p><h2>{tab === "setups" ? "Публічні розбори HookChart" : tab === "articles" ? "Статті та розбори" : "Публікації"}</h2></div>
+              <span>{tab === "setups" ? "Публічні графіки без біржових підключень" : tab === "articles" ? "Публічні навчальні матеріали автора" : "Нові публікації спочатку"}</span>
             </div>
+            {tab === "wall" && <div className="public-profile-wall-compose">
+              <span><BookOpenText size={17} aria-hidden="true" /> Залиште запитання, відгук або поділіться своїм сетапом на стіні @{profile.username}</span>
+              <a href={communityUrl!}><MessageCircle size={15} aria-hidden="true" /> Написати у Community</a>
+            </div>}
+            {tab === "articles" && <p className="public-profile-articles-note">Тут лише опубліковані автором навчальні дописи. Приватні чернетки та закриті матеріали не відображаються.</p>}
             {tab === "wall" && <nav className="public-profile-category-nav" aria-label="Категорії публікацій">
               {([
                 ["all", "Усі дописи", Layers3],
@@ -711,13 +795,13 @@ export function PublicProfile() {
               </div>}
             </article>)}
             {pendingFeedKey === feedKey && <p className="public-profile-loading" role="status">
-              {tab === "setups" ? "Шукаємо відкриті розбори HookChart…" : "Завантажуємо публікації…"}
+              {tab === "setups" ? "Шукаємо відкриті розбори HookChart…" : tab === "articles" ? "Завантажуємо статті та розбори…" : "Завантажуємо публікації…"}
             </p>}
             {!visibleWall.length && pendingFeedKey !== feedKey && loadedFeedKey === feedKey && !error && <div className="public-profile-panel public-profile-empty-state">
               <BookOpenText size={28} aria-hidden="true" />
-              <h3>{tab === "setups" ? "Публічних графіків поки немає" : postCategory === "all" ? "Публікацій поки немає" : "У цій категорії поки немає дописів"}</h3>
+              <h3>{tab === "setups" ? "Публічних графіків поки немає" : tab === "articles" ? "Публічних статей поки немає" : postCategory === "all" ? "Публікацій поки немає" : "У цій категорії поки немає дописів"}</h3>
               <p>Показуються тільки дозволені автором публікації серед уже завантажених. {loadedNext ? "Нижче можна завантажити наступні дописи." : "Поверніться до загальної стрічки."}</p>
-              {postCategory !== "all" && <button type="button" onClick={() => setPostCategory("all")}>Усі публікації</button>}
+              {tab === "wall" && postCategory !== "all" && <button type="button" onClick={() => setPostCategory("all")}>Усі публікації</button>}
               {tab === "wall" && postCategory === "all" && !loadedNext && (
                 <div className="public-profile-empty-actions">
                   <a href={profile.communityOrigin + "/#community?section=feed"}>
@@ -731,7 +815,7 @@ export function PublicProfile() {
               )}
             </div>}
             {loadedNext && <button type="button" className="public-profile-more" disabled={busy} onClick={() => void more()}>
-              {tab === "setups" ? "Ще розбори HookChart" : "Ще публікації"}
+              {tab === "setups" ? "Ще розбори HookChart" : tab === "articles" ? "Ще статті" : "Ще публікації"}
             </button>}
           </section>}
 
@@ -775,78 +859,7 @@ export function PublicProfile() {
             {profile.telegram && <section className="public-profile-panel"><h3>Соцмережі</h3><a href={profile.telegram} target="_blank" rel="noopener noreferrer">Telegram-канал <ArrowUpRight size={14} aria-hidden="true" /></a></section>}
             {!profile.bio && !profile.interests && !profile.lifestyle && !profile.telegram && <p className="public-profile-muted">Автор ще не відкрив інформацію про себе.</p>}
           </section>}
-        </div>        <aside className="public-profile-insights" aria-label="Торгові результати й участь у Community">
-      <section className="public-profile-overview public-profile-panel" aria-labelledby="public-profile-overview-title">
-        <div className="public-profile-overview-header">
-          <div>
-            <span className="public-profile-kicker">ІМПОРТОВАНІ ДАНІ БІРЖІ</span>
-            <h2 id="public-profile-overview-title"><TrendingUp size={19} aria-hidden="true" /> Трейдерська статистика та результати</h2>
-          </div>
-          <span className="public-profile-overview-basis">Bybit linear · закриті ордери · доступний період</span>
         </div>
-        {profile.statistics ? (
-          <>
-            <div className="public-profile-kpi-grid">
-              <div className="public-profile-kpi"><span>Закриттів</span><strong>{overview.count}</strong><small>Імпортовані закриті ордери</small></div>
-              <div className="public-profile-kpi public-profile-kpi-positive"><span>Win rate</span><strong>{overview.winRate === null ? "—" : overview.winRate.toFixed(1) + "%"}</strong><small>Беззбиткові не враховуються</small></div>
-              <div className="public-profile-kpi"><span>Прибуткові</span><strong>{overview.wins}</strong><small>Закриття з прибутком</small></div>
-              <div className="public-profile-kpi"><span>Збиткові</span><strong>{overview.losses}</strong><small>Закриття зі збитком</small></div>
-              <div className="public-profile-kpi"><span>Беззбиткові</span><strong>{overview.flat}</strong><small>Закриття з нульовим PnL</small></div>
-              {overview.pnl !== null && <div className="public-profile-kpi public-profile-kpi-pnl"><span>Сумарний PnL</span><strong>{overview.pnl} {overview.currency}</strong><small>У межах однієї валюти</small></div>}
-            </div>
-            <div className="public-profile-overview-foot">
-              <p>Ці дані не є повною прибутковістю рахунку. Суми показуються лише з окремого дозволу власника. Показники різних валют не підсумовуються.</p>
-              <button type="button" onClick={() => { setTab("statistics"); document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>Детальна статистика <ArrowUpRight size={15} aria-hidden="true" /></button>
-            </div>
-          </>
-        ) : (
-          <div className="public-profile-overview-private">
-            <ShieldCheck size={22} aria-hidden="true" />
-            <p>Трейдер не відкрив торгову статистику. Показники не розраховуються й не підміняються демонстраційними числами.</p>
-          </div>
-        )}
-      </section>
-
-      <section className="public-profile-achievements public-profile-panel" aria-label="Заслуги та участь">
-        <div className="public-profile-achievements-heading">
-          <h2><Award size={19} aria-hidden="true" /> Заслуги та нагороди трейдера</h2>
-          <span>Спільнота h00k</span>
-        </div>
-        <div className="public-profile-achievement-grid">
-          {profileJoinDate && <div className="public-profile-achievement-card">
-            <span className="public-profile-achievement-icon"><UsersRound size={23} aria-hidden="true" /></span>
-            <div><strong>Учасник Community</strong><small>Дата приєднання: {profileJoinDate}</small></div>
-          </div>}
-          {profile.awards ? (
-            <div className="public-profile-awards-summary">
-              <div className="public-profile-awards-total">
-                <Trophy size={25} aria-hidden="true" />
-                <strong>{profile.awards.received}</strong>
-                <span>Отримано нагород</span>
-              </div>
-              <div className="public-profile-awards-breakdown">
-                <span><Trophy size={15} aria-hidden="true" /> Подяка <strong>{profile.awards.thanks}</strong></span>
-                <span><Star size={15} aria-hidden="true" /> Крутий аналіз <strong>{profile.awards.analysis}</strong></span>
-                <span><Award size={15} aria-hidden="true" /> Топ трейдер <strong>{profile.awards.topTrader}</strong></span>
-              </div>
-              <small>Підтверджені подарунки Community. Автор добровільно відкрив лише сукупні кількості.</small>
-            </div>
-          ) : (
-            <div className="public-profile-achievement-empty">
-              <Award size={20} aria-hidden="true" />
-              <span>Підтверджені нагороди ще не опубліковані для гостей. Власник може окремо увімкнути їх показ у налаштуваннях.</span>
-            </div>
-          )}
-        </div>
-      </section>
-
-
-          <section className="public-profile-panel public-profile-right-help">
-            <h2><MessageCircle size={18} aria-hidden="true" /> Спілкування</h2>
-            <p>Хочете обговорити ідею або запросити трейдера у друзі? Перейдіть до Community та увійдіть у свій акаунт.</p>
-            <a href={communityUrl!}><UsersRound size={15} aria-hidden="true" /> Відкрити Community <ArrowUpRight size={14} aria-hidden="true" /></a>
-          </section>
-        </aside>
       </div>
 
       {chart && <section id="public-chart-workspace" ref={chartWorkspaceRef}

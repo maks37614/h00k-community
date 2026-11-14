@@ -44,7 +44,7 @@ export function publicProfileDate(value: unknown): string {
 }
 
 export type PublicProfileDeepLink = {
-  tab: "wall" | "setups" | "statistics" | "about";
+  tab: "wall" | "articles" | "setups" | "statistics" | "about";
   postId: string | null;
   openChart: boolean;
 };
@@ -55,6 +55,7 @@ export function publicProfileDeepLink(search: string): PublicProfileDeepLink {
   const requested = params.get("tab");
   const tab = requested === "hookchart" ? "setups"
     : requested === "about" ? "about"
+    : requested === "articles" ? "articles"
     : requested === "statistics" ? "statistics" : "wall";
   const postId = publicPostId(params.get("post"));
   return { tab, postId, openChart: tab === "setups" && postId !== null && params.get("view") === "chart" };

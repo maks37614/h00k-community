@@ -41,8 +41,9 @@ test("real HookChart breakdowns never substitute mock articles or unpublished se
   ];
   assert.deepEqual(publicProfileSetups(rows).map(x => x.id), ["public-chart", "another-chart"]);
   assert.deepEqual(publicProfileSetups([]), []);
-  assert.match(view, /type PublicTab = "wall" \| "setups" \| "statistics" \| "about"/);
-  assert.match(view, /visibleWall = tab === "setups" \? publicProfileSetups\(wall\) : wall/);
+  assert.match(view, /type PublicTab = "wall" \| "articles" \| "setups" \| "statistics" \| "about"/);
+  assert.match(view, /visibleWall = tab === "setups" \? publicProfileSetups\(wall\)/);
+  assert.match(view, /tab === "articles" \? wall\.filter\(item => item\.category === "education"\)/);
   assert.match(view, /Публічні розбори HookChart/);
   assert.doesNotMatch(view, /MOCK_ARTICLE|fakeFollowers|hardcodedBadge|PNL_30D/);
 });
@@ -61,7 +62,7 @@ test("public profile mirrors social reference layout with real privacy-aware act
   assert.match(view, /className="public-profile-achievements public-profile-panel"/);
   assert.match(view, /поки ще не опубліковані|ще не опубліковані/);
   assert.match(view, /className="public-profile-tabs"/);
-  assert.match(view, /className="public-profile-wall"/);
+  assert.match(view, /className=\{"public-profile-wall"/);
   assert.match(view, /aria-expanded=\{expandedComments === item\.id\}/);
   assert.match(view, /className="public-profile-post-actions"/);
   assert.match(view, /className="public-profile-reactions"/);

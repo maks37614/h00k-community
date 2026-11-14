@@ -19,7 +19,7 @@ test("guest HookChart tab fetches chart-filtered server pages instead of filteri
   assert.match(view, /controller\.signal\.aborted/);
   assert.match(view, /Ще розбори HookChart/);
   assert.match(view, /Шукаємо відкриті розбори HookChart/);
-  assert.match(view, /visibleWall = tab === "setups" \? publicProfileSetups\(wall\) : wall/);
+  assert.match(view, /visibleWall = tab === "setups" \? publicProfileSetups\(wall\)/);
   assert.doesNotMatch(view, /MOCK_ARTICLE|fakeSetup|mockChartList/);
 });
 
