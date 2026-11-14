@@ -30,7 +30,7 @@ test("friend card and profile changes refresh left sidebar without adding pollin
 });
 
 test("social friend shortcut block remains responsive and scoped to Community", () => {
-  assert.match(sidebar, /className="community-concept-friend-shortcuts"/);
+  assert.match(sidebar, /className="community-concept-sidebar-section community-concept-friend-shortcuts"/);
   assert.match(sidebar, /className="community-concept-friends-list"/);
   assert.match(sidebar, /className="community-concept-friend-message"/);
   assert.match(css, /\.community-workspace \.community-concept-friend-row/);
