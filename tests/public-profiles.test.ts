@@ -493,6 +493,12 @@ test("public trade periods aggregate only real closed orders and honor independe
       [connection, "private-window-order-" + i, a.id, currency, pnl, daysAgo, { privateAccount: "PRIVATE_WINDOW_ACCOUNT" }],
     );
   }
+  // A malformed future-dated imported close must never count in rolling 7/30-day windows.
+  await db.query(
+    `INSERT INTO hc_trades(connection_id,source_id,owner_id,symbol,currency,pnl,closed_at,source)
+     VALUES($1,'future-window-order',$2,'HIDDEN_ORDER_SYMBOL','USDT',9999,now()+interval '3 days',$3)`,
+    [connection, a.id, { privateAccount: "PRIVATE_WINDOW_ACCOUNT" }],
+  );
   assert.equal((await call("/api/public/profiles/stats-windows-person")).data.profile.statistics, null);
   await enable(a, { statisticsAudience: "public", amountsAudience: "private", tradesAudience: "public" });
   const first = await call("/api/public/profiles/stats-windows-person");
