@@ -62,7 +62,7 @@ test("public profile mirrors social reference layout with real privacy-aware act
   assert.match(view, /className="public-profile-achievements public-profile-panel"/);
   assert.match(view, /поки ще не опубліковані|ще не опубліковані/);
   assert.match(view, /className="public-profile-tabs"/);
-  assert.match(view, /className="public-profile-wall"/);
+  assert.match(view, /className=\{"public-profile-wall"/);
   assert.match(view, /aria-expanded=\{expandedComments === item\.id\}/);
   assert.match(view, /className="public-profile-post-actions"/);
   assert.match(view, /className="public-profile-reactions"/);
