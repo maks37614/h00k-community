@@ -12,7 +12,8 @@ import type { ChartDocument } from "./chartDocument";
 import {
   communityPostUrl, communityProfileContactUrl, publicPostUrl, publicCommentUrl, publicCommentIdFromSearch,
   publicChartGalleryUrl, publicChartPostUrl, publicArticleUrl, publicProfileDeepLink,
-  publicProfileDate, visibleReactionSummary,
+  publicProfileTabUrl, publicProfileCategoryUrl, publicProfileCategoryFromSearch,
+  publicProfileDate, visibleReactionSummary, type PublicPostCategory,
   type PublicReactionSummary,
 } from "./publicProfileViewModel";
 import { publicClosedOrderOverview, publicProfileSetups } from "./publicProfileSocialModel";
@@ -190,7 +191,8 @@ export function PublicProfile() {
   const chartWorkspaceRef = useRef<HTMLElement | null>(null);
   const chartExpandButtonRef = useRef<HTMLButtonElement | null>(null);
   const [tab, setTab] = useState<PublicTab>(() => publicProfileDeepLink(location.search).tab);
-  const [postCategory, setPostCategory] = useState<"all" | "idea" | "analysis" | "education">("all");
+  const [postCategory, setPostCategory] = useState<PublicPostCategory>(() => publicProfileCategoryFromSearch(location.search));
+  const [navigationSearch, setNavigationSearch] = useState(() => location.search);
   const feedKey = tab === "setups" ? "setups" : tab === "articles" ? "articles" : tab === "wall" ? "wall:" + postCategory : null;
   const currentFeedKey = useRef(feedKey);
   currentFeedKey.current = feedKey;
@@ -204,9 +206,45 @@ export function PublicProfile() {
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, CommentState>>({});
   const base = "/api/public/profiles/" + encodeURIComponent(nameAtLocation());
-  const initialLink = publicProfileDeepLink(location.search);
+  const initialLink = publicProfileDeepLink(navigationSearch);
   const linkedPostId = initialLink.postId;
-  const linkedCommentId = publicCommentIdFromSearch(location.search);
+  const linkedCommentId = publicCommentIdFromSearch(navigationSearch);
+
+  const navigateProfile = (section: PublicTab, category: PublicPostCategory = "all") => {
+    const next = section === "wall"
+      ? publicProfileCategoryUrl(location.href, category)
+      : publicProfileTabUrl(location.href, section);
+    if (next !== location.href) history.pushState(null, "", next);
+    setNavigationSearch(location.search);
+    setTab(section);
+    setPostCategory(section === "wall" ? category : "all");
+    setFocusedPost(null);
+    setFocusedCommentId(null);
+    setExpandedComments(null);
+    setPostError("");
+    setError("");
+    setChartExpanded(false);
+    setChart(null);
+    setChartPostId(null);
+  };
+  useEffect(() => {
+    const onBackForward = () => {
+      const restored = publicProfileDeepLink(location.search);
+      setNavigationSearch(location.search);
+      setTab(restored.tab);
+      setPostCategory(publicProfileCategoryFromSearch(location.search));
+      setFocusedPost(null);
+      setFocusedCommentId(null);
+      setExpandedComments(null);
+      setPostError("");
+      setError("");
+      setChartExpanded(false);
+      setChart(null);
+      setChartPostId(null);
+    };
+    window.addEventListener("popstate", onBackForward);
+    return () => window.removeEventListener("popstate", onBackForward);
+  }, []);
 
   useEffect(() => {
     if (chart && !chartExpanded)
@@ -341,6 +379,10 @@ export function PublicProfile() {
             }
             return;
           }
+          if (initialLink.tab === "setups") {
+            setTab("setups");
+            return;
+          }
           setTab("wall");
           if (!linkedCommentId) return;
           try {
@@ -439,10 +481,9 @@ export function PublicProfile() {
       // A chart may predate the current wall page, or may have been revoked.
       // Re-authorize the public post before opening its read-only discussion.
       const result = await read(base + "/posts/" + encodeURIComponent(id));
+      navigateProfile("wall");
       setFocusedPost(result.item);
       setFocusedCommentId(null);
-      setTab("wall");
-      setPostCategory("all");
       setExpandedComments(id);
       if (!comments[id]) void loadComments(id);
       setChartExpanded(false);
@@ -564,8 +605,7 @@ export function PublicProfile() {
   const followingChartId = chartIndex >= 0 ? chartPostIds[chartIndex + 1] ?? null : null;
   const visiblePostCount = wallPreviewCount;
   const browsePosts = () => {
-    setPostCategory("all");
-    setTab("wall");
+    navigateProfile("wall");
     document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" });
   };
 
@@ -644,7 +684,7 @@ export function PublicProfile() {
             </div>
             <div className="public-profile-overview-foot">
               <p>Ці дані не є повною прибутковістю рахунку. Суми показуються лише з окремого дозволу власника. Показники різних валют не підсумовуються.</p>
-              <button type="button" onClick={() => { setTab("statistics"); document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>Детальна статистика <ArrowUpRight size={15} aria-hidden="true" /></button>
+              <button type="button" onClick={() => { navigateProfile("statistics"); document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>Детальна статистика <ArrowUpRight size={15} aria-hidden="true" /></button>
             </div>
           </>
         ) : (
@@ -712,7 +752,7 @@ export function PublicProfile() {
             {profile.bio && <p>{profile.bio}</p>}
             {!profile.bio && <p className="public-profile-muted">Біографія не опублікована.</p>}
             {profileJoinDate && <p className="public-profile-sidebar-joined"><CalendarDays size={14} aria-hidden="true" /> У спільноті з {profileJoinDate}</p>}
-            <button type="button" onClick={() => { setTab("about"); document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>Детальніше про профіль <ArrowUpRight size={14} aria-hidden="true" /></button>
+            <button type="button" onClick={() => { navigateProfile("about"); document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>Детальніше про профіль <ArrowUpRight size={14} aria-hidden="true" /></button>
           </section>
           {(profile.interests || profile.lifestyle || profile.telegram) && <section className="public-profile-panel">
             {profile.interests && <><h2>Інтереси</h2><p>{profile.interests}</p></>}
@@ -727,11 +767,11 @@ export function PublicProfile() {
         </aside>
         <div className="public-profile-main">
           <nav id="public-profile-tabs" className="public-profile-tabs" aria-label="Розділи профілю">
-            <button type="button" aria-current={tab === "wall" ? "page" : undefined} onClick={() => setTab("wall")}><Layers3 size={16} aria-hidden="true" /> Стіна</button>
-            <button type="button" aria-current={tab === "articles" ? "page" : undefined} onClick={() => setTab("articles")}><BookOpenText size={16} aria-hidden="true" /> Статті та розбори</button>
-            <button type="button" aria-current={tab === "setups" ? "page" : undefined} onClick={() => { setPostCategory("all"); setTab("setups"); }}><ChartNoAxesCombined size={16} aria-hidden="true" /> HookChart</button>
-            {profile.statistics && <button type="button" aria-current={tab === "statistics" ? "page" : undefined} onClick={() => setTab("statistics")}><TrendingUp size={16} aria-hidden="true" /> Результати</button>}
-            <button type="button" aria-current={tab === "about" ? "page" : undefined} onClick={() => setTab("about")}><UsersRound size={16} aria-hidden="true" /> Про трейдера</button>
+            <button type="button" aria-current={tab === "wall" ? "page" : undefined} onClick={() => navigateProfile("wall")}><Layers3 size={16} aria-hidden="true" /> Стіна</button>
+            <button type="button" aria-current={tab === "articles" ? "page" : undefined} onClick={() => navigateProfile("articles")}><BookOpenText size={16} aria-hidden="true" /> Статті та розбори</button>
+            <button type="button" aria-current={tab === "setups" ? "page" : undefined} onClick={() => navigateProfile("setups")}><ChartNoAxesCombined size={16} aria-hidden="true" /> HookChart</button>
+            {profile.statistics && <button type="button" aria-current={tab === "statistics" ? "page" : undefined} onClick={() => navigateProfile("statistics")}><TrendingUp size={16} aria-hidden="true" /> Результати</button>}
+            <button type="button" aria-current={tab === "about" ? "page" : undefined} onClick={() => navigateProfile("about")}><UsersRound size={16} aria-hidden="true" /> Про трейдера</button>
           </nav>
 
           {(tab === "wall" || tab === "setups" || tab === "articles") && <section aria-label={tab === "articles" ? "Публічні статті та розбори" : "Публічна стіна"} className={"public-profile-wall" + (tab === "articles" ? " public-profile-articles" : "")}>
@@ -752,7 +792,7 @@ export function PublicProfile() {
                 ["education", "Навчання", GraduationCap],
               ] as const).map(([id, label, Icon]) => (
                 <button type="button" key={id} aria-pressed={postCategory === id}
-                  onClick={() => setPostCategory(id)}><Icon size={15} aria-hidden="true" /> {label}</button>
+                  onClick={() => navigateProfile("wall", id)}><Icon size={15} aria-hidden="true" /> {label}</button>
               ))}
             </nav>}
             {tab === "setups" && <div className="public-profile-gallery-share">
@@ -844,7 +884,7 @@ export function PublicProfile() {
               <BookOpenText size={28} aria-hidden="true" />
               <h3>{tab === "setups" ? "Публічних графіків поки немає" : tab === "articles" ? "Публічних статей поки немає" : postCategory === "all" ? "Публікацій поки немає" : "У цій категорії поки немає дописів"}</h3>
               <p>Показуються тільки дозволені автором публікації серед уже завантажених. {loadedNext ? "Нижче можна завантажити наступні дописи." : "Поверніться до загальної стрічки."}</p>
-              {tab === "wall" && postCategory !== "all" && <button type="button" onClick={() => setPostCategory("all")}>Усі публікації</button>}
+              {tab === "wall" && postCategory !== "all" && <button type="button" onClick={() => navigateProfile("wall")}>Усі публікації</button>}
               {tab === "wall" && postCategory === "all" && !loadedNext && (
                 <div className="public-profile-empty-actions">
                   <a href={profile.communityOrigin + "/#community?section=feed"}>
