@@ -23,6 +23,7 @@ test("friend card and profile changes refresh left sidebar without adding pollin
   assert.match(sidebar, /window\.removeEventListener\("community:friends-changed", refresh\)/);
   assert.match(sidebar, /\[user\?\.uid, version, friendVersion\]/);
   assert.match(page, /onFriendProfile=\{id => \{ setViewProfile\(id\); setTab\("profile"\); \}\}/);
+  assert.match(page, /<CommunityConceptProfile\s+key=\{user\.uid\}/);
   assert.match(page, /onFriendChat=\{\(id, name\) => \{/);
   assert.match(page, /window\.dispatchEvent\(new Event\("community:friends-changed"\)\)/);
   assert.doesNotMatch(sidebar, /setInterval\(|new WebSocket\(|new EventSource\(/);
