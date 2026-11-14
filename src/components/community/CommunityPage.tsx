@@ -448,6 +448,12 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
             onProfile={() => { setViewProfile(null); setTab("profile"); }}
             onFriends={() => setTab("friends")}
             onSettings={() => setTab("settings")}
+            onFriendProfile={id => { setViewProfile(id); setTab("profile"); }}
+            onFriendChat={(id, name) => {
+              setChatInvite({ id, name });
+              setViewProfile(null);
+              setTab("chats");
+            }}
           />
         <details className="community-concept-navigation">
           <summary>Усі розділи Community</summary>
@@ -2301,6 +2307,7 @@ function Friends({
         }
         setPeople([]);
         resource.refresh();
+        window.dispatchEvent(new Event("community:friends-changed"));
       } finally {
         setPendingFriendId(null);
       }
@@ -2461,6 +2468,7 @@ function Friends({
                       await post(api + "/blocks/" + person.id, {});
                       setPeople([]);
                       resource.refresh();
+                      window.dispatchEvent(new Event("community:friends-changed"));
                     });
                   }}
                 >
@@ -3396,6 +3404,7 @@ function Profile({
         await post(api + "/friends/" + id, {});
       }
       friendships.refresh();
+      window.dispatchEvent(new Event("community:friends-changed"));
     });
   }
   return (
