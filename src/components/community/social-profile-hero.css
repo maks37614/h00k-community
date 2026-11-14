@@ -103,7 +103,7 @@
   .community-workspace .community-profile-cover {min-height:160px;}
 }
 @media (max-width:760px) {
-  .community-workspace .community-profile-cover {min-height:155px;padding:12px;}
+  .community-workspace .community-profile-cover {min-height:160px;padding:12px;}
   .community-workspace .community-profile-avatar {
     width:112px;height:112px;flex-basis:112px;border-radius:19px;
   }
