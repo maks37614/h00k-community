@@ -48,6 +48,8 @@ import type {
   Timeframe,
 } from "../../types";
 import { ChartPreview } from "./ChartPreview";
+import { PublicSetupGalleryToolbar } from "../../community/PublicSetupGalleryToolbar";
+import { DEFAULT_PUBLIC_SETUP_FILTERS, filterPublicSetupGallery, type PublicSetupGalleryFilters } from "../../community/publicSetupGalleryModel";
 import { CommunityItemEditor } from "./CommunityItemEditor";
 import { CommunityReactions } from "./CommunityReactions";
 import { CommunityPhotoGallery } from "./CommunityPhotoGallery";
@@ -64,6 +66,7 @@ import "./social-edit-items.css";
 import "./social-photo-gallery.css";
 import "./social-profile-actions.css";
 import "./social-profile-tabs.css";
+import "./social-profile-gallery.css";
 import "./social-profile-hero.css";
 import "./social-resource-library.css";
 import "./social-concept-layout.css";
@@ -219,6 +222,11 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
     const jump = () => {
       const query = new URLSearchParams(location.hash.split("?")[1] ?? "");
       const section = query.get("section");
+      if (!section && location.hash.startsWith("#community")) {
+        // Back/forward from a deep-linked profile must restore the feed.
+        setViewProfile(null);
+        setTab("feed");
+      }
       if (section && (["feed","day","sessions","strategies","trades","learning","chats","friends","profile","settings"] as string[]).includes(section)) {
         if (section === "profile") {
           const owner = query.get("owner");
@@ -231,7 +239,11 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
       if (query.has("post")) setTab("feed");
     };
     window.addEventListener("hashchange", jump);
-    return () => window.removeEventListener("hashchange", jump);
+    window.addEventListener("popstate", jump);
+    return () => {
+      window.removeEventListener("hashchange", jump);
+      window.removeEventListener("popstate", jump);
+    };
   }, []);
   // Import is explicit on h00k.top. Clear the fragment before placing any
   // market bars in React state, and NEVER publish without user confirmation.
@@ -644,16 +656,19 @@ function Composer({
   onPick,
   onSent,
   run,
+  presetCategory,
 }: {
   target: Target;
   onPick: (target: Target) => void;
   onSent: () => void;
   run: Run;
+  presetCategory?: "education";
 }) {
   const { user, profile } = useAuth();
   const [text, setText] = useState("");
+  const [title, setTitle] = useState("");
   const [audience, setAudience] = useState(() => target.replyTo ? normalizeReplyAudience(target.replyTo.audience) : target.audience ? normalizeReplyAudience(target.audience) : target.kind === "post" ? "public" : "private");
-  const [category, setCategory] = useState("general");
+  const [category, setCategory] = useState(presetCategory ?? "general");
   const [photos, setPhotos] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
@@ -662,13 +677,17 @@ function Composer({
   const clientId = useRef(crypto.randomUUID());
   const emojiPanelId = useId();
   const audienceId = useId();
-  const canSubmit = canSendCommunityContent(text, photos.length, busy) && canShareReplyWithAudience(target.replyTo, audience);
+  const canSubmit = canSendCommunityContent(text, photos.length, busy) &&
+    canShareReplyWithAudience(target.replyTo, audience) &&
+    (presetCategory !== "education" || title.trim().length > 0);
   const kindLabel = target.kind === "post" ? "Нова публікація" :
     target.kind === "comment" ? "Написати коментар" : "Нове повідомлення";
 
   function send(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (inFlight.current || !canSendCommunityContent(text, photos.length, false) || !canShareReplyWithAudience(target.replyTo, audience)) return;
+    if (inFlight.current || !canSendCommunityContent(text, photos.length, false) ||
+      !canShareReplyWithAudience(target.replyTo, audience) ||
+      (presetCategory === "education" && !title.trim())) return;
     inFlight.current = true;
     setBusy(true);
     setPhotoError("");
@@ -679,9 +698,12 @@ function Composer({
         conversationId: target.conversationId,
         audience,
         clientId: clientId.current,
-        body: { ...replyBody(text, photos, target.replyTo), ...(target.kind === "post" ? { category } : {}) },
+        body: { ...replyBody(text, photos, target.replyTo), ...(target.kind === "post"
+          ? { category: presetCategory ?? category, ...(title.trim() ? { title: title.trim() } : {}) }
+          : {}) },
       });
       setText("");
+      setTitle("");
       setPhotos([]);
       setShowEmojis(false);
       clientId.current = crypto.randomUUID();
@@ -750,6 +772,14 @@ function Composer({
           <small>Відповідь залишиться в обговоренні цього допису.</small>
         </blockquote>
       )}
+      {target.kind === "post" && (presetCategory === "education" || category === "education") && (
+        <label className="community-article-title-label">Назва статті
+          <input type="text" aria-label="Назва статті" maxLength={200} value={title}
+            placeholder="Про що цей навчальний розбір?" disabled={busy}
+            required={presetCategory === "education"}
+            onChange={event => setTitle(event.target.value)} />
+        </label>
+      )}
       <textarea
         aria-label={
           target.kind === "comment"
@@ -811,7 +841,7 @@ function Composer({
             <Smile size={17} aria-hidden="true" /> <span>Емодзі</span>
           </button>
         </div>
-        {target.kind === "post" && (
+        {target.kind === "post" && !presetCategory && (
           <label className="community-concept-category-label">Розділ
             <select aria-label="Категорія публікації" value={category} onChange={(event) => setCategory(event.target.value)}>
               <option value="general">Стрічка</option>
@@ -2980,12 +3010,26 @@ function Profile({
   const friendships = useResource("profile-friends:" + id + ":" + user?.uid, () =>
     user?.uid === id ? Promise.resolve({ people: [] }) : apiJson(api + "/friends"),
   );
-  type Section = "wall" | "articles" | "about" | "trades";
+  type Section = "wall" | "articles" | "setups" | "about" | "trades";
   const requestedProfileSection = (): Section => {
     const value = new URLSearchParams(location.hash.split("?")[1] ?? "").get("profileTab");
-    return value === "about" || value === "articles" || value === "trades" ? value : "wall";
+    return value === "hookchart" || value === "setups" ? "setups"
+      : value === "about" || value === "articles" || value === "trades" ? value : "wall";
   };
   const [profileSection, setProfileSection] = useState<Section>(requestedProfileSection);
+  const [showArticleComposer, setShowArticleComposer] = useState(false);
+  const [setupFilters, setSetupFilters] = useState<PublicSetupGalleryFilters>(() => ({ ...DEFAULT_PUBLIC_SETUP_FILTERS }));
+  const navigateProfileSection = (section: Section) => {
+    const params = new URLSearchParams(location.hash.split("?")[1] ?? "");
+    params.set("section", "profile");
+    params.set("owner", id);
+    params.set("profileTab", section === "setups" ? "hookchart" : section);
+    params.delete("post");
+    params.delete("contact");
+    const nextHash = "#community?" + params.toString();
+    if (location.hash !== nextHash) history.pushState(history.state, "", nextHash);
+    setProfileSection(section);
+  };
   useEffect(() => {
     setProfileSection(requestedProfileSection());
     const jump = () => {
@@ -2994,7 +3038,11 @@ function Profile({
         setProfileSection(requestedProfileSection());
     };
     window.addEventListener("hashchange", jump);
-    return () => window.removeEventListener("hashchange", jump);
+    window.addEventListener("popstate", jump);
+    return () => {
+      window.removeEventListener("hashchange", jump);
+      window.removeEventListener("popstate", jump);
+    };
   }, [id]);
   const [form, setForm] = useState<any>({ ...profile?.community }),
     [displayName, setName] = useState(profile?.displayName ?? "");
@@ -3019,12 +3067,49 @@ function Profile({
       ? apiJson(api + "/feed?mode=wall&owner=" + id + "&category=education")
       : Promise.resolve(null),
   );
+  const setups = useResource("profile-setups:" + id + ":" + (profileSection === "setups"), () =>
+    profileSection === "setups"
+      ? apiJson(api + "/feed?mode=wall&owner=" + id + "&withChart=1")
+      : Promise.resolve(null),
+  );
+  const [setupPages, setSetupPages] = useState<any[]>([]);
+  const [setupNext, setSetupNext] = useState<string | null>(null);
+  const [setupsBusy, setSetupsBusy] = useState(false);
+  const [setupsError, setSetupsError] = useState("");
   const [articlePages, setArticlePages] = useState<any[]>([]);
   const [articleNext, setArticleNext] = useState<string | null>(null);
   const [articlesBusy, setArticlesBusy] = useState(false);
   const [articlesError, setArticlesError] = useState("");
   const currentProfileRef = useRef(id);
   currentProfileRef.current = id;
+  useEffect(() => {
+    setSetupPages([]);
+    setSetupNext(setups.data?.next ?? null);
+    setSetupsError("");
+  }, [id, setups.data]);
+  const loadMoreSetups = async () => {
+    const cursor = setupNext;
+    if (!cursor || setupsBusy || !setups.data) return;
+    const requestedId = id;
+    setSetupsBusy(true);
+    setSetupsError("");
+    try {
+      const page = await apiJson(api + "/feed?mode=wall&owner=" + requestedId +
+        "&withChart=1&before=" + encodeURIComponent(cursor));
+      if (currentProfileRef.current !== requestedId) return;
+      setSetupPages(old => [...new Map([...old, ...page.items].map((item: any) => [item.id, item])).values()]);
+      setSetupNext(page.next);
+    } catch (error) {
+      if (currentProfileRef.current === requestedId)
+        setSetupsError(error instanceof Error ? error.message : "Не вдалося завантажити графіки");
+    } finally {
+      if (currentProfileRef.current === requestedId) setSetupsBusy(false);
+    }
+  };
+  const loadedSetups: any[] = [...new Map([...(setups.data?.items ?? []), ...setupPages]
+    .filter((item: any) => item.owner_id === id && !!item.chart)
+    .map((item: any) => [item.id, item])).values()];
+  const visibleSetups = filterPublicSetupGallery(loadedSetups, setupFilters);
   useEffect(() => {
     setArticlePages([]);
     setArticleNext(articles.data?.next ?? null);
@@ -3107,7 +3192,7 @@ function Profile({
             </div>
             <div className="community-profile-hero-actions">
               {id === user?.uid && <button type="button" className="community-profile-edit-appearance"
-                onClick={() => setProfileSection("about")}>Налаштувати профіль</button>}
+                onClick={() => navigateProfileSection("about")}>Налаштувати профіль</button>}
               {p.publicUrl && (
                 <a className="community-profile-link" href={p.publicUrl} target="_blank" rel="noopener noreferrer">
                   Персональна сторінка ↗
@@ -3186,6 +3271,7 @@ function Profile({
           [
             ["wall", "Стіна"],
             ["articles", "Статті та розбори"],
+            ["setups", "HookChart"],
             ["about", "Про трейдера"],
             ["trades", "Статистика"],
           ] as const
@@ -3194,7 +3280,7 @@ function Profile({
             type="button"
             key={key}
             aria-pressed={profileSection === key}
-            onClick={() => setProfileSection(key)}
+            onClick={() => navigateProfileSection(key)}
           >
             {label}
           </button>
@@ -3209,10 +3295,17 @@ function Profile({
               <p className="community-hint">Лише доступні вам навчальні дописи автора. Права доступу перевіряє Community.</p>
             </div>
           </header>
-          {id === user?.uid && <button type="button" className="community-profile-write-article"
-            onClick={() => setProfileSection("wall")}>
-            Створити навчальний допис на своїй стіні
-          </button>}
+          {id === user?.uid && <>
+            <button type="button" className="community-profile-write-article"
+              aria-expanded={showArticleComposer} aria-controls="community-profile-article-composer"
+              onClick={() => setShowArticleComposer(open => !open)}>
+              {showArticleComposer ? "Закрити редактор статті" : "Написати статтю або навчальний розбір"}
+            </button>
+            {showArticleComposer && <div id="community-profile-article-composer">
+              <Composer target={{ kind: "post" }} presetCategory="education"
+                onPick={onPick} onSent={() => { articles.refresh(); setShowArticleComposer(false); }} run={run} />
+            </div>}
+          </>}
           {articles.error && <p role="status" className="community-profile-articles-error">{articles.error}</p>}
           {!articles.data && !articles.error && <p role="status">Завантажуємо навчальні матеріали…</p>}
           {articles.data && ![...articles.data.items, ...articlePages].some((item: any) => item.owner_id === id) &&
@@ -3228,6 +3321,39 @@ function Profile({
           {articleNext && <button type="button" className="community-profile-articles-more"
             disabled={articlesBusy} onClick={() => void loadMoreArticles()}>
             {articlesBusy ? "Завантажуємо…" : "Ще статті та розбори"}
+          </button>}
+        </section>
+      )}
+      {profileSection === "setups" && (
+        <section className="community-profile-setups" aria-label="HookChart трейдера">
+          <header className="community-section-heading">
+            <div>
+              <span className="community-page-kicker">ЗБЕРЕЖЕНІ РОЗБОРИ</span>
+              <h3>HookChart · формації та графіки</h3>
+              <p className="community-hint">Тільки графіки, до яких ви маєте доступ. Приватні матеріали інших трейдерів не показуються.</p>
+            </div>
+          </header>
+          <PublicSetupGalleryToolbar scope="authorized" filters={setupFilters}
+            totalLoaded={loadedSetups.length} matches={visibleSetups.length}
+            hasNextPage={!!setupNext} onChange={setSetupFilters} />
+          {setups.error && <p className="community-profile-gallery-error" role="alert">{setups.error}</p>}
+          {!setups.data && !setups.error && <p role="status">Завантажуємо доступні HookChart…</p>}
+          {setups.data && !loadedSetups.length &&
+            <div className="community-empty">Доступних графіків ще немає. Збережіть HookChart і прикріпіть його до допису.</div>}
+          {loadedSetups.length > 0 && !visibleSetups.length &&
+            <div className="community-empty">У завантажених графіках немає збігів із фільтрами.
+              <button type="button" onClick={() => setSetupFilters({ ...DEFAULT_PUBLIC_SETUP_FILTERS })}>Очистити фільтри</button>
+            </div>}
+          <div className="community-profile-gallery-list">
+            {visibleSetups.map((item: any) => (
+              <ItemCard key={item.id} item={item} onChart={onChart} onPick={onPick}
+                run={run} refresh={setups.refresh} />
+            ))}
+          </div>
+          {setupsError && <p role="alert" className="community-profile-gallery-error">{setupsError}</p>}
+          {setupNext && <button type="button" className="community-profile-gallery-more"
+            disabled={setupsBusy} onClick={() => void loadMoreSetups()}>
+            {setupsBusy ? "Завантажуємо…" : "Ще графіки"}
           </button>}
         </section>
       )}
