@@ -5,7 +5,8 @@ import {
 } from "lucide-react";
 import type { ChartDocument } from "./chartDocument";
 import { ChartPreview } from "../components/community/ChartPreview";
-import { PublicProfilePhotoGallery, publicPhotoIds, publicPhotoUrl } from "./PublicProfilePhotoGallery";
+import { PublicProfilePhotoGallery } from "./PublicProfilePhotoGallery";
+import { publicPhotoIds, publicPhotoUrl } from "./publicProfilePhotosModel";
 import {
   communityPostUrl, publicArticleExcerpt, publicArticleReadMinutes, publicArticleUrl,
   publicArticlesUrl, type PublicReactionSummary,
