@@ -1169,6 +1169,8 @@ function ItemCard({
         >
           <span className="community-avatar">
             {(item.author?.displayName ?? "T").slice(0, 1)}
+            {item.author?.avatarUrl && <img src={item.author.avatarUrl} alt=""
+              loading="lazy" onError={event => { event.currentTarget.hidden = true; }} />}
           </span>
           <span>
             <b>{item.author?.displayName ?? "Трейдер"}</b>
@@ -2254,6 +2256,8 @@ function Friends({
               <div className="community-friend-identity">
                 <span className="community-friend-avatar" aria-hidden="true">
                   {name.slice(0, 1).toUpperCase()}
+                  {person.avatarUrl && <img src={person.avatarUrl} alt=""
+                    loading="lazy" onError={event => { event.currentTarget.hidden = true; }} />}
                 </span>
                 <div>
                   <button type="button" className="community-friend-name" onClick={() => onProfile(person.id)}>
@@ -2342,7 +2346,7 @@ function Chats({
   inviteTarget: ChatInvite | null;
   onInviteHandled: () => void;
 }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const list = useResource("chats:" + revision, () =>
       apiJson(api + "/conversations"),
     ),
@@ -2398,6 +2402,8 @@ function Chats({
     }
   }, [id, messages]);
   const conversations: any[] = Array.isArray(list.data?.items) ? list.data.items : [];
+  const friendAvatar = (personId: string | null | undefined): string | null =>
+    (friends.data?.people ?? []).find((person: CommunityFriend) => person.id === personId)?.avatarUrl ?? null;
   useEffect(() => {
     if (!inviteTarget || !list.data) return;
     // Reuse a server-authorized direct dialog instead of spawning a duplicate.
@@ -2652,7 +2658,10 @@ function Chats({
                 onClick={() => { setId(c.id); setRequestedConversationId(""); }}
               >
                 <span className="community-chat-channel-symbol" aria-hidden="true">
-                  {c.is_group ? "👥" : "✉"}
+                  {c.is_group ? "👥" : conversationDisplayTitle(c).slice(0, 1).toUpperCase()}
+                  {!c.is_group && friendAvatar(c.peer_id) &&
+                    <img src={friendAvatar(c.peer_id)!} alt="" loading="lazy"
+                      onError={event => { event.currentTarget.hidden = true; }} />}
                 </span>
                 <span className="community-chat-channel-label">
                   <strong>{conversationDisplayTitle(c)}</strong>
@@ -2677,7 +2686,10 @@ function Chats({
             <>
               <header className="community-chat-active-header">
                 <span className="community-chat-active-avatar" aria-hidden="true">
-                  {currentConversation?.is_group ? "👥" : "✉"}
+                  {currentConversation?.is_group ? "👥" : currentTitle.slice(0, 1).toUpperCase()}
+                  {!currentConversation?.is_group && friendAvatar(currentConversation?.peer_id) &&
+                    <img src={friendAvatar(currentConversation?.peer_id)!} alt=""
+                      onError={event => { event.currentTarget.hidden = true; }} />}
                 </span>
                 <div>
                   <span className="community-page-kicker">
@@ -2878,7 +2890,10 @@ function Chats({
                 {messages.map((item) => (
                   <ItemCard
                     key={item.id}
-                    item={item}
+                    item={{ ...item, author: { ...item.author,
+                      avatarUrl: item.owner_id === user?.uid
+                        ? ownerAvatarUrl(profile?.community)
+                        : friendAvatar(item.owner_id) } }}
                     onChart={onChart}
                     onPick={onPick}
                     onProfile={onProfile}
