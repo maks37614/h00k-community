@@ -499,7 +499,7 @@ export function PublicProfile() {
                   <a href={profile.communityOrigin + "/#community?section=feed"}>
                     <BookOpenText size={16} aria-hidden="true" /> Перейти до стрічки Community
                   </a>
-                  <a href={communityUrl!}>
+                  <a href={communityUrl! + "&profileTab=about"}>
                     <UsersRound size={16} aria-hidden="true" /> Власник профілю? Заповнити сторінку
                   </a>
                   <p>Перший допис, фото та HookChart з'являться тут лише після публікації з дозволом «Публічно». Дані з особистих чатів чи приватних графіків не використовуються.</p>
