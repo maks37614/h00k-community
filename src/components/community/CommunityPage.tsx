@@ -3,6 +3,7 @@ import { PublicProfileSettings } from "./PublicProfileSettings";
 import { CommunityNotificationCenter } from "./CommunityNotificationCenter";
 import { CommunityTradingSessions } from "./CommunityTradingSessions";
 import { CommunityConceptProfile } from "./CommunityConceptProfile";
+import { ownerAvatarUrl } from "./profileMediaAvatar";
 import { CommunityAwardPanel } from "./CommunityAwardPanel";
 import { STRATEGY_PRESETS } from "../hookchart/strategyEngine";
 import { saveChartArchive } from "../../community/archiveChart";
@@ -726,7 +727,9 @@ function Composer({
       {target.kind === "post" && (
         <header className="community-composer-head">
           <span className="community-composer-avatar" aria-hidden="true">
-            {(profile?.displayName ?? user?.displayName ?? "Т").trim().slice(0, 1).toUpperCase()}
+            {ownerAvatarUrl(profile?.community)
+              ? <img src={ownerAvatarUrl(profile?.community)!} alt="" />
+              : (profile?.displayName ?? user?.displayName ?? "Т").trim().slice(0, 1).toUpperCase()}
           </span>
           <div>
             <strong>{profile?.displayName ?? user?.displayName ?? "Трейдер"}</strong>
