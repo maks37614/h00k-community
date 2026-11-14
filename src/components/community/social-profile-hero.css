@@ -26,8 +26,8 @@
 .community-workspace .community-profile-avatar {
   position:relative;
   overflow:hidden;
-  width:112px;height:112px;flex-basis:112px;
-  border:5px solid #0e1d2f;border-radius:25px;
+  width:128px;height:128px;flex-basis:128px;
+  border:4px solid #0e1d2f;border-radius:20px;
   background:linear-gradient(140deg,#0b534e,#19365c);
   box-shadow:0 8px 22px #0007;
 }
@@ -99,13 +99,16 @@
 .community-workspace .community-profile-articles-error {
   color:#ffd0d6;overflow-wrap:anywhere;
 }
+@media (max-width:640px) {
+  .community-workspace .community-profile-cover {min-height:160px;}
+}
 @media (max-width:760px) {
   .community-workspace .community-profile-cover {min-height:155px;padding:12px;}
   .community-workspace .community-profile-avatar {
-    width:86px;height:86px;flex-basis:86px;border-radius:20px;
+    width:112px;height:112px;flex-basis:112px;border-radius:19px;
   }
   .community-workspace .community-profile-identity {
-    margin-top:-40px;align-items:center;gap:10px;
+    margin-top:-56px;align-items:center;gap:10px;
   }
   .community-workspace .community-profile-heading {padding-top:34px;}
   .community-workspace .community-profile-hero-actions {
