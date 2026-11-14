@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { ChartPreview } from "../components/community/ChartPreview";
 import { PublicProfileArticles } from "./PublicProfileArticles";
+import { PublicProfilePhotoGallery } from "./PublicProfilePhotoGallery";
 import type { ChartDocument } from "./chartDocument";
 import {
   communityPostUrl, publicPostUrl, publicCommentUrl, publicCommentIdFromSearch,
@@ -780,9 +781,9 @@ export function PublicProfile() {
               </span>}
               {item.title && <h3>{item.title}</h3>}
               {item.text && <p>{item.text}</p>}
-              {!!item.photos?.length && <div className="public-profile-photos">
-                {item.photos.map((id: string) => <img key={id} loading="lazy" alt="Фото до публікації" src={base + "/posts/" + item.id + "/media/" + id} />)}
-              </div>}
+              {!!item.photos?.length && <PublicProfilePhotoGallery
+                ids={item.photos} postId={item.id} base={base}
+                label={item.title || "Фото до публікації"} />}
               {item.chart && <>
                 <ChartPreview document={item.chart} onOpen={() => void openChart(item.id)} />
                 <a className="public-profile-chart-deep-link"
