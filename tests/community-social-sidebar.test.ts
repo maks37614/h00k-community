@@ -11,7 +11,12 @@ test('Community sidebar displays the authenticated user, not hardcoded mock trad
   assert.match(page, /className="community-sidebar"/);
   assert.match(page, /<CommunityConceptProfile/);
   assert.match(concept, /profile\?\.displayName \?\? user\?\.displayName/);
-  assert.match(concept, /profile\?\.community\?\.status\?\.text/);
+  assert.match(concept, /const currentStatus = profile\?\.community\?\.status/);
+  assert.match(concept, /currentStatus\?\.text \?\? info\?\.status\?\.text/);
+  assert.match(concept, /updateProfileData\(\{ community: \{ bio: value \} \}\)/);
+  assert.match(concept, /status: \{ text: value, audience: currentStatus\?\.audience \?\? "private" \}/);
+  assert.match(concept, /Змінити свій статус/);
+  assert.match(concept, /Редагувати опис/);
   assert.match(concept, /apiJson\("\/api\/community\/awards"\)/);
   assert.match(page, /setViewProfile\(null\); setTab\("profile"\);/);
   assert.doesNotMatch(page, /TradingAtlas|INITIAL_PROFILES/);
