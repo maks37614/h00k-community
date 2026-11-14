@@ -268,6 +268,49 @@ test("guest /u/ wall shows only opt-in public comments, post deep links and aggr
   assert.equal((await call(root + "/comments")).res.status, 404);
 });
 
+test("owner can feature only own public posts and revocation hides the pinned post immediately", async () => {
+  const owner = await named("featured-trader");
+  const another = await named("featured-other");
+  const featuredId = await post(owner, { title: "Перевірений відкритий розбір", text: "Реальна ідея, без прихованих полів" });
+  const privateId = await post(owner, { title: "Секретний розбір", text: "PRIVATE_FEATURED_CONTENT" }, "private");
+  const foreignId = await post(another, { title: "Чужий допис", text: "Інший власник" });
+
+  const endpoint = "/api/account/profile";
+  const pin = (actor: Actor, id: any) => call(endpoint, actor, "PATCH", {
+    community: { featuredPublicPostId: id },
+  });
+  assert.equal((await pin(owner, "not-a-uuid")).res.status, 400);
+  assert.equal((await pin(owner, foreignId)).res.status, 403);
+  assert.equal((await pin(owner, privateId)).res.status, 403);
+  assert.equal((await pin(another, featuredId)).res.status, 403);
+  const result = await pin(owner, featuredId);
+  assert.equal(result.res.status, 200, result.text);
+  assert.equal(result.data.profile.community.featuredPublicPostId, featuredId);
+
+  const publicUrl = "/api/public/profiles/featured-trader";
+  const first = await call(publicUrl);
+  assert.equal(first.res.status, 200, first.text);
+  assert.equal(first.data.profile.featuredPost.id, featuredId);
+  assert.equal(first.data.profile.featuredPost.title, "Перевірений відкритий розбір");
+  assert.doesNotMatch(first.text, /PRIVATE_FEATURED_CONTENT|password_hash|privateId|mfa_secret/);
+
+  // Direct SQL audience change represents an independent edit outside the pin UI.
+  await db.query("UPDATE hc_items SET audience='private' WHERE id=$1", [featuredId]);
+  const hidden = await call(publicUrl);
+  assert.equal(hidden.res.status, 200);
+  assert.equal(hidden.data.profile.featuredPost, null);
+  assert.doesNotMatch(hidden.text, /Реальна ідея/);
+  await db.query("UPDATE hc_items SET audience='public' WHERE id=$1", [featuredId]);
+  assert.equal((await call(publicUrl)).data.profile.featuredPost?.id, featuredId);
+  await db.query("UPDATE hc_items SET deleted=true WHERE id=$1", [featuredId]);
+  assert.equal((await call(publicUrl)).data.profile.featuredPost, null);
+
+  const unpin = await pin(owner, null);
+  assert.equal(unpin.res.status, 200, unpin.text);
+  assert.equal(unpin.data.profile.community.featuredPublicPostId, null);
+  assert.equal((await call(publicUrl)).data.profile.featuredPost, null);
+});
+
 test("saved public chart is fetched only explicitly and revocation closes direct chart links", async () => {
   const a = await named("chart-owner"), document = snapshot();
   const id = await saveChart(db, await policy(db, a.id), document), item = await post(a, { text: "saved setup" }, "public", id);
