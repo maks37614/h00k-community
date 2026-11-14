@@ -7,6 +7,7 @@ export type ArchiveScorePayload = {
   version: 1;
   issuer: "h00k.top";
   purpose: "archive-score-record";
+  rubric: "regular-flow-72-13-15-v1";
   archiveId: string;
   symbol: string;
   exchange: "binance" | "bybit";
@@ -27,7 +28,7 @@ export type SignedArchiveScoreProof = {
 };
 
 const payloadKeys = [
-  "version", "issuer", "purpose", "archiveId", "symbol", "exchange",
+  "version", "issuer", "purpose", "rubric", "archiveId", "symbol", "exchange",
   "marketType", "timeframe", "score", "entry", "stop", "target",
   "assessedAt", "issuedAt", "expiresAt",
 ];
@@ -48,6 +49,7 @@ export function normalizeArchiveScoreProof(raw: unknown): SignedArchiveScoreProo
       Object.keys(p).length !== payloadKeys.length ||
       payloadKeys.some(k => !Object.hasOwn(p,k)) ||
       p.version !== 1 || p.issuer !== "h00k.top" || p.purpose !== "archive-score-record" ||
+      p.rubric !== "regular-flow-72-13-15-v1" ||
       typeof p.archiveId !== "string" || !/^[a-zA-Z0-9_-]{1,140}$/.test(p.archiveId) ||
       typeof p.symbol !== "string" || !/^[A-Z0-9]{2,30}$/.test(p.symbol) ||
       !["binance","bybit"].includes(p.exchange) ||
