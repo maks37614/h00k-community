@@ -11,6 +11,8 @@ import { PublicProfilePhotoGallery } from "./PublicProfilePhotoGallery";
 import { PublicProfileChartContext } from "./PublicProfileChartContext";
 import { PublicProfileImportFreshness, PublicProfileVerifiedAwards } from "./PublicProfileVerifiedHighlights";
 import { PublicProfileTradeWindows, type PublicTradeWindow } from "./PublicProfileTradeWindows";
+import { PublicProfileDailyHistory } from "./PublicProfileDailyHistory";
+import type { PublicDailyHistoryPayload } from "./publicProfileDailyHistoryModel";
 import type { ChartDocument } from "./chartDocument";
 import {
   communityPostUrl, communityProfileContactUrl, publicPostUrl, publicCommentUrl, publicCommentIdFromSearch,
@@ -29,6 +31,7 @@ import "./publicProfileReferenceLayout.css";
 import "./publicProfileCards.css";
 import "./publicProfileHighlights.css";
 import "./publicProfileTradeWindows.css";
+import "./publicProfileDailyHistory.css";
 
 type PublicStats = {
   totals: Array<{
@@ -186,6 +189,10 @@ function PublicSessionPanel({ ids }: { ids: string[] }) {
 
 export function PublicProfile() {
   const [profile, setProfile] = useState<PublicTrader | null>(null);
+  const [dailyHistory, setDailyHistory] = useState<PublicDailyHistoryPayload | null>(null);
+  const [dailyHistoryBusy, setDailyHistoryBusy] = useState(false);
+  const [dailyHistoryError, setDailyHistoryError] = useState("");
+  const [dailyHistoryRetry, setDailyHistoryRetry] = useState(0);
   const [items, setItems] = useState<PublicPost[]>([]);
   const [focusedPost, setFocusedPost] = useState<PublicPost | null>(null);
   const [next, setNext] = useState<string | null>(null);
@@ -428,6 +435,26 @@ export function PublicProfile() {
       .catch(e => { if (!controller.signal.aborted) setPostError(e instanceof Error ? e.message : "Допис недоступний"); });
     return () => controller.abort();
   }, [base, linkedPostId, linkedCommentId, initialLink.openChart, initialLink.tab]);
+
+  // Load this small owner-scoped aggregate only when a visitor requests the
+  // Results tab. No background polling, trades list or exchange connections.
+  useEffect(() => {
+    if (tab !== "statistics" || !profile?.statistics || dailyHistory) return;
+    const controller = new AbortController();
+    setDailyHistoryBusy(true);
+    setDailyHistoryError("");
+    void read(base + "/statistics/daily", controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted)
+          setDailyHistory(result as PublicDailyHistoryPayload);
+      })
+      .catch(cause => {
+        if (!controller.signal.aborted)
+          setDailyHistoryError(cause instanceof Error ? cause.message : "Не вдалося завантажити історію");
+      })
+      .finally(() => { if (!controller.signal.aborted) setDailyHistoryBusy(false); });
+    return () => controller.abort();
+  }, [base, tab, profile?.id, profile?.statistics, dailyHistory, dailyHistoryRetry]);
 
   const more = async () => {
     if (!next || busy || pendingFeedKey || !feedKey || loadedFeedKey !== feedKey) return;
@@ -955,6 +982,12 @@ export function PublicProfile() {
               </section>)}
             </div>}
             {!profile.statistics.totals.length && <div className="public-profile-panel">Імпортованих закриттів ще немає.</div>}
+            {dailyHistoryBusy && <p className="public-profile-loading" role="status">Завантажуємо денну історію закриттів…</p>}
+            {dailyHistoryError && <div className="public-profile-panel">
+              <p className="public-profile-error" role="status">Денна історія недоступна: {dailyHistoryError}</p>
+              <button type="button" onClick={() => setDailyHistoryRetry(v => v + 1)}>Повторити завантаження</button>
+            </div>}
+            {dailyHistory && <PublicProfileDailyHistory data={dailyHistory} />}
             {profile.statistics.windows?.length ? <PublicProfileTradeWindows windows={profile.statistics.windows} /> : null}
             <div className="public-profile-panel">
               <h3>Покриття й актуальність</h3>

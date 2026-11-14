@@ -1,0 +1,145 @@
+/* Isolated, lightweight daily count chart for anonymous public trader profiles. */
+.public-profile .public-daily-history {
+  min-width: 0;
+  padding: clamp(13px,1.5vw,20px);
+  border: 1px solid #305566;
+  border-radius: 16px;
+  background: linear-gradient(145deg,#14263a,#0a1c2d 85%);
+}
+.public-profile .public-daily-history-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.public-profile .public-daily-history-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 17px;
+  line-height: 1.4;
+}
+.public-profile .public-daily-history-heading h3 svg { color: #46dbc6; }
+.public-profile .public-daily-history-tz {
+  padding: 5px 9px;
+  border: 1px solid #2d6d6c;
+  background: #10393f;
+  color: #9ce8dc;
+  border-radius: 9px;
+  font: 700 11px ui-monospace,monospace;
+}
+.public-profile .public-daily-history-summary {
+  display: flex;
+  gap: 7px 15px;
+  flex-wrap: wrap;
+  margin: 13px 0 5px;
+  color: #a4c5d2;
+  font-size: 11px;
+}
+.public-profile .public-daily-history-summary b {
+  font-variant-numeric: tabular-nums;
+  color: #e4fff5;
+  font-size: 12px;
+}
+.public-profile .public-daily-history-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  padding: 14px 2px 3px;
+  scrollbar-width: thin;
+}
+.public-profile .public-daily-history-bars {
+  display: grid;
+  grid-template-columns: repeat(30, minmax(15px,1fr));
+  align-items: end;
+  gap: 5px;
+  min-width: 600px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.public-profile .public-daily-history-bars li {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 7px;
+}
+.public-profile .public-daily-history-bar-slot {
+  height: 138px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-bottom: 1px solid #304e64;
+  background: repeating-linear-gradient(to top, transparent, transparent 33px, #36506929 33px, #36506929 34px);
+}
+.public-profile .public-daily-history-stack {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 5px 5px 0 0;
+  opacity: .95;
+}
+.public-profile .public-daily-history-stack > span {
+  min-height: 0;
+  flex-basis: 0;
+}
+.public-profile .public-daily-history-positive {background:#2bc7a8;}
+.public-profile .public-daily-history-negative {background:#eb7f91;}
+.public-profile .public-daily-history-neutral {background:#7b9db0;}
+.public-profile .public-daily-history-bars time {
+  display: block;
+  height: 14px;
+  font-size: 9px;
+  text-align: center;
+  color: #92b5c4;
+  font-variant-numeric: tabular-nums;
+}
+.public-profile .public-daily-history-legend {
+  display: flex;
+  gap: 8px 15px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  color: #a8c4d3;
+  font-size: 11px;
+}
+.public-profile .public-daily-history-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.public-profile .public-daily-history-legend i {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  border-radius: 3px;
+}
+.public-profile .public-daily-history-notice {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 10px;
+  line-height: 1.65;
+  margin: 15px 0 0;
+  padding-top: 10px;
+  color: #9dbbc9;
+  border-top: 1px solid #2c4d5e;
+}
+.public-profile .public-daily-history-notice svg {flex: none;color:#4bd8c4;}
+.public-profile .public-daily-history-empty {
+  font-size: 12px;
+  padding: 16px;
+  border: 1px dashed #37546a;
+  border-radius: 10px;
+  background: #112739;
+  color: #b5cbd8;
+}
+@media (max-width: 640px) {
+  .public-profile .public-daily-history {padding: 12px;}
+  .public-profile .public-daily-history-bars {min-width: 560px; gap: 4px;}
+  .public-profile .public-daily-history-bar-slot {height: 120px;}
+}

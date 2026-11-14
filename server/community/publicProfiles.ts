@@ -327,6 +327,32 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
         ? "/api/public/profiles/" + owner.username + "/cover" : null,
     } });
   });
+  // Load the last 30 UTC calendar days only when a visitor opens the
+  // public Results tab. No raw trade identifiers, symbols, sources or PnL.
+  // The existing per-owner trade index supports the bounded date scan.
+  route("/statistics/daily", async (_req, res, db, owner) => {
+    if (owner.profile?.community?.statisticsAudience !== "public")
+      fail("Історія закриттів недоступна", 404);
+    const { rows } = await db.query<{
+      day: string; count: number; wins: number; losses: number; flat: number;
+    }>(
+      `SELECT to_char(closed_at AT TIME ZONE 'UTC','YYYY-MM-DD') AS day,
+        count(*)::integer AS count,
+        count(*) FILTER(WHERE pnl>0)::integer AS wins,
+        count(*) FILTER(WHERE pnl<0)::integer AS losses,
+        count(*) FILTER(WHERE pnl=0)::integer AS flat
+      FROM hc_trades
+      WHERE owner_id=$1
+        AND closed_at >= (date_trunc('day', now() AT TIME ZONE 'UTC') - interval '29 days') AT TIME ZONE 'UTC'
+        AND closed_at <= now()
+      GROUP BY 1 ORDER BY 1`, [owner.id],
+    );
+    res.json({
+      success: true, days: 30, timezone: "UTC",
+      through: new Date().toISOString().slice(0, 10),
+      items: rows.map(({ day, count, wins, losses, flat }) => ({ day, count, wins, losses, flat })),
+    });
+  });
   // Avatar and cover are explicit opt-in media. No other files become public.
   for (const kind of ["avatar", "cover"] as const) {
     route("/" + kind, async (_req, res, db, owner) => {
