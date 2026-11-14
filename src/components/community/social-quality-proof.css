@@ -96,3 +96,124 @@
   .community-workspace .community-chart-score-feedback { padding: 11px; font-size: 12px; }
   .community-workspace .community-chart-score-feedback button { width: 100%; justify-content: center; }
 }
+
+/* Signed-score provenance shown only inside the Community HookChart editor. */
+.community-workspace .community-chart-provenance {
+  min-width: 0;
+  margin: 9px 0 13px;
+  padding: 14px;
+  border-radius: 13px;
+  border: 1px solid #376575;
+  background: linear-gradient(120deg, #0e2d37, #112438);
+  color: #d3eaf0;
+}
+.community-workspace .community-chart-provenance-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.community-workspace .community-chart-provenance-heading h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 750;
+  color: #defcf3;
+}
+.community-workspace .community-chart-provenance-state {
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 6px 8px;
+  border: 1px solid #437d81;
+  border-radius: 8px;
+  color: #bbf0e3;
+  background: #143e43;
+}
+.community-workspace .community-chart-provenance-invalid .community-chart-provenance-state,
+.community-workspace .community-chart-provenance-mismatch .community-chart-provenance-state,
+.community-workspace .community-chart-provenance-expired .community-chart-provenance-state {
+  border-color: #9a5f66;
+  color: #ffdad7;
+  background: #422935;
+}
+.community-workspace .community-chart-provenance-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin: 0 0 12px;
+}
+.community-workspace .community-chart-provenance-fields > div {
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid #325562;
+  border-radius: 9px;
+  background: #0b2432;
+}
+.community-workspace .community-chart-provenance-fields dt {
+  font-size: 10px;
+  color: #99bac9;
+  margin-bottom: 5px;
+}
+.community-workspace .community-chart-provenance-fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e4f8fa;
+  font-variant-numeric: tabular-nums;
+}
+.community-workspace .community-chart-provenance-fields .community-chart-provenance-score {
+  color: #83ecd7;
+  font-size: 17px;
+  font-weight: 800;
+}
+.community-workspace .community-chart-provenance-verification {
+  padding: 10px 12px;
+  border-left: 3px solid #3ac5ab;
+  border-radius: 6px;
+  background: #104342;
+}
+.community-workspace .community-chart-provenance-invalid .community-chart-provenance-verification,
+.community-workspace .community-chart-provenance-mismatch .community-chart-provenance-verification,
+.community-workspace .community-chart-provenance-expired .community-chart-provenance-verification {
+  border-color: #d18c89;
+  background: #402935;
+}
+.community-workspace .community-chart-provenance-verification strong {
+  font-size: 12px;
+  color: #dffff9;
+}
+.community-workspace .community-chart-provenance-verification p {
+  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.community-workspace .community-chart-provenance-disclaimer {
+  color: #a9c3c8;
+  font-size: 11px;
+  line-height: 1.65;
+  margin: 9px 0 0;
+}
+.community-workspace .community-chart-provenance-remove {
+  margin-top: 12px;
+  min-height: 42px;
+  padding: 9px 12px;
+  background: #743d48;
+  border: 1px solid #c18583;
+  border-radius: 9px;
+  color: #ffe8e5;
+  font-size: 12px;
+  font-weight: 750;
+}
+.community-workspace .community-chart-provenance-remove:focus-visible {
+  outline: 2px solid #ffdda2;
+  outline-offset: 2px;
+}
+@media (max-width: 640px) {
+  .community-workspace .community-chart-provenance { padding: 11px; }
+  .community-workspace .community-chart-provenance-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .community-workspace .community-chart-provenance-remove { width: 100%; }
+}
