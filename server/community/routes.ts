@@ -24,6 +24,7 @@ import { amount, evaluateRisk } from "./risk";
 import { connectBybit, syncBybit } from "./bybit";
 import { publicProfileUrl, publicTraderAvatarPath } from "./profileNames";
 import { extractMentionHandles } from "./mentions";
+import { getCommunityPublicRoom } from "../../src/community/publicRooms";
 
 export function installCommunityRoutes(app: Express, getDb: () => Database) {
   const limits = new RequestLimits();
@@ -87,6 +88,107 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
       }
     });
   };
+
+  // Public rooms use isolated authenticated records; friend-only chats stay private.
+  route("get", "/rooms/:slug/messages", async (req, res, db, _a, p) => {
+    const room = getCommunityPublicRoom(req.params.slug);
+    if (!room) fail("Публічна кімната недоступна", 404);
+    if (req.query.after && req.query.before) fail("Оберіть один курсор");
+    const after = req.query.after ? uuid(req.query.after) : null;
+    const before = req.query.before ? uuid(req.query.before) : null;
+    const cursor = after ?? before;
+    const query =
+      "SELECT m.id,m.owner_id,m.text,m.created_at,u.profile,pn.username " +
+      "FROM hc_room_messages m JOIN hc_users u ON u.id=m.owner_id " +
+      "LEFT JOIN hc_profile_names pn ON pn.owner_id=u.id " +
+      "AND u.profile->'community'->>'publicProfileEnabled'='true' " +
+      "WHERE m.slug=$1 AND NOT m.deleted AND u.deleted_at IS NULL " +
+      "AND NOT (m.owner_id=ANY($3::uuid[])) " +
+      (after
+        ? "AND (m.created_at,m.id)>(SELECT created_at,id FROM hc_room_messages WHERE id=$2 AND slug=$1) "
+        : "AND ($2::uuid IS NULL OR (m.created_at,m.id)<(SELECT created_at,id FROM hc_room_messages WHERE id=$2 AND slug=$1)) ") +
+      (after ? "ORDER BY m.created_at ASC,m.id ASC " : "ORDER BY m.created_at DESC,m.id DESC ") +
+      "LIMIT 40";
+    const { rows } = await db.query(query, [room.slug,cursor,[...p.blocked]]);
+    const items = rows.map(row => ({
+      id:row.id, owner_id:row.owner_id, text:row.text, created_at:row.created_at,
+      author: { displayName:row.profile?.displayName ?? "Трейдер",
+        username:row.username ?? null,
+        avatarUrl:publicTraderAvatarPath(row) },
+    }));
+    res.json({ success:true, items:after ? items : items.reverse(),
+      next: !after && rows.length===40 ? rows.at(-1)!.id : null });
+  }, 50);
+  route("post", "/rooms/:slug/messages", async (req, res, db, a) => {
+    const room = getCommunityPublicRoom(req.params.slug);
+    if (!room) fail("Публічна кімната недоступна", 404);
+    const text = bounded(req.body?.text, 2000);
+    if (!text) fail("Напишіть повідомлення");
+    const id = randomUUID();
+    await db.query(
+      "INSERT INTO hc_room_messages(id,slug,owner_id,text) VALUES($1,$2,$3,$4)",
+      [id,room.slug,a.id,text],
+    );
+    res.status(201).json({ success:true, id });
+  }, 10);
+  route("delete", "/rooms/:slug/messages/:id", async (req, res, db, a) => {
+    const room = getCommunityPublicRoom(req.params.slug);
+    if (!room) fail("Публічна кімната недоступна", 404);
+    const messageId = uuid(req.params.id);
+    const moderator = (process.env.COMMUNITY_MODERATOR_IDS ?? "").split(",").map(s=>s.trim()).includes(a.id);
+    const { rows } = await db.query(
+      "UPDATE hc_room_messages SET deleted=true WHERE id=$1 AND slug=$2 AND NOT deleted " +
+      "AND (owner_id=$3 OR $4::boolean) RETURNING id",
+      [messageId,room.slug,a.id,moderator],
+    );
+    if (!rows.length) fail("Повідомлення недоступне або немає прав", 404);
+    res.json({ success:true });
+  }, 20);
+  route("post", "/rooms/:slug/messages/:id/report", async (req, res, db, a) => {
+    const room = getCommunityPublicRoom(req.params.slug);
+    if (!room) fail("Публічна кімната недоступна", 404);
+    const messageId = uuid(req.params.id);
+    const reason = bounded(req.body?.reason, 500);
+    if (reason.length < 8) fail("Опишіть причину скарги (не менше 8 символів)");
+    const found = await db.query(
+      "SELECT owner_id FROM hc_room_messages WHERE id=$1 AND slug=$2 AND NOT deleted",
+      [messageId,room.slug],
+    );
+    if (!found.rows.length || found.rows[0].owner_id === a.id)
+      fail("Неможливо поскаржитися на це повідомлення", 404);
+    await db.query(
+      "INSERT INTO hc_room_reports(id,message_id,reporter_id,reason) VALUES($1,$2,$3,$4) " +
+      "ON CONFLICT(message_id,reporter_id) DO NOTHING",
+      [randomUUID(),messageId,a.id,reason],
+    );
+    res.json({ success:true });
+  }, 5);
+  // Moderator queue is only accessible to explicitly configured accounts.
+  route("get", "/rooms/reports", async (_req, res, db, a) => {
+    const moderator = (process.env.COMMUNITY_MODERATOR_IDS ?? "").split(",").map(s=>s.trim()).includes(a.id);
+    if (!moderator) fail("Недостатньо прав", 403);
+    const { rows } = await db.query(
+      "SELECT r.id,r.message_id,r.reason,r.created_at,m.slug,m.text " +
+      "FROM hc_room_reports r JOIN hc_room_messages m ON m.id=r.message_id " +
+      "WHERE r.status='pending' ORDER BY r.created_at DESC LIMIT 100",
+    );
+    res.json({success:true,items:rows});
+  }, 20);
+  route("post", "/rooms/reports/:id/resolve", async (req, res, db, a) => {
+    const moderator = (process.env.COMMUNITY_MODERATOR_IDS ?? "").split(",").map(s=>s.trim()).includes(a.id);
+    if (!moderator) fail("Недостатньо прав", 403);
+    const reportId = uuid(req.params.id);
+    const action = req.body?.action;
+    if (action !== "remove" && action !== "dismiss") fail("Некоректне рішення");
+    const { rows } = await db.query(
+      "UPDATE hc_room_reports SET status=$2 WHERE id=$1 AND status='pending' RETURNING message_id",
+      [reportId,action==="remove" ? "removed" : "dismissed"],
+    );
+    if (!rows.length) fail("Скаргу не знайдено", 404);
+    if (action==="remove") await db.query(
+      "UPDATE hc_room_messages SET deleted=true WHERE id=$1", [rows[0].message_id]);
+    res.json({success:true});
+  }, 20);
   route("get", "/feed", async (req, res, db, _a, p) => {
     const mode = req.query.owner
         ? "wall"
