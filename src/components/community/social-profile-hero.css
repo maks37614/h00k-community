@@ -1,0 +1,127 @@
+/* Authenticated trader profiles share the public social visual language without
+   weakening the existing Community API permissions. Scope all styles to Community. */
+.community-workspace .community-profile-hero {
+  border:1px solid #284657;
+  border-radius:22px;
+  background:linear-gradient(145deg,#122238,#0c1829);
+  box-shadow:0 14px 42px #0003;
+}
+.community-workspace .community-profile-cover {
+  min-height:clamp(160px,18vw,216px);
+  background:linear-gradient(115deg,#081a2d,#0d4042 45%,#0a1b31);
+}
+.community-workspace .community-profile-cover-photo {
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;opacity:.65;z-index:0;
+}
+.community-workspace .community-profile-cover::after {
+  z-index:0;
+}
+.community-workspace .community-profile-cover > span {z-index:1;}
+.community-workspace .community-profile-identity {
+  align-items:flex-end;
+  margin-top:-56px;
+  gap:clamp(12px,2vw,20px);
+}
+.community-workspace .community-profile-avatar {
+  position:relative;
+  overflow:hidden;
+  width:112px;height:112px;flex-basis:112px;
+  border:5px solid #0e1d2f;border-radius:25px;
+  background:linear-gradient(140deg,#0b534e,#19365c);
+  box-shadow:0 8px 22px #0007;
+}
+.community-workspace .community-profile-avatar > span {
+  position:absolute;inset:0;display:grid;place-items:center;
+}
+.community-workspace .community-profile-avatar-photo {
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;background:#102332;
+}
+.community-workspace .community-profile-heading {
+  padding:36px 0 0;
+}
+.community-workspace .community-profile-heading h2 {
+  margin:2px 0 3px;font-size:clamp(22px,2.8vw,32px);
+  font-weight:850;letter-spacing:-.025em;
+}
+.community-workspace .community-profile-handle {
+  margin:0!important;color:#69eadd;font-size:13px;
+  font-family:ui-monospace,monospace;font-weight:750;
+}
+.community-workspace .community-profile-joined {
+  margin:7px 0 0!important;color:#9fb9c7;
+  font-size:11px;letter-spacing:.01em;
+}
+.community-workspace .community-profile-hero-actions {
+  display:flex;flex-wrap:wrap;align-items:center;gap:9px;
+  margin:0 0 4px auto;
+}
+.community-workspace .community-profile-hero-actions > button,
+.community-workspace .community-profile-hero-actions > a {
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:40px;padding:9px 12px;border-radius:11px;
+  background:#123d3e;border:1px solid #2e7c70;
+  color:#cafff1;text-decoration:none!important;
+  font-size:12px;font-weight:800;
+}
+.community-workspace .community-profile-hero-actions > button:hover,
+.community-workspace .community-profile-hero-actions > a:hover {
+  background:#1b514b;border-color:#3ad2bf;
+}
+.community-workspace .community-profile-hero-actions .community-profile-link {
+  margin:0;
+}
+.community-workspace .community-profile-articles {min-width:0;}
+.community-workspace .community-profile-articles > .community-section-heading {
+  margin:0 0 17px;padding:0 2px 13px;
+  border-bottom:1px solid #263f51;
+}
+.community-workspace .community-profile-articles > .community-section-heading h3 {
+  margin:5px 0 0;font-size:clamp(20px,2.3vw,26px);
+}
+.community-workspace .community-profile-articles .community-hint {
+  color:#9cbac9;line-height:1.6;font-size:12px;margin:8px 0 0;
+}
+.community-workspace .community-profile-article-list {
+  display:grid;grid-template-columns:minmax(0,1fr);gap:14px;
+}
+.community-workspace .community-profile-article-list .community-post-card {min-width:0;margin:0;}
+.community-workspace .community-profile-write-article,
+.community-workspace .community-profile-articles-more {
+  display:inline-flex;justify-content:center;align-items:center;
+  min-height:43px;padding:10px 16px;border-radius:11px;
+  border:1px solid #2a9789;background:#115448;
+  color:#e8fff9;font-weight:800;font-size:12px;
+  margin-bottom:17px;
+}
+.community-workspace .community-profile-articles-more {margin-top:15px;}
+.community-workspace .community-profile-articles-error {
+  color:#ffd0d6;overflow-wrap:anywhere;
+}
+@media (max-width:760px) {
+  .community-workspace .community-profile-cover {min-height:155px;padding:12px;}
+  .community-workspace .community-profile-avatar {
+    width:86px;height:86px;flex-basis:86px;border-radius:20px;
+  }
+  .community-workspace .community-profile-identity {
+    margin-top:-40px;align-items:center;gap:10px;
+  }
+  .community-workspace .community-profile-heading {padding-top:34px;}
+  .community-workspace .community-profile-hero-actions {
+    flex:1 1 100%;margin:5px 0 0;
+  }
+  .community-workspace .community-profile-hero-actions > a,
+  .community-workspace .community-profile-hero-actions > button {
+    flex:1 1 auto;
+  }
+}
+@media (max-width:390px) {
+  .community-workspace .community-profile-heading h2 {font-size:20px;}
+  .community-workspace .community-profile-identity {padding-inline:12px;}
+  .community-workspace .community-profile-hero-actions > a,
+  .community-workspace .community-profile-hero-actions > button {flex:1 1 100%;}
+}
+@media (prefers-reduced-motion:reduce) {
+  .community-workspace .community-profile-hero {scroll-behavior:auto;}
+}

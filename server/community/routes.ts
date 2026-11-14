@@ -591,6 +591,20 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
       "SELECT COALESCE(sum(points),0)::integer AS points FROM hc_reputation WHERE owner_id=$1",
       [id],
     );
+    const communityFields = profile.community ?? {};
+    const hasPublicAddress = communityFields.publicProfileEnabled === true &&
+      typeof rows[0].username === "string" && /^[a-z0-9-]+$/.test(rows[0].username);
+    // Own private media is served by the authenticated endpoint, other viewers
+    // see only explicit public opt-in media via the public profile endpoint.
+    const profileMediaUrl = (kind: "avatar" | "cover"): string | null => {
+      const mediaId = communityFields[kind + "MediaId"];
+      if (typeof mediaId !== "string" ||
+          !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(mediaId)) return null;
+      if (id === a.id) return "/api/community/media/" + mediaId;
+      if (hasPublicAddress && communityFields[kind + "Audience"] === "public")
+        return "/api/public/profiles/" + rows[0].username + "/" + kind;
+      return null;
+    };
     const status = profile.community?.status;
     const validStatus =
       status &&
@@ -602,7 +616,10 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
         id,
         displayName: profile.displayName ?? "Трейдер",
         joinedAt: rows[0].created_at,
-        publicUrl: profile.community?.publicProfileEnabled === true && rows[0].username ? publicProfileUrl(rows[0].username) : null,
+        publicUrl: hasPublicAddress ? publicProfileUrl(rows[0].username) : null,
+        username: hasPublicAddress ? rows[0].username : null,
+        avatarUrl: profileMediaUrl("avatar"),
+        coverUrl: profileMediaUrl("cover"),
         points: score.rows[0].points,
         bio: canShare(profile.community?.bioAudience ?? "public")
           ? profile.community?.bio

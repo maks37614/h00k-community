@@ -29,7 +29,7 @@ test("empty wall explains consent and links to authorized editing instead of inv
   assert.match(page, /section=feed/);
   assert.match(page, /profileTab=about/);
   assert.match(page, /Перший допис, фото та HookChart з'являться тут лише після публікації/);
-  assert.match(profilePage, /get\("profileTab"\) === "about"/);
+  assert.match(profilePage, /value === "about" \|\| value === "articles" \|\| value === "trades"/);
   assert.match(css, /@media\(max-width:670px\)/);
 });
 
