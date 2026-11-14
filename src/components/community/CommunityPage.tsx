@@ -1,6 +1,8 @@
 import { AccountSecuritySettings } from "./AccountSecuritySettings";
 import { PublicProfileSettings } from "./PublicProfileSettings";
 import { CommunityNotificationCenter } from "./CommunityNotificationCenter";
+import { CommunityPublicRooms } from "./CommunityPublicRooms";
+import { swipeCommunityPane } from "./socialMobileSwipe";
 import { CommunityTradingSessions } from "./CommunityTradingSessions";
 import { CommunityConceptProfile } from "./CommunityConceptProfile";
 import { ownerAvatarUrl } from "./profileMediaAvatar";
@@ -181,6 +183,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
   }),
     [revision, bump] = useState(0);
   const [mobileFeedColumn, setMobileFeedColumn] = useState<"profile" | "feed" | "sessions">("feed");
+  const mobileSwipeStart = useRef<{x:number;y:number;at:number}|null>(null);
   async function run(fn: () => Promise<unknown>) {
     setNotice("");
     try {
@@ -439,13 +442,39 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
         {([["profile","Профіль"],["feed","Стрічка"],["sessions","Сесії й нагороди"]] as const)
           .map(([key,label]) => (
             <button type="button" key={key} aria-pressed={mobileFeedColumn === key}
-              onClick={() => setMobileFeedColumn(key)}>
+              onClick={() => setMobileFeedColumn(key)}
+              onKeyDown={event => {
+                if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+                event.preventDefault();
+                setMobileFeedColumn(current => swipeCommunityPane(
+                  current, event.key === "ArrowLeft" ? 100 : -100, 0, 150
+                ));
+              }}>
               {label}
             </button>
           ))}
       </nav>}
       <div className={"community-dashboard" + (tab === "feed" ? " community-dashboard-feed" : "")}
-        data-mobile-column={tab === "feed" ? mobileFeedColumn : undefined}>
+        data-mobile-column={tab === "feed" ? mobileFeedColumn : undefined}
+        onTouchStart={event => {
+          mobileSwipeStart.current = null;
+          if (tab !== "feed" || window.innerWidth > 760 || event.touches.length !== 1) return;
+          const target = event.target as Element;
+          if (target.closest('button,a,input,textarea,select,canvas,[contenteditable="true"],[role="slider"],.community-photo-gallery,.community-chart-preview,.community-concept-feed-tabs,.community-composer,.community-profile-gallery'))
+            return;
+          mobileSwipeStart.current = {x:event.touches[0].clientX,y:event.touches[0].clientY,at:Date.now()};
+        }}
+        onTouchEnd={event => {
+          const start = mobileSwipeStart.current;
+          mobileSwipeStart.current = null;
+          if (!start || tab !== "feed" || event.changedTouches.length !== 1 ||
+              window.innerWidth > 760) return;
+          const touch = event.changedTouches[0];
+          setMobileFeedColumn(current => swipeCommunityPane(
+            current, touch.clientX - start.x, touch.clientY - start.y, Date.now() - start.at
+          ));
+        }}
+        onTouchCancel={() => { mobileSwipeStart.current = null; }}>
         <div className="community-sidebar">
           <CommunityConceptProfile
             key={user.uid}
@@ -2545,6 +2574,7 @@ function Chats({
     [chatSearch, setChatSearch] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [chatArea, setChatArea] = useState<"direct" | "rooms">("direct");
   const [createGroup, setCreateGroup] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
   const [muteMenuOpen, setMuteMenuOpen] = useState(false);
@@ -2586,6 +2616,7 @@ function Chats({
   const conversations: any[] = Array.isArray(list.data?.items) ? list.data.items : [];
   const friendAvatar = (personId: string | null | undefined): string | null =>
     (friends.data?.people ?? []).find((person: CommunityFriend) => person.id === personId)?.avatarUrl ?? null;
+  useEffect(() => { if (inviteTarget) setChatArea("direct"); }, [inviteTarget?.id]);
   useEffect(() => {
     if (!inviteTarget || !list.data) return;
     // Reuse a server-authorized direct dialog instead of spawning a duplicate.
@@ -2645,7 +2676,7 @@ function Chats({
   const myRole = currentConversation?.role as "owner" | "admin" | "member" | undefined;
   const canManageGroup = currentConversation?.is_group && (myRole === "owner" || myRole === "admin");
   const groupMembers = useResource("chat-members:" + id + ":" + groupOpen, () =>
-    id && groupOpen && currentConversation?.is_group
+    id && chatArea === "direct" && groupOpen && currentConversation?.is_group
       ? apiJson(api + "/conversations/" + encodeURIComponent(id) + "/members")
       : Promise.resolve({ items: [] }),
   );
@@ -2706,7 +2737,7 @@ function Chats({
     stayAtBottom.current = true;
     restoreOlderOffset.current = null;
     setPollError("");
-    if (!id) return;
+    if (!id || chatArea !== "direct") return;
     let active = true;
     const pull = () => {
       if (!active || document.visibilityState !== "visible" || inFlightPoll.current) return;
@@ -2727,7 +2758,7 @@ function Chats({
       document.removeEventListener("visibilitychange", pull);
       window.removeEventListener("focus", pull);
     };
-  }, [id, revision]);
+  }, [id, revision, chatArea]);
   return (
     <>
       <div className="community-section-heading community-chat-heading">
@@ -2736,6 +2767,18 @@ function Chats({
           <h2>Приватні та групові розмови</h2>
         </div>
       </div>
+      <nav className="community-chat-room-segments" aria-label="Режим повідомлень">
+        <button type="button" aria-pressed={chatArea === "direct"}
+          onClick={() => setChatArea("direct")}>
+          <MessageCircle size={16} aria-hidden="true" /> Особисті та групові
+        </button>
+        <button type="button" aria-pressed={chatArea === "rooms"}
+          onClick={() => setChatArea("rooms")}>
+          <Users size={16} aria-hidden="true" /> Кімнати трейдерів
+        </button>
+      </nav>
+      {chatArea === "rooms" ? <CommunityPublicRooms key={user?.uid}
+        onProfile={onProfile} /> : <>
       <details
         className="community-card community-chat-create"
         open={createOpen}
@@ -3101,6 +3144,7 @@ function Chats({
           )}
         </div>
       </div>
+      </>}
     </>
   );
 }

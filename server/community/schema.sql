@@ -217,3 +217,29 @@ CREATE TABLE IF NOT EXISTS hc_message_mentions (
 );
 CREATE INDEX IF NOT EXISTS hc_message_mentions_recipient
   ON hc_message_mentions(user_id,message_id);
+
+
+-- Public trader chat rooms are independent from friend-only conversations.
+-- Public messages are visible to signed-in members of Community. Never mix
+-- these records with hc_conversations or private hc_items.
+CREATE TABLE IF NOT EXISTS hc_room_messages (
+  id uuid PRIMARY KEY,
+  slug text NOT NULL CHECK(slug IN ('general','setups')),
+  owner_id uuid NOT NULL REFERENCES hc_users(id) ON DELETE CASCADE,
+  text text NOT NULL CHECK(char_length(text) BETWEEN 1 AND 2000),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  deleted boolean NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS hc_room_messages_recent
+  ON hc_room_messages(slug,created_at DESC,id DESC) WHERE NOT deleted;
+CREATE TABLE IF NOT EXISTS hc_room_reports (
+  id uuid PRIMARY KEY,
+  message_id uuid NOT NULL REFERENCES hc_room_messages(id) ON DELETE CASCADE,
+  reporter_id uuid NOT NULL REFERENCES hc_users(id) ON DELETE CASCADE,
+  reason text NOT NULL CHECK(char_length(reason) BETWEEN 8 AND 500),
+  status text NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','removed','dismissed')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(message_id,reporter_id)
+);
+CREATE INDEX IF NOT EXISTS hc_room_reports_pending
+  ON hc_room_reports(created_at DESC) WHERE status='pending';
