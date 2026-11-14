@@ -40,7 +40,8 @@ test("opening chart discussion retrieves the exact public post before revealing 
   assert.match(page, /if \(!comments\[id\]\) void loadComments\(id\)/);
   assert.match(page, /void openChartDiscussion\(chartPostId\)/);
   assert.match(page, /Переглянути обговорення/);
-  assert.match(page, /document\.getElementById\("public-comments-" \+ expandedComments\)\?\.scrollIntoView/);
+  assert.match(page, /document\.getElementById\("public-comments-" \+ expandedComments\)/);
+  assert.match(page, /target \?\? document\.getElementById/);
   assert.match(page, /communityPostUrl\(profile\.communityOrigin, item\.id\)/);
   assert.match(page, /chartExpanded \? " public-profile-workspace-expanded"/);
   assert.match(api, /route\("\/posts\/:id", async/);
