@@ -8,15 +8,16 @@ const css = readFileSync(new URL("../src/components/community/social-profile-tab
 const profile = page.slice(page.indexOf("function Profile({"), page.indexOf("\nfunction CommunitySettings("));
 
 test("real trader profiles separate wall, about, and API statistics without mock data", () => {
-  assert.match(profile, /useState<"wall" \| "about" \| "trades">\(requestedProfileSection\)/);
-  assert.match(profile, /get\("profileTab"\) === "about"/);
-  assert.match(profile, /useEffect\(\(\) => setProfileSection\(requestedProfileSection\(\)\), \[id\]\)/);
+  assert.match(profile, /type Section = "wall" \| "articles" \| "about" \| "trades"/);
+  assert.match(profile, /new URLSearchParams\(location\.hash\.split\("\?"\)\[1\] \?\? ""\)\.get\("profileTab"\)/);
+  assert.match(profile, /window\.addEventListener\("hashchange", jump\)/);
   assert.match(profile, /className="community-profile-tabs"/);
   assert.match(profile, /aria-pressed=\{profileSection === key\}/);
-  for (const name of ["Стіна", "Про трейдера", "Статистика"]) {
+  for (const name of ["Стіна", "Статті та розбори", "Про трейдера", "Статистика"]) {
     assert.ok(profile.includes('"' + name + '"'));
   }
   assert.match(profile, /profileSection === "wall" && \(/);
+  assert.match(profile, /profileSection === "articles" && \(/);
   assert.match(profile, /profileSection === "about" && \(/);
   assert.match(profile, /profileSection === "trades" && \(/);
   assert.doesNotMatch(profile, /INITIAL_PROFILES|MOCK_STATS|FAKE_PNL/);
