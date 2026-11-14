@@ -6,6 +6,7 @@ import {
   filterConversations, conversationDisplayTitle,
 } from "../src/components/community/chatModel";
 import { buildFriendDirectory } from "../src/components/community/friendsModel";
+import { publicTraderAvatarPath } from "../server/community/profileNames";
 
 const page = readFileSync(new URL("../src/components/community/CommunityPage.tsx", import.meta.url), "utf8");
 const routes = readFileSync(new URL("../server/community/routes.ts", import.meta.url), "utf8");
@@ -92,4 +93,31 @@ test("inbox has live unread filtering, social bubble alignment and keyboard send
   assert.match(css, /@media\(max-width:700px\)/);
   assert.match(css, /font-size:16px/);
   assert.doesNotMatch(css, /(^|\n)\s*(html|body)\s*\{/);
+});
+
+test("only explicitly public profile avatars reach social friend and chat surfaces", () => {
+  const person = {
+    username: "maks",
+    profile: { community: {
+      publicProfileEnabled: true, avatarAudience: "public",
+      avatarMediaId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    } },
+  };
+  assert.equal(publicTraderAvatarPath(person), "/api/public/profiles/maks/avatar");
+  assert.equal(publicTraderAvatarPath({
+    ...person, profile: { community: { ...person.profile.community, avatarAudience: "friends" } },
+  }), null);
+  assert.equal(publicTraderAvatarPath({
+    ...person, profile: { community: { ...person.profile.community, publicProfileEnabled: false } },
+  }), null);
+  assert.equal(publicTraderAvatarPath({ ...person, username: null }), null);
+  assert.equal(publicTraderAvatarPath({
+    ...person, profile: { community: { ...person.profile.community, avatarMediaId: "javascript:alert(1)" } },
+  }), null);
+  assert.match(routes, /avatarUrl: publicTraderAvatarPath\(r\)/);
+  assert.match(page, /person\.avatarUrl && <img src=\{person\.avatarUrl\}/);
+  assert.match(chat, /const friendAvatar =/);
+  assert.match(chat, /friendAvatar\(c\.peer_id\)/);
+  assert.match(chat, /friendAvatar\(item\.owner_id\)/);
+  assert.match(css, /\.community-workspace \.community-friend-avatar img/);
 });
