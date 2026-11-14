@@ -55,6 +55,7 @@ import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from ".
 import { canSendCommunityContent, communityAudienceHint, validateCommunityPhoto, MAX_COMMUNITY_PHOTOS } from "./composerPolicy";
 import { canShareReplyWithAudience, normalizeReplyAudience, replyAudienceOptions, replyBody, replyPreviewText, type ReplySource, type CommentAudience } from "./commentReplyModel";
 import "./social-composer-posts.css";
+import "./social-quality-proof.css";
 import "./social-edit-items.css";
 import "./social-photo-gallery.css";
 import "./social-profile-actions.css";
