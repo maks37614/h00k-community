@@ -33,7 +33,7 @@ test("read-only comment links use a privacy-checked API and keep older linked co
   assert.match(api, /c\.id=\$1 AND c\.parent_id=\$2 AND c\.kind='comment' AND c\.audience='public'/);
   assert.match(api, /await rules\.visible\(comment\)/);
   assert.match(api, /await rules\.canReadChart\(comment\.chart_id\)/);
-  assert.match(api, /publicCommentCard\(db, rules, comment, parent\.id\)/);
+  assert.match(api, /publicCommentCard\(db, rules, comment, parent\.id, owner\.username\)/);
   assert.match(page, /publicCommentIdFromSearch\(navigationSearch\)/);
   assert.match(page, /setFocusedCommentId\(result\.item\.id\)/);
   assert.match(page, /setExpandedComments\(linkedPostId\)/);

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Award, Gift, Globe2, Settings, Star, UsersRound } from "lucide-react";
+import { Award, Check, Gift, Globe2, Pencil, Settings, Star, UsersRound, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { apiJson } from "../../utils/apiFetch";
 import { TRADING_SESSIONS, formatZonedTime, getSessionWindow, resolveTimeZone } from "../../utils/tradingSessions";
@@ -14,10 +14,15 @@ export function CommunityConceptProfile({
   onSettings: () => void;
   version?: number;
 }) {
-  const { user, profile } = useAuth();
+  const { user, profile, updateProfileData } = useAuth();
   const [info, setInfo] = useState<{ points?: number; bio?: string; status?: { text?: string } } | null>(null);
   const [awards, setAwards] = useState<{ balance: number; received: number; gifted: number } | null>(null);
   const [friends, setFriends] = useState<number | null>(null);
+  const [editing, setEditing] = useState<"status" | "bio" | null>(null);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editSuccess, setEditSuccess] = useState("");
   useEffect(() => {
     if (!user?.uid) return;
     let live = true;
@@ -45,8 +50,62 @@ export function CommunityConceptProfile({
   }, [profile?.community?.tradingSessionIds, zone]);
   const name = profile?.displayName ?? user?.displayName ?? "Трейдер";
   const photo = ownerAvatarUrl(profile?.community) ?? user?.photoURL;
-  const bio = info?.bio || profile?.community?.bio || "";
-  const status = info?.status?.text || profile?.community?.status?.text || "";
+  // The account profile is the source of truth immediately after PATCH.
+  // A separate sidebar GET may be stale or may not contain recent edits.
+  const bio = profile?.community?.bio ?? info?.bio ?? "";
+  const currentStatus = profile?.community?.status;
+  const status = currentStatus?.expiresAt && Date.parse(currentStatus.expiresAt) <= Date.now()
+    ? "" : (currentStatus?.text ?? info?.status?.text ?? "");
+
+  function beginEdit(kind: "bio" | "status") {
+    if (saving) return;
+    setDraft(kind === "bio" ? bio : status);
+    setEditing(kind);
+    setEditError("");
+    setEditSuccess("");
+  }
+  function cancelEdit() {
+    if (saving) return;
+    setEditing(null);
+    setEditError("");
+  }
+  async function saveInline(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editing || saving || !user) return;
+    const kind = editing;
+    const value = draft.trim();
+    if (value.length > (kind === "bio" ? 2000 : 280)) {
+      setEditError("Текст перевищує дозволену довжину");
+      return;
+    }
+    setSaving(true);
+    setEditError("");
+    setEditSuccess("");
+    try {
+      if (kind === "bio") {
+        await updateProfileData({ community: { bio: value } });
+      } else {
+        // This is self-reported, never a live exchange / online status.
+        // Preserve explicit audience preference; default to private.
+        await updateProfileData({ community: {
+          status: { text: value, audience: currentStatus?.audience ?? "private" },
+        } });
+      }
+      setEditing(null);
+      setEditSuccess(kind === "bio" ? "Опис профілю збережено" : "Статус збережено");
+    } catch (error) {
+      setEditError(error instanceof Error ? error.message : "Не вдалося зберегти");
+    } finally {
+      setSaving(false);
+    }
+  }
+  useEffect(() => {
+    // Never show previous account's drafts or success notices after logout.
+    setEditing(null);
+    setDraft("");
+    setEditError("");
+    setEditSuccess("");
+  }, [user?.uid]);
   return (
     <section className="community-concept-profile" aria-label="Профіль користувача">
       <div className="community-concept-identity">
@@ -57,9 +116,31 @@ export function CommunityConceptProfile({
           <button type="button" className="community-concept-name" onClick={onProfile}>{name}</button>
           <span className="community-concept-muted">h00k Community</span>
           {status && <span className="community-concept-status"><span aria-hidden="true">●</span> {status}</span>}
+          <button type="button" className="community-concept-text-button"
+            onClick={() => beginEdit("status")} disabled={saving} aria-label="Змінити свій статус">
+            <Pencil size={12} aria-hidden="true" /> {status ? "Змінити статус" : "Додати статус"}
+          </button>
         </div>
         <button type="button" className="community-concept-settings" onClick={onSettings} aria-label="Налаштування профілю"><Settings size={18} /></button>
       </div>
+      {editing === "status" && <form className="community-concept-inline-editor"
+        aria-label="Редагування свого статусу" onSubmit={e => void saveInline(e)}>
+        <label htmlFor="community-quick-status">Мій статус (до 280 символів)</label>
+        <input id="community-quick-status" list="community-status-presets" maxLength={280}
+          value={draft} disabled={saving} onChange={e => setDraft(e.target.value)}
+          placeholder="Аналізую ринок" autoFocus />
+        <datalist id="community-status-presets">
+          {["Аналізую ринок", "Шукаю формації", "Стежу за ліквідністю", "Поза ринком / відпочиваю"].map(option => (
+            <option key={option} value={option} />
+          ))}
+        </datalist>
+        <small>Ваш особистий опис, не підтвердження присутності онлайн чи відкритої угоди.
+          Аудиторія залишається як у налаштуваннях профілю.</small>
+        <div className="community-concept-inline-actions">
+          <button type="button" disabled={saving} onClick={cancelEdit}><X size={14} aria-hidden="true" /> Скасувати</button>
+          <button type="submit" disabled={saving}><Check size={14} aria-hidden="true" /> {saving ? "Зберігаємо…" : "Зберегти"}</button>
+        </div>
+      </form>}
       <div className="community-concept-sidebar-section">
         <h3><Globe2 size={16} /> Торгові сесії (обрані)</h3>
         {sessions.length ? sessions.map(s => <div className="community-concept-session-tag" key={s.id}><span>{s.flag} {s.city}</span><time>{s.time}</time></div>) : (
@@ -69,8 +150,28 @@ export function CommunityConceptProfile({
       </div>
       <div className="community-concept-sidebar-section">
         <h3>Про мене</h3>
-        <p className="community-concept-bio">{bio || "Додайте опис свого торгового стилю у профілі."}</p>
-        <button type="button" className="community-concept-text-button" onClick={onProfile}>Редагувати профіль</button>
+        {editing === "bio" ? (
+          <form className="community-concept-inline-editor" aria-label="Редагування опису профілю"
+            onSubmit={e => void saveInline(e)}>
+            <label htmlFor="community-quick-bio">Коротко про себе</label>
+            <textarea id="community-quick-bio" maxLength={2000} rows={4} value={draft}
+              onChange={e => setDraft(e.target.value)} disabled={saving}
+              autoFocus placeholder="Розкажіть про свій підхід до трейдингу" />
+            <small>{draft.length}/2000 · Видимість опису налаштовується окремо в профілі.</small>
+            <div className="community-concept-inline-actions">
+              <button type="button" disabled={saving} onClick={cancelEdit}><X size={14} aria-hidden="true" /> Скасувати</button>
+              <button type="submit" disabled={saving}><Check size={14} aria-hidden="true" /> {saving ? "Зберігаємо…" : "Зберегти"}</button>
+            </div>
+          </form>
+        ) : <>
+          <p className="community-concept-bio">{bio || "Додайте опис свого торгового стилю у профілі."}</p>
+          <button type="button" className="community-concept-text-button" onClick={() => beginEdit("bio")}>
+            <Pencil size={12} aria-hidden="true" /> Редагувати опис
+          </button>
+          <button type="button" className="community-concept-text-button" onClick={onProfile}>Усі налаштування профілю</button>
+        </>}
+        {editError && <p className="community-concept-edit-error" role="alert">{editError}</p>}
+        {editSuccess && <p className="community-concept-edit-success" role="status">{editSuccess}</p>}
       </div>
       <div className="community-concept-sidebar-section community-concept-metrics">
         <h3>Статистика Community</h3>

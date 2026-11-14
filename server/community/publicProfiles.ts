@@ -130,9 +130,16 @@ async function publicPostCard(db: Database, rules: Policy, row: Item) {
   };
 }
 
+type PublicCommentWithAvatar = Item & {
+  author_profile: Record<string, any>;
+  avatar_media_id: string | null;
+};
+
 /** Public comment payload shared by the list and exact-comment permalink.
  * Do not expose raw body, account fields, private quoted sources, or chart docs. */
-async function publicCommentCard(db: Database, rules: Policy, row: Item & { author_profile: Record<string, any> }, postId: string) {
+async function publicCommentCard(
+  db: Database, rules: Policy, row: PublicCommentWithAvatar, postId: string, profileName: string,
+) {
   const source = row.body?.sourceItemId ? await rules.item(row.body.sourceItemId) : null;
   const visibleSource = source && (await rules.visible(source)) &&
     (!source.chart_id || await rules.canReadChart(source.chart_id)) ? source : null;
@@ -144,6 +151,12 @@ async function publicCommentCard(db: Database, rules: Policy, row: Item & { auth
     id: row.id,
     createdAt: row.created_at,
     author: text(row.author_profile?.displayName, 100) || "Трейдер",
+    authorAvatarUrl: row.author_profile?.community?.publicProfileEnabled === true &&
+      row.author_profile?.community?.avatarAudience === "public" &&
+      typeof row.avatar_media_id === "string"
+      ? "/api/public/profiles/" + profileName + "/posts/" + postId +
+        "/comments/" + row.id + "/avatar"
+      : null,
     text: text(row.body?.text, 20_000),
     quote: visibleSource ? text(visibleSource.body?.text, 180) : "",
     replyToId: visibleSource?.kind === "comment" && visibleSource.parent_id === postId
@@ -401,8 +414,10 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
   route("/posts/:id/comments", async (req, res, db, owner, rules) => {
     const parent = await publicPost(db, rules, owner.id, req.params.id);
     const after = req.query.after ? uuid(req.query.after) : null;
-    const { rows } = await db.query<(Item & { author_profile: Record<string, any> })>(
-      `SELECT c.*,u.profile AS author_profile FROM hc_items c JOIN hc_users u ON u.id=c.owner_id
+    const { rows } = await db.query<PublicCommentWithAvatar>(
+      `SELECT c.*,u.profile AS author_profile,m.id AS avatar_media_id
+       FROM hc_items c JOIN hc_users u ON u.id=c.owner_id
+       LEFT JOIN hc_media m ON m.owner_id=c.owner_id AND m.id::text=(u.profile->'community'->>'avatarMediaId')
        WHERE c.parent_id=$1 AND c.kind='comment' AND c.audience='public' AND c.conversation_id IS NULL AND NOT c.deleted
        AND ($2::uuid IS NULL OR (c.created_at,c.id)>(SELECT created_at,id FROM hc_items
          WHERE id=$2 AND parent_id=$1 AND kind='comment' AND audience='public' AND NOT deleted))
@@ -412,7 +427,7 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
     const items = [];
     for (const row of rows.slice(0, 20)) {
       if (!(await rules.visible(row)) || (row.chart_id && !(await rules.canReadChart(row.chart_id)))) continue;
-      items.push(await publicCommentCard(db, rules, row, parent.id));
+      items.push(await publicCommentCard(db, rules, row, parent.id, owner.username));
     }
     res.json({ success: true, items, next: rows.length > 20 ? rows[19].id : null });
   });
@@ -422,8 +437,10 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
   route("/posts/:id/comments/:comment", async (req, res, db, owner, rules) => {
     const parent = await publicPost(db, rules, owner.id, req.params.id);
     const commentId = uuid(req.params.comment);
-    const { rows } = await db.query<(Item & { author_profile: Record<string, any> })>(
-      `SELECT c.*,u.profile AS author_profile FROM hc_items c JOIN hc_users u ON u.id=c.owner_id
+    const { rows } = await db.query<PublicCommentWithAvatar>(
+      `SELECT c.*,u.profile AS author_profile,m.id AS avatar_media_id
+       FROM hc_items c JOIN hc_users u ON u.id=c.owner_id
+       LEFT JOIN hc_media m ON m.owner_id=c.owner_id AND m.id::text=(u.profile->'community'->>'avatarMediaId')
        WHERE c.id=$1 AND c.parent_id=$2 AND c.kind='comment' AND c.audience='public'
          AND c.conversation_id IS NULL AND NOT c.deleted`,
       [commentId, parent.id],
@@ -432,7 +449,35 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
     if (!comment || !(await rules.visible(comment)) ||
         (comment.chart_id && !(await rules.canReadChart(comment.chart_id))))
       fail("Коментар недоступний", 404);
-    res.json({ success: true, item: await publicCommentCard(db, rules, comment, parent.id) });
+    res.json({ success: true, item: await publicCommentCard(db, rules, comment, parent.id, owner.username) });
+  });
+  // The same-profile URL works on personal wildcard hosts without opening
+  // any extra cross-profile endpoints or weakening the read-only host policy.
+  route("/posts/:id/comments/:comment/avatar", async (req, res, db, owner, rules) => {
+    const parent = await publicPost(db, rules, owner.id, req.params.id);
+    const commentId = uuid(req.params.comment);
+    const { rows } = await db.query<PublicCommentWithAvatar>(
+      `SELECT c.*,u.profile AS author_profile,m.id AS avatar_media_id
+       FROM hc_items c JOIN hc_users u ON u.id=c.owner_id
+       LEFT JOIN hc_media m ON m.owner_id=c.owner_id AND m.id::text=(u.profile->'community'->>'avatarMediaId')
+       WHERE c.id=$1 AND c.parent_id=$2 AND c.kind='comment' AND c.audience='public'
+         AND c.conversation_id IS NULL AND NOT c.deleted`,
+      [commentId, parent.id],
+    );
+    const row = rows[0];
+    if (!row || !(await rules.visible(row)) ||
+        (row.chart_id && !(await rules.canReadChart(row.chart_id))))
+      fail("Аватар недоступний", 404);
+    if (row.author_profile?.community?.avatarAudience !== "public" ||
+        row.author_profile?.community?.publicProfileEnabled !== true ||
+        typeof row.avatar_media_id !== "string")
+      fail("Аватар недоступний", 404);
+    const mediaId = uuid(row.avatar_media_id);
+    try {
+      res.type("image/webp").send(await fs.readFile(path.join(mediaRoot(), mediaId + ".webp")));
+    } catch {
+      fail("Аватар недоступний", 404);
+    }
   });
   route("/posts/:id/chart", async (req, res, db, owner, rules) => {
     const row = await publicPost(db, rules, owner.id, req.params.id);

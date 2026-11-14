@@ -86,6 +86,7 @@ type PublicComment = {
   id: string;
   createdAt: string;
   author: string;
+  authorAvatarUrl?: string | null;
   text: string;
   quote: string;
   replyToId?: string | null;
@@ -134,7 +135,11 @@ function PublicCommentCard({ comment, focused, copied, onShare }: {
       aria-label={focused ? "Коментар за посиланням" : undefined}>
       {focused && <span className="public-profile-featured">Коментар за посиланням</span>}
       <div className="public-profile-comment-head">
-        <span className="public-profile-post-avatar" aria-hidden="true">{comment.author.slice(0, 1).toUpperCase()}</span>
+        <span className="public-profile-post-avatar" aria-hidden="true">
+          {comment.author.slice(0, 1).toUpperCase()}
+          {comment.authorAvatarUrl && <img src={comment.authorAvatarUrl} alt=""
+            loading="lazy" decoding="async" onError={e => { e.currentTarget.hidden = true; }} />}
+        </span>
         <div><strong>{comment.author}</strong><time dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleString("uk-UA")}</time></div>
       </div>
       {comment.quote && <blockquote>{comment.quote}</blockquote>}
