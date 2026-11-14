@@ -1429,6 +1429,38 @@ export function installMediaRoutes(app: Express, getDb: () => Database) {
       }
     },
   );
+  // Authenticated, owner-only photo picker. Never lists another account's
+  // media, never exposes private files through the public profile endpoint.
+  app.get("/api/community/media/library", async (req, res) => {
+    res.set({ "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" });
+    try {
+      const db = getDb();
+      const a = await accountFor(db, req);
+      if (!a) fail("Увійдіть у свій акаунт", 401);
+      limits.take("media-library:" + a.id, 30);
+      const before = req.query.before === undefined ? null : uuid(req.query.before);
+      const { rows } = await db.query<{ id: string; bytes: number; created_at: Date }>(
+        `SELECT id,bytes,created_at FROM hc_media
+         WHERE owner_id=$1 AND
+           ($2::uuid IS NULL OR (created_at,id) <
+             (SELECT created_at,id FROM hc_media WHERE owner_id=$1 AND id=$2))
+         ORDER BY created_at DESC,id DESC LIMIT 19`,
+        [a.id, before],
+      );
+      res.json({
+        success: true,
+        items: rows.slice(0, 18).map(row => ({
+          id: row.id, bytes: row.bytes, createdAt: row.created_at,
+        })),
+        next: rows.length > 18 ? rows[17].id : null,
+      });
+    } catch (error: any) {
+      res.status(error.status ?? 503).json({
+        success: false,
+        error: error.status ? error.message : "Фото тимчасово недоступні",
+      });
+    }
+  });
   app.get("/api/community/media/:id", async (req, res) => {
     try {
       const db = getDb(),
