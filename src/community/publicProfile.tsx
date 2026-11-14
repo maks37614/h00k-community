@@ -6,10 +6,11 @@ import {
   Globe2, Sparkles, Layers3, Lightbulb, GraduationCap, Trophy, Star, Send,
 } from "lucide-react";
 import { ChartPreview } from "../components/community/ChartPreview";
+import { PublicProfileArticles } from "./PublicProfileArticles";
 import type { ChartDocument } from "./chartDocument";
 import {
   communityPostUrl, publicPostUrl, publicCommentUrl, publicCommentIdFromSearch,
-  publicChartGalleryUrl, publicChartPostUrl, publicProfileDeepLink,
+  publicChartGalleryUrl, publicChartPostUrl, publicArticleUrl, publicProfileDeepLink,
   publicProfileDate, visibleReactionSummary,
   type PublicReactionSummary,
 } from "./publicProfileViewModel";
@@ -331,6 +332,13 @@ export function PublicProfile() {
               setPostError(e instanceof Error ? e.message : "Графік недоступний");
           }
         } else {
+          if (initialLink.tab === "articles") {
+            setTab("articles");
+            if (result.item.category !== "education") {
+              setPostError("Цей допис не належить до відкритих навчальних статей.");
+            }
+            return;
+          }
           setTab("wall");
           if (!linkedCommentId) return;
           try {
@@ -501,6 +509,19 @@ export function PublicProfile() {
       }
     }
     await copy(url, id);
+  };
+  const shareArticle = async (id: string) => {
+    if (!profile) return;
+    const url = publicArticleUrl(profile.url, id);
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: profile.displayName + " · стаття у h00k Community", url });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+    await copy(url, "article:" + id);
   };
   const shareChart = async (id: string) => {
     if (!profile) return;
@@ -732,7 +753,18 @@ export function PublicProfile() {
               {copied === "error:gallery" && <small role="status">Не вдалося скопіювати адресу галереї.</small>}
             </div>}
             {postError && <p className="public-profile-error" role="status">Допис за посиланням недоступний: {postError}</p>}
-            {visibleWall.map(item => <article className="public-profile-panel public-profile-post" key={item.id} id={"post-" + item.id}>
+            {tab === "articles" && <PublicProfileArticles
+              posts={visibleWall}
+              selected={initialLink.tab === "articles" && linkedPostId &&
+                focusedPost?.id === linkedPostId && focusedPost.category === "education" ? focusedPost : null}
+              pending={initialLink.tab === "articles" && !!linkedPostId && !focusedPost && !postError}
+              profile={profile}
+              base={base}
+              copied={copied}
+              onShare={id => void shareArticle(id)}
+              onOpenChart={id => void openChart(id)}
+            />}
+            {tab !== "articles" && visibleWall.map(item => <article className="public-profile-panel public-profile-post" key={item.id} id={"post-" + item.id}>
               {focusedPost?.id === item.id && <span className="public-profile-featured">Допис за посиланням</span>}
               {pinned?.id === item.id && <span className="public-profile-pinned-post"><Sparkles size={14} aria-hidden="true" /> Закріплений допис трейдера</span>}
               <div className="public-profile-post-author">
@@ -797,7 +829,7 @@ export function PublicProfile() {
             {pendingFeedKey === feedKey && <p className="public-profile-loading" role="status">
               {tab === "setups" ? "Шукаємо відкриті розбори HookChart…" : tab === "articles" ? "Завантажуємо статті та розбори…" : "Завантажуємо публікації…"}
             </p>}
-            {!visibleWall.length && pendingFeedKey !== feedKey && loadedFeedKey === feedKey && !error && <div className="public-profile-panel public-profile-empty-state">
+            {!visibleWall.length && pendingFeedKey !== feedKey && loadedFeedKey === feedKey && !error && !(tab === "articles" && linkedPostId && !postError) && <div className="public-profile-panel public-profile-empty-state">
               <BookOpenText size={28} aria-hidden="true" />
               <h3>{tab === "setups" ? "Публічних графіків поки немає" : tab === "articles" ? "Публічних статей поки немає" : postCategory === "all" ? "Публікацій поки немає" : "У цій категорії поки немає дописів"}</h3>
               <p>Показуються тільки дозволені автором публікації серед уже завантажених. {loadedNext ? "Нижче можна завантажити наступні дописи." : "Поверніться до загальної стрічки."}</p>
