@@ -271,3 +271,95 @@
   .community-workspace .community-social-mobile-columns button {font-size:10px;}
   .community-workspace .community-articles-audience button {flex:1 1 auto;}
 }
+
+/* Social left column: real approved friends, no fake online status or PnL. */
+.community-workspace .community-concept-friend-shortcuts h3 {
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.community-workspace .community-concept-friends-list {
+  display:grid;
+  gap:6px;
+  min-width:0;
+  margin:10px 0 12px;
+}
+.community-workspace .community-concept-friend-row {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-width:0;
+  padding:7px;
+  border:1px solid #293d50;
+  border-radius:12px;
+  background:#0c1929;
+}
+.community-workspace .community-concept-friend-avatar {
+  display:grid;
+  position:relative;
+  flex:0 0 36px;
+  place-items:center;
+  width:36px;
+  height:36px;
+  border:1px solid #368b81;
+  border-radius:11px;
+  background:linear-gradient(130deg,#12665e,#203d57);
+  color:#d9fff5;
+  font-size:13px;
+  font-weight:840;
+  overflow:hidden;
+}
+.community-workspace .community-concept-friend-avatar img {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:inherit;
+}
+.community-workspace .community-concept-friend-avatar img[hidden] {display:none;}
+.community-workspace .community-concept-friend-name {
+  display:grid;
+  flex:1;
+  min-width:0;
+  gap:3px;
+  margin:0;
+  padding:4px 0;
+  border:0;
+  text-align:left;
+  background:transparent;
+}
+.community-workspace .community-concept-friend-name strong {
+  color:#f2f9ff;
+  font-size:12px;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.community-workspace .community-concept-friend-name small {
+  color:#7ae7d0;
+  font-size:10px;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.community-workspace .community-concept-friend-message {
+  display:grid;
+  flex:0 0 38px;
+  place-items:center;
+  width:38px;
+  height:38px;
+  padding:8px;
+  border:1px solid #277c73;
+  border-radius:10px;
+  background:#12463f;
+  color:#b9fceb;
+}
+.community-workspace .community-concept-friend-message:hover {
+  border-color:#21caa8;
+  background:#146154;
+}
+.community-workspace .community-concept-friend-row :is(button):focus-visible {
+  outline:2px solid #51f7d6;
+  outline-offset:2px;
+}
