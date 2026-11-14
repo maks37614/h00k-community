@@ -422,7 +422,7 @@ test("signed h00k archive score survives an authorized public chart, then disapp
       { id: "saved-t", type: "target", label: "TP", price: 110, color: "#00ff00" },
     );
     const payload: ArchiveScorePayload = {
-      version: 1, issuer: "h00k.top", purpose: "archive-score-record",
+      version: 1, issuer: "h00k.top", purpose: "archive-score-record", rubric: "regular-flow-72-13-15-v1",
       archiveId: "arch_approved_1", symbol: "BTCUSDT", exchange: "binance",
       marketType: "futures", timeframe: "1m", score: 83,
       entry: 100, stop: 95, target: 110,
