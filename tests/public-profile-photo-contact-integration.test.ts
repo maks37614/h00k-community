@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { publicPhotoIds, publicPhotoUrl } from "../src/community/PublicProfilePhotoGallery";
+import { publicPhotoIds, publicPhotoUrl } from "../src/community/publicProfilePhotosModel";
 import { communityProfileContactUrl } from "../src/community/publicProfileViewModel";
 
 const gallery = readFileSync(new URL("../src/community/PublicProfilePhotoGallery.tsx", import.meta.url), "utf8");
