@@ -6,6 +6,7 @@ import { CommunityConceptProfile } from "./CommunityConceptProfile";
 import { CommunityAwardPanel } from "./CommunityAwardPanel";
 import { STRATEGY_PRESETS } from "../hookchart/strategyEngine";
 import { saveChartArchive } from "../../community/archiveChart";
+import { chartFromScreenerHandoff } from "../../community/screenerHandoff";
 import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, useId } from "react";
 import {
   Users,
@@ -226,6 +227,27 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
     window.addEventListener("hashchange", jump);
     return () => window.removeEventListener("hashchange", jump);
   }, []);
+  // Import is explicit on h00k.top. Clear the fragment before placing any
+  // market bars in React state, and NEVER publish without user confirmation.
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
+    const packet = query.get("handoff");
+    if (!packet) return;
+    query.delete("handoff");
+    const safeHash = "#community?" + (query.toString() || "section=feed");
+    window.history.replaceState(window.history.state, "", window.location.pathname +
+      window.location.search + safeHash);
+    try {
+      const document = chartFromScreenerHandoff(packet);
+      setTab("feed");
+      setViewProfile(null);
+      setDraft({ document, target: { kind: "post" } });
+      setNotice("Чернетку за посиланням підготовлено. Походження свічок у посиланні не перевірене незалежно. Перевірте рівні; опублікувати її можете тільки ви.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Не вдалося імпортувати форму графіка.");
+    }
+  }, []);
+
   const openChart = (item: any, target?: Target) =>
     run(async () => {
       const data = await apiJson(api + "/charts/" + item.chart_id);
@@ -1458,7 +1480,7 @@ function ChartDialog({
   run: Run;
 }) {
   const { user } = useAuth();
-  const [qualityProofText, setQualityProofText] = useState("");
+  const [qualityProofText, setQualityProofText] = useState(() => !draft.parentId && draft.document.qualityProof ? JSON.stringify(draft.document.qualityProof) : "");
   const [text, setText] = useState(""),
     [category, setCategory] = useState("analysis"),
     [audience, setAudience] = useState(() => draft.target.replyTo ? normalizeReplyAudience(draft.target.replyTo.audience) : "private"),
