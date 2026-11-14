@@ -222,6 +222,11 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
     const jump = () => {
       const query = new URLSearchParams(location.hash.split("?")[1] ?? "");
       const section = query.get("section");
+      if (!section && location.hash.startsWith("#community")) {
+        // Back/forward from a deep-linked profile must restore the feed.
+        setViewProfile(null);
+        setTab("feed");
+      }
       if (section && (["feed","day","sessions","strategies","trades","learning","chats","friends","profile","settings"] as string[]).includes(section)) {
         if (section === "profile") {
           const owner = query.get("owner");
@@ -234,7 +239,11 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
       if (query.has("post")) setTab("feed");
     };
     window.addEventListener("hashchange", jump);
-    return () => window.removeEventListener("hashchange", jump);
+    window.addEventListener("popstate", jump);
+    return () => {
+      window.removeEventListener("hashchange", jump);
+      window.removeEventListener("popstate", jump);
+    };
   }, []);
   // Import is explicit on h00k.top. Clear the fragment before placing any
   // market bars in React state, and NEVER publish without user confirmation.
