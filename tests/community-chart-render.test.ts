@@ -17,5 +17,11 @@ test('minimal HookChart renders timeframe/history/drawing tools with zero exchan
     const document=captureChartDocument({symbol:'BTCUSDT',exchange:'binance',marketType:'futures',timeframe:'1m',candles:[{time:t,open:100,high:110,low:95,close:105,volume:12}],markers:[],drawings:[]});
     const html=renderToString(React.createElement(compiled.exports.default,{value:document,onChange(){},onHistory:async()=>[]}));
     assert.match(html,/data-network-mode="snapshot"/);assert.match(html,/Таймфрейми та інструменти графіка/);assert.match(html,/Панель малювання/);assert.match(html,/Історія/);assert.match(html,/4h/);assert.match(html,/До знімка/);assert.doesNotMatch(html,/originalSettingsBackdrop|Налаштування hookchart/);assert.equal(calls,0);
+    // No onHistory transport for a new private draft: button must be disabled.
+    const draftHtml=renderToString(React.createElement(compiled.exports.default,{value:document,onChange(){}}));
+    const historyButton=draftHtml.match(/<button[^>]*>Історія ←<\/button>/);
+    assert.ok(historyButton,"Private draft should still explain/show its disabled history button");
+    assert.match(historyButton[0],/\bdisabled(?:=""|\b)/);
+    assert.equal(calls,0);
   }finally{globalThis.fetch=previousFetch;globalThis.WebSocket=previousWs;}
 });
