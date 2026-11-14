@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   ArrowUpRight, Award, BookOpenText, CalendarDays, Check, Copy, MessageCircle,
   ShieldCheck, TrendingUp, UsersRound, UserPlus, ChartNoAxesCombined,
-  Globe2, Sparkles, Layers3, Lightbulb, GraduationCap, Trophy, Send,
+  Globe2, Sparkles, Layers3, Lightbulb, GraduationCap, Trophy, Send, ListFilter,
 } from "lucide-react";
 import { ChartPreview } from "../components/community/ChartPreview";
 import { PublicProfileArticles } from "./PublicProfileArticles";
