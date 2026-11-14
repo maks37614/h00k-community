@@ -1480,7 +1480,7 @@ function ChartDialog({
   run: Run;
 }) {
   const { user } = useAuth();
-  const [qualityProofText, setQualityProofText] = useState(() => draft.document.qualityProof ? JSON.stringify(draft.document.qualityProof) : "");
+  const [qualityProofText, setQualityProofText] = useState(() => !draft.parentId && draft.document.qualityProof ? JSON.stringify(draft.document.qualityProof) : "");
   const [text, setText] = useState(""),
     [category, setCategory] = useState("analysis"),
     [audience, setAudience] = useState(() => draft.target.replyTo ? normalizeReplyAudience(draft.target.replyTo.audience) : "private"),
