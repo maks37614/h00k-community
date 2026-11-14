@@ -56,7 +56,8 @@ import { CommunityPhotoGallery } from "./CommunityPhotoGallery";
 import "./community.css";
 import "./social-friends-settings.css";
 import "./social-chat-workspace.css";
-import { filterConversations, conversationDisplayTitle } from "./chatModel";
+import "./social-chat-messenger-parity.css";
+import { filterConversations, conversationDisplayTitle, conversationPreview, conversationPreviewTime } from "./chatModel";
 import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from "./friendsModel";
 import { canSendCommunityContent, communityAudienceHint, validateCommunityPhoto, MAX_COMMUNITY_PHOTOS } from "./composerPolicy";
 import { canShareReplyWithAudience, normalizeReplyAudience, replyAudienceOptions, replyBody, replyPreviewText, type ReplySource, type CommentAudience } from "./commentReplyModel";
@@ -509,6 +510,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
             revision={revision}
             onPick={setPicker}
             onChart={openChart}
+            onProfile={(id) => { setViewProfile(id); setTab("profile"); }}
             run={run}
             inviteTarget={chatInvite}
             onInviteHandled={() => setChatInvite(null)}
@@ -520,6 +522,11 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
             onProfile={(id) => {
               setViewProfile(id);
               setTab("profile");
+            }}
+            onChat={(id, name) => {
+              setChatInvite({ id, name });
+              setViewProfile(null);
+              setTab("chats");
             }}
           />
         )}
@@ -799,10 +806,17 @@ function Composer({
         maxLength={20_000}
         disabled={busy}
         onChange={(event) => setText(event.target.value)}
+        onKeyDown={event => {
+          if (target.kind === "message" && event.key === "Enter" && !event.shiftKey &&
+              !event.nativeEvent.isComposing) {
+            event.preventDefault();
+            event.currentTarget.form?.requestSubmit();
+          }
+        }}
         required={!photos.length}
       />
       <div className="community-composer-meta">
-        <span>{communityAudienceHint(target.kind, audience)}</span>
+        <span>{target.kind === "message" ? "Enter — надіслати · Shift+Enter — новий рядок" : communityAudienceHint(target.kind, audience)}</span>
         <span>{text.length.toLocaleString("uk-UA")} / 20 000</span>
       </div>
       <div className="community-composer-tools">
@@ -1144,7 +1158,9 @@ function ItemCard({
       ? { kind: "message", conversationId: item.conversation_id }
       : { kind: "comment", parentId: item.id, audience: normalizeReplyAudience(item.audience) };
   return (
-    <article className={"community-card community-post-card" + (item.kind === "message" ? " community-message-card" : "")}>
+    <article className={"community-card community-post-card" + (item.kind === "message"
+      ? " community-message-card" + (item.owner_id === user?.uid ? " community-message-own" : " community-message-other")
+      : "")}>
       <header>
         <button
           type="button"
@@ -1153,13 +1169,15 @@ function ItemCard({
         >
           <span className="community-avatar">
             {(item.author?.displayName ?? "T").slice(0, 1)}
+            {item.author?.avatarUrl && <img src={item.author.avatarUrl} alt=""
+              loading="lazy" onError={event => { event.currentTarget.hidden = true; }} />}
           </span>
           <span>
             <b>{item.author?.displayName ?? "Трейдер"}</b>
             <small>
               {new Date(item.created_at).toLocaleString("uk-UA")} ·{" "}
               {item.kind === "message"
-                ? "Учасникам чату"
+                ? "Повідомлення"
                 : item.audience === "public"
                   ? "Публічно"
                   : item.audience === "friends"
@@ -2103,15 +2121,18 @@ function Workspace({
 function Friends({
   run,
   onProfile,
+  onChat,
 }: {
   run: Run;
   onProfile: (id: string) => void;
+  onChat: (id: string, name: string) => void;
 }) {
   const resource = useResource("friends", () => apiJson(api + "/friends"));
   const [q, setQ] = useState("");
   const [people, setPeople] = useState<CommunityFriend[]>([]);
   const [searched, setSearched] = useState(false);
   const [filter, setFilter] = useState<FriendFilter>("all");
+  const [pendingFriendId, setPendingFriendId] = useState<string | null>(null);
 
   const relationships: CommunityFriend[] = resource.data?.people ?? [];
   const { rows: visible, friendsCount, requestsCount } = buildFriendDirectory(
@@ -2120,14 +2141,20 @@ function Friends({
 
   function changeFriend(person: CommunityFriend, action: "send" | "accept" | "cancel" | "remove") {
     if (action === "remove" && !window.confirm("Видалити цього користувача з друзів?")) return;
+    if (pendingFriendId) return;
+    setPendingFriendId(person.id);
     void run(async () => {
-      if (action === "cancel" || action === "remove") {
-        await apiJson(api + "/friends/" + person.id, { method: "DELETE" });
-      } else {
-        await post(api + "/friends/" + person.id, {});
+      try {
+        if (action === "cancel" || action === "remove") {
+          await apiJson(api + "/friends/" + person.id, { method: "DELETE" });
+        } else {
+          await post(api + "/friends/" + person.id, {});
+        }
+        setPeople([]);
+        resource.refresh();
+      } finally {
+        setPendingFriendId(null);
       }
-      setPeople([]);
-      resource.refresh();
     });
   }
 
@@ -2223,16 +2250,20 @@ function Friends({
           const state = person.statusText;
           const name = person.displayName?.trim() || "Трейдер";
 
+
           return (
             <article className="community-card community-friend-card" key={person.id}>
               <div className="community-friend-identity">
                 <span className="community-friend-avatar" aria-hidden="true">
                   {name.slice(0, 1).toUpperCase()}
+                  {person.avatarUrl && <img src={person.avatarUrl} alt=""
+                    loading="lazy" onError={event => { event.currentTarget.hidden = true; }} />}
                 </span>
                 <div>
                   <button type="button" className="community-friend-name" onClick={() => onProfile(person.id)}>
                     {name}
                   </button>
+                  {person.username && <small className="community-friend-handle">@{person.username}</small>}
                   <span className={"community-friend-state" + (accepted ? " community-friend-state-accepted" : incoming ? " community-friend-state-incoming" : "")}>
                     {state}
                   </span>
@@ -2240,25 +2271,41 @@ function Friends({
               </div>
               <div className="community-friend-actions">
                 {accepted ? (
-                  <button type="button" onClick={() => changeFriend(person, "remove")}>
-                    Видалити з друзів
-                  </button>
+                  <>
+                    <button type="button" className="community-primary community-friend-message"
+                      onClick={() => onChat(person.id, name)}>
+                      <MessageCircle size={16} aria-hidden="true" /> Написати
+                    </button>
+                    <button type="button" disabled={!!pendingFriendId}
+                      onClick={() => changeFriend(person, "remove")}>
+                      Видалити з друзів
+                    </button>
+                  </>
                 ) : incoming ? (
-                  <button type="button" className="community-primary" onClick={() => changeFriend(person, "accept")}>
-                    Прийняти
-                  </button>
+                  <>
+                    <button type="button" className="community-primary" disabled={!!pendingFriendId}
+                      onClick={() => changeFriend(person, "accept")}>
+                      Прийняти
+                    </button>
+                    <button type="button" disabled={!!pendingFriendId}
+                      onClick={() => changeFriend(person, "cancel")}>
+                      Відхилити
+                    </button>
+                  </>
                 ) : outgoing ? (
-                  <button type="button" onClick={() => changeFriend(person, "cancel")}>
+                  <button type="button" disabled={!!pendingFriendId} onClick={() => changeFriend(person, "cancel")}>
                     Відкликати запит
                   </button>
                 ) : (
-                  <button type="button" className="community-primary" onClick={() => changeFriend(person, "send")}>
-                    Додати в друзі
+                  <button type="button" className="community-primary" disabled={!!pendingFriendId}
+                    onClick={() => changeFriend(person, "send")}>
+                    <Users size={16} aria-hidden="true" /> Додати в друзі
                   </button>
                 )}
                 <button
                   type="button"
                   className="community-friend-block"
+                  disabled={!!pendingFriendId}
                   onClick={() => {
                     if (!window.confirm("Заблокувати цього користувача? Він не зможе бути вашим другом.")) return;
                     void run(async () => {
@@ -2286,6 +2333,7 @@ function Chats({
   revision,
   onPick,
   onChart,
+  onProfile,
   run,
   inviteTarget,
   onInviteHandled,
@@ -2293,11 +2341,12 @@ function Chats({
   revision: number;
   onPick: (t: Target) => void;
   onChart: (item: any, target?: Target) => Promise<void>;
+  onProfile: (id: string) => void;
   run: Run;
   inviteTarget: ChatInvite | null;
   onInviteHandled: () => void;
 }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const list = useResource("chats:" + revision, () =>
       apiJson(api + "/conversations"),
     ),
@@ -2312,6 +2361,7 @@ function Chats({
     [messages, setMessages] = useState<any[]>([]),
     [before, setBefore] = useState<string | null>(null),
     [chatSearch, setChatSearch] = useState("");
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createGroup, setCreateGroup] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
@@ -2334,12 +2384,6 @@ function Chats({
       reading.current.delete(conversationId);
     }
   }
-  useEffect(() => {
-    if (!inviteTarget) return;
-    setCreateOpen(true);
-    setMembers([inviteTarget.id]);
-    setName("Діалог із " + inviteTarget.name);
-  }, [inviteTarget?.id, inviteTarget?.name]);
   const activeId = useRef(id);
   const latestMessages = useRef(messages);
   const threadRef = useRef<HTMLDivElement>(null);
@@ -2358,6 +2402,25 @@ function Chats({
     }
   }, [id, messages]);
   const conversations: any[] = Array.isArray(list.data?.items) ? list.data.items : [];
+  const friendAvatar = (personId: string | null | undefined): string | null =>
+    (friends.data?.people ?? []).find((person: CommunityFriend) => person.id === personId)?.avatarUrl ?? null;
+  useEffect(() => {
+    if (!inviteTarget || !list.data) return;
+    // Reuse a server-authorized direct dialog instead of spawning a duplicate.
+    const existing = conversations.find(chat => !chat.is_group && chat.peer_id === inviteTarget.id);
+    if (existing) {
+      setId(existing.id);
+      setChatSearch("");
+      setCreateOpen(false);
+      setMembers([]);
+      onInviteHandled();
+      return;
+    }
+    setCreateOpen(true);
+    setCreateGroup(false);
+    setMembers([inviteTarget.id]);
+    setName("Діалог із " + inviteTarget.name);
+  }, [inviteTarget?.id, inviteTarget?.name, list.data]);
   // Navigate only to conversations the authenticated server actually returned.
   useEffect(() => {
     const jump = () => {
@@ -2393,7 +2456,8 @@ function Chats({
     }, delay);
     return () => window.clearTimeout(timer);
   }, [list.data]);
-  const filteredConversations = filterConversations(conversations, chatSearch);
+  const filteredConversations = filterConversations(conversations, chatSearch)
+    .filter(chat => !unreadOnly || Number(chat.unread_count) > 0);
   const currentConversation = conversations.find((c) => c.id === id);
   const currentTitle = conversationDisplayTitle(currentConversation);
   const myRole = currentConversation?.role as "owner" | "admin" | "member" | undefined;
@@ -2570,12 +2634,19 @@ function Chats({
             onChange={(e) => setChatSearch(e.target.value)}
             placeholder="Назва групи або діалогу"
           />
+          <label className="community-chat-unread-filter">
+            <input type="checkbox" checked={unreadOnly}
+              onChange={event => setUnreadOnly(event.target.checked)} />
+            Лише непрочитані
+          </label>
           {list.error && <p role="status">{list.error}</p>}
           {!list.error && !conversations.length && (
             <p className="community-chat-list-empty">Тут з’являться ваші особисті та групові розмови.</p>
           )}
           {conversations.length > 0 && filteredConversations.length === 0 && (
-            <p className="community-chat-list-empty">За цією назвою розмов немає.</p>
+            <p className="community-chat-list-empty">{unreadOnly
+              ? "Немає непрочитаних розмов за цим фільтром."
+              : "За цією назвою розмов немає."}</p>
           )}
           <div className="community-chat-channels">
             {filteredConversations.map((c: any) => (
@@ -2587,13 +2658,20 @@ function Chats({
                 onClick={() => { setId(c.id); setRequestedConversationId(""); }}
               >
                 <span className="community-chat-channel-symbol" aria-hidden="true">
-                  {c.is_group ? "👥" : "✉"}
+                  {c.is_group ? "👥" : conversationDisplayTitle(c).slice(0, 1).toUpperCase()}
+                  {!c.is_group && friendAvatar(c.peer_id) &&
+                    <img src={friendAvatar(c.peer_id)!} alt="" loading="lazy"
+                      onError={event => { event.currentTarget.hidden = true; }} />}
                 </span>
                 <span className="community-chat-channel-label">
                   <strong>{conversationDisplayTitle(c)}</strong>
-                  <small>{c.is_group ? "Групова розмова" : "Особистий діалог"}{c.muted === true ? (c.muted_until ? " · Тимчасово без звуку" : " · Без звуку") : ""}</small>
+                  <small className="community-chat-preview">{conversationPreview(c)}</small>
+                  {c.muted === true && <small className="community-chat-muted-label">{c.muted_until ? "Тимчасово без звуку" : "Без звуку"}</small>}
                 </span>
-                {c.muted === true && <BellOff size={15} className="community-chat-muted-icon" aria-label="Сповіщення розмови приглушені" />}
+                <span className="community-chat-channel-meta">
+                  {conversationPreviewTime(c) && <time dateTime={c.last_message_created_at}>{conversationPreviewTime(c)}</time>}
+                  {c.muted === true && <BellOff size={15} className="community-chat-muted-icon" aria-label="Сповіщення розмови приглушені" />}
+                </span>
                 {Number(c.unread_count) > 0 && (
                   <span className="community-chat-unread-count" aria-hidden="true">
                     {Number(c.unread_count) >= 100 ? "99+" : Number(c.unread_count)}
@@ -2608,7 +2686,10 @@ function Chats({
             <>
               <header className="community-chat-active-header">
                 <span className="community-chat-active-avatar" aria-hidden="true">
-                  {currentConversation?.is_group ? "👥" : "✉"}
+                  {currentConversation?.is_group ? "👥" : currentTitle.slice(0, 1).toUpperCase()}
+                  {!currentConversation?.is_group && friendAvatar(currentConversation?.peer_id) &&
+                    <img src={friendAvatar(currentConversation?.peer_id)!} alt=""
+                      onError={event => { event.currentTarget.hidden = true; }} />}
                 </span>
                 <div>
                   <span className="community-page-kicker">
@@ -2809,9 +2890,13 @@ function Chats({
                 {messages.map((item) => (
                   <ItemCard
                     key={item.id}
-                    item={item}
+                    item={{ ...item, author: { ...item.author,
+                      avatarUrl: item.owner_id === user?.uid
+                        ? ownerAvatarUrl(profile?.community)
+                        : friendAvatar(item.owner_id) } }}
                     onChart={onChart}
                     onPick={onPick}
+                    onProfile={onProfile}
                     run={run}
                     refresh={() => void load(false, true)}
                   />
@@ -2821,7 +2906,7 @@ function Chats({
                 key={id}
                 target={{ kind: "message", conversationId: id }}
                 onPick={onPick}
-                onSent={() => void load()}
+                onSent={() => { void load(); list.refresh(); }}
                 run={run}
               />
             </>

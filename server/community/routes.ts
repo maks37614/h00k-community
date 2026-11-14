@@ -22,7 +22,7 @@ import { historyBlock } from "./history";
 import { TF_SECONDS } from "../../src/community/chartDocument";
 import { amount, evaluateRisk } from "./risk";
 import { connectBybit, syncBybit } from "./bybit";
-import { publicProfileUrl } from "./profileNames";
+import { publicProfileUrl, publicTraderAvatarPath } from "./profileNames";
 import { extractMentionHandles } from "./mentions";
 
 export function installCommunityRoutes(app: Express, getDb: () => Database) {
@@ -479,13 +479,21 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
     "/people",
     async (req, res, db, a, p) => {
       const q = bounded(req.query.q ?? "", 80);
-      if (q.length < 2) {
+      const search = q.trim().replace(/^@/, "");
+      if (search.length < 2) {
         res.json({ success: true, people: [] });
         return;
       }
       const { rows } = await db.query(
-        `SELECT id,profile FROM hc_users WHERE id<>$1 AND deleted_at IS NULL AND profile->>'displayName' ILIKE $2 ESCAPE '\\' LIMIT 30`,
-        [a.id, "%" + q.replace(/[\\%_]/g, "\\$&") + "%"],
+        `SELECT u.id,u.profile,pn.username
+         FROM hc_users u
+         LEFT JOIN hc_profile_names pn ON pn.owner_id=u.id
+           AND u.profile->'community'->>'publicProfileEnabled'='true'
+         WHERE u.id<>$1 AND u.deleted_at IS NULL
+           AND (u.profile->>'displayName' ILIKE $2 ESCAPE '\\'
+             OR pn.username ILIKE $2 ESCAPE '\\')
+         LIMIT 30`,
+        [a.id, "%" + search.replace(/[\\%_]/g, "\\$&") + "%"],
       );
       res.json({
         success: true,
@@ -494,6 +502,8 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
           .map((r) => ({
             id: r.id,
             displayName: r.profile.displayName ?? "Трейдер",
+            username: r.username ?? null,
+            avatarUrl: publicTraderAvatarPath(r),
             friend: p.accepted.has(r.id),
           })),
       });
@@ -502,7 +512,11 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
   );
   route("get", "/friends", async (_req, res, db, a, p) => {
     const { rows } = await db.query(
-      `SELECT f.*,u.id,u.profile FROM hc_friendships f JOIN hc_users u ON u.id=CASE WHEN f.sender=$1 THEN f.recipient ELSE f.sender END WHERE f.sender=$1 OR f.recipient=$1`,
+      `SELECT f.*,u.id,u.profile,pn.username FROM hc_friendships f
+       JOIN hc_users u ON u.id=CASE WHEN f.sender=$1 THEN f.recipient ELSE f.sender END
+       LEFT JOIN hc_profile_names pn ON pn.owner_id=u.id
+         AND u.profile->'community'->>'publicProfileEnabled'='true'
+       WHERE (f.sender=$1 OR f.recipient=$1) AND u.deleted_at IS NULL`,
       [a.id],
     );
     res.json({
@@ -512,6 +526,8 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
         .map((r) => ({
           id: r.id,
           displayName: r.profile.displayName ?? "Трейдер",
+          username: r.username ?? null,
+          avatarUrl: publicTraderAvatarPath(r),
           accepted: r.accepted,
           incoming: r.recipient === a.id,
         })),
@@ -677,12 +693,30 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
           WHERE others.conversation_id=c.id AND others.user_id<>$1 AND peer.deleted_at IS NULL
           ORDER BY others.joined_at, others.user_id LIMIT 1
         ) END AS peer_name,
+        CASE WHEN c.is_group THEN NULL ELSE (
+          SELECT peer.id FROM hc_members others
+          JOIN hc_users peer ON peer.id=others.user_id
+          WHERE others.conversation_id=c.id AND others.user_id<>$1
+            AND peer.deleted_at IS NULL
+          ORDER BY others.joined_at,others.user_id LIMIT 1
+        ) END AS peer_id,
+        LEFT(COALESCE(last_message.last_text,''),140) AS last_message_text,
+        last_message.last_at AS last_message_created_at,
+        (last_message.last_sender=$1) AS last_message_mine,
         COALESCE(counts.unread_count,0) AS unread_count,
         CASE WHEN m.muted OR COALESCE(m.muted_until>NOW(),false) THEN 0
           ELSE COALESCE(counts.alert_unread_count,0) END AS alert_unread_count
         FROM hc_conversations c
         JOIN hc_members m ON m.conversation_id=c.id
         LEFT JOIN hc_items marker ON marker.id=m.last_read_message_id AND marker.conversation_id=c.id
+        LEFT JOIN LATERAL (
+          SELECT msg.body->>'text' AS last_text,msg.created_at AS last_at,
+            msg.owner_id AS last_sender
+          FROM hc_items msg
+          WHERE msg.conversation_id=c.id AND msg.kind='message'
+            AND NOT msg.deleted AND msg.created_at>=m.joined_at
+          ORDER BY msg.created_at DESC,msg.id DESC LIMIT 1
+        ) last_message ON true
         LEFT JOIN LATERAL (
           SELECT count(*)::integer AS unread_count,
             count(*) FILTER (WHERE NOT m.mentions_only OR EXISTS (
