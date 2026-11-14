@@ -184,3 +184,29 @@
 @media(prefers-reduced-motion:reduce) {
   .community-workspace .community-rooms-thread {scroll-behavior:auto;}
 }
+
+/* Social chat type switch. Existing friend-only controls remain on the DM tab. */
+.community-workspace .community-chat-room-segments {
+  display:flex;flex-wrap:wrap;align-items:center;gap:7px;
+  margin:0 0 13px;padding:5px;
+  border:1px solid #284457;border-radius:12px;background:#0c1a29;
+}
+.community-workspace .community-chat-room-segments button {
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:41px;padding:9px 13px;
+  border:1px solid transparent;border-radius:10px;
+  background:transparent;color:#b9d2de;
+  font-size:12px;font-weight:760;
+}
+.community-workspace .community-chat-room-segments button[aria-pressed="true"] {
+  border-color:#268b7e;background:#14463f;color:#dcfff6;
+}
+.community-workspace .community-chat-room-segments button:focus-visible {
+  outline:2px solid #37e6c4;outline-offset:2px;
+}
+@media(max-width:430px) {
+  .community-workspace .community-chat-room-segments button {
+    flex:1 1 auto;min-width:0;
+    padding:9px;font-size:11px;
+  }
+}
