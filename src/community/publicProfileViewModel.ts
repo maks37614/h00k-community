@@ -15,6 +15,20 @@ export function publicPostUrl(profileUrl: string, id: string): string {
   return url.toString();
 }
 
+/** Build an authenticated profile/contact destination without treating a guest URL as an API action. */
+export function communityProfileContactUrl(
+  communityOrigin: string, ownerId: string, contact?: "friend" | "message",
+): string {
+  if (!publicPostId(ownerId)) throw new Error("Некоректний ідентифікатор профілю");
+  const url = new URL(communityOrigin);
+  if (!["https:", "http:"].includes(url.protocol) || url.username || url.password)
+    throw new Error("Некоректна адреса Community");
+  const params = new URLSearchParams({ section: "profile", owner: ownerId });
+  if (contact) params.set("contact", contact);
+  url.hash = "community?" + params.toString();
+  return url.toString();
+}
+
 /** A logged-in viewer is directed to the actual post, never just the profile tab. */
 export function communityPostUrl(communityOrigin: string, id: string): string {
   if (!publicPostId(id)) throw new Error("Некоректна адреса допису");
