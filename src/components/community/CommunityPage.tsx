@@ -56,7 +56,8 @@ import { CommunityPhotoGallery } from "./CommunityPhotoGallery";
 import "./community.css";
 import "./social-friends-settings.css";
 import "./social-chat-workspace.css";
-import { filterConversations, conversationDisplayTitle } from "./chatModel";
+import "./social-chat-messenger-parity.css";
+import { filterConversations, conversationDisplayTitle, conversationPreview, conversationPreviewTime } from "./chatModel";
 import { buildFriendDirectory, type CommunityFriend, type FriendFilter } from "./friendsModel";
 import { canSendCommunityContent, communityAudienceHint, validateCommunityPhoto, MAX_COMMUNITY_PHOTOS } from "./composerPolicy";
 import { canShareReplyWithAudience, normalizeReplyAudience, replyAudienceOptions, replyBody, replyPreviewText, type ReplySource, type CommentAudience } from "./commentReplyModel";
@@ -2344,6 +2345,7 @@ function Chats({
     [messages, setMessages] = useState<any[]>([]),
     [before, setBefore] = useState<string | null>(null),
     [chatSearch, setChatSearch] = useState("");
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createGroup, setCreateGroup] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
@@ -2366,12 +2368,6 @@ function Chats({
       reading.current.delete(conversationId);
     }
   }
-  useEffect(() => {
-    if (!inviteTarget) return;
-    setCreateOpen(true);
-    setMembers([inviteTarget.id]);
-    setName("Діалог із " + inviteTarget.name);
-  }, [inviteTarget?.id, inviteTarget?.name]);
   const activeId = useRef(id);
   const latestMessages = useRef(messages);
   const threadRef = useRef<HTMLDivElement>(null);
@@ -2390,6 +2386,23 @@ function Chats({
     }
   }, [id, messages]);
   const conversations: any[] = Array.isArray(list.data?.items) ? list.data.items : [];
+  useEffect(() => {
+    if (!inviteTarget || !list.data) return;
+    // Reuse a server-authorized direct dialog instead of spawning a duplicate.
+    const existing = conversations.find(chat => !chat.is_group && chat.peer_id === inviteTarget.id);
+    if (existing) {
+      setId(existing.id);
+      setChatSearch("");
+      setCreateOpen(false);
+      setMembers([]);
+      onInviteHandled();
+      return;
+    }
+    setCreateOpen(true);
+    setCreateGroup(false);
+    setMembers([inviteTarget.id]);
+    setName("Діалог із " + inviteTarget.name);
+  }, [inviteTarget?.id, inviteTarget?.name, list.data]);
   // Navigate only to conversations the authenticated server actually returned.
   useEffect(() => {
     const jump = () => {
@@ -2425,7 +2438,8 @@ function Chats({
     }, delay);
     return () => window.clearTimeout(timer);
   }, [list.data]);
-  const filteredConversations = filterConversations(conversations, chatSearch);
+  const filteredConversations = filterConversations(conversations, chatSearch)
+    .filter(chat => !unreadOnly || Number(chat.unread_count) > 0);
   const currentConversation = conversations.find((c) => c.id === id);
   const currentTitle = conversationDisplayTitle(currentConversation);
   const myRole = currentConversation?.role as "owner" | "admin" | "member" | undefined;
@@ -2602,12 +2616,19 @@ function Chats({
             onChange={(e) => setChatSearch(e.target.value)}
             placeholder="Назва групи або діалогу"
           />
+          <label className="community-chat-unread-filter">
+            <input type="checkbox" checked={unreadOnly}
+              onChange={event => setUnreadOnly(event.target.checked)} />
+            Лише непрочитані
+          </label>
           {list.error && <p role="status">{list.error}</p>}
           {!list.error && !conversations.length && (
             <p className="community-chat-list-empty">Тут з’являться ваші особисті та групові розмови.</p>
           )}
           {conversations.length > 0 && filteredConversations.length === 0 && (
-            <p className="community-chat-list-empty">За цією назвою розмов немає.</p>
+            <p className="community-chat-list-empty">{unreadOnly
+              ? "Немає непрочитаних розмов за цим фільтром."
+              : "За цією назвою розмов немає."}</p>
           )}
           <div className="community-chat-channels">
             {filteredConversations.map((c: any) => (
@@ -2623,9 +2644,13 @@ function Chats({
                 </span>
                 <span className="community-chat-channel-label">
                   <strong>{conversationDisplayTitle(c)}</strong>
-                  <small>{c.is_group ? "Групова розмова" : "Особистий діалог"}{c.muted === true ? (c.muted_until ? " · Тимчасово без звуку" : " · Без звуку") : ""}</small>
+                  <small className="community-chat-preview">{conversationPreview(c)}</small>
+                  {c.muted === true && <small className="community-chat-muted-label">{c.muted_until ? "Тимчасово без звуку" : "Без звуку"}</small>}
                 </span>
-                {c.muted === true && <BellOff size={15} className="community-chat-muted-icon" aria-label="Сповіщення розмови приглушені" />}
+                <span className="community-chat-channel-meta">
+                  {conversationPreviewTime(c) && <time dateTime={c.last_message_created_at}>{conversationPreviewTime(c)}</time>}
+                  {c.muted === true && <BellOff size={15} className="community-chat-muted-icon" aria-label="Сповіщення розмови приглушені" />}
+                </span>
                 {Number(c.unread_count) > 0 && (
                   <span className="community-chat-unread-count" aria-hidden="true">
                     {Number(c.unread_count) >= 100 ? "99+" : Number(c.unread_count)}
