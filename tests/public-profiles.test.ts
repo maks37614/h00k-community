@@ -11,7 +11,7 @@ import { request } from "node:http";
 import * as OTPAuth from "otpauth";
 import { migrate } from "../server/community/db";
 import { installAccountRoutes } from "../server/community/account";
-import { installCommunityRoutes } from "../server/community/routes";
+import { installCommunityRoutes, installMediaRoutes } from "../server/community/routes";
 import { installPublicProfiles } from "../server/community/publicProfiles";
 import { nameFromHost, profileName, NAME_CHANGE_INTERVAL } from "../server/community/profileNames";
 import { testDatabase } from "./fixtures/community-db";
@@ -85,6 +85,7 @@ test.before(async () => {
   app.use(express.json());
   installAccountRoutes(app, () => db, async () => {}, () => now);
   installCommunityRoutes(app, () => db);
+  installMediaRoutes(app, () => db);
   server = app.listen(0, "127.0.0.1"); await new Promise<void>(resolve => server.once("listening", resolve));
   base = "http://127.0.0.1:" + server.address().port; process.env.APP_ORIGIN = base;
 });
@@ -490,6 +491,50 @@ test("public photos require both a visible post and its owner's media, checked o
   assert.equal((await call(url + unlinked)).res.status, 404);
   await db.query("UPDATE hc_items SET audience='private' WHERE id=$1", [item]);
   assert.equal((await call(url + media)).res.status, 404);
+});
+
+test("media library lists only own photos, is bounded, paginated and cannot publish on selection", async () => {
+  const owner = await actor(), another = await actor();
+  const ids = Array.from({ length: 23 }, () => randomUUID());
+  const foreign = randomUUID();
+  for (let index = 0; index < ids.length; index++) {
+    await db.query(
+      "INSERT INTO hc_media(id,owner_id,bytes,created_at) VALUES($1,$2,123,now()-($3 * interval '1 minute'))",
+      [ids[index], owner.id, index],
+    );
+  }
+  await db.query("INSERT INTO hc_media(id,owner_id,bytes) VALUES($1,$2,456)", [foreign, another.id]);
+
+  assert.equal((await call("/api/community/media/library")).res.status, 401);
+  const first = await call("/api/community/media/library", owner);
+  assert.equal(first.res.status, 200, first.text);
+  assert.equal(first.data.items.length, 18);
+  assert.equal(first.data.items[0].id, ids[0]);
+  assert.equal(first.data.items[17].id, ids[17]);
+  assert.equal(first.data.next, ids[17]);
+  assert.equal(first.res.headers.get("cache-control"), "private, no-store");
+  assert.equal(first.data.items.some((item: any) => item.id === foreign), false);
+  assert.doesNotMatch(first.text, /owner_id|ownerId|email|password|profile/);
+
+  const second = await call("/api/community/media/library?before=" + first.data.next, owner);
+  assert.equal(second.res.status, 200, second.text);
+  assert.deepEqual(second.data.items.map((item: any) => item.id), ids.slice(18));
+  assert.equal(second.data.next, null);
+  assert.deepEqual((await call("/api/community/media/library?before=" + foreign, owner)).data.items, []);
+  assert.equal((await call("/api/community/media/library?before=wrong", owner)).res.status, 400);
+  assert.equal((await call("/api/community/media/" + foreign, owner)).res.status, 404);
+
+  // Selecting an existing photo still relies on the account PATCH ownership
+  // gate and remains private until explicitly opened.
+  assert.equal((await call("/api/account/profile", owner, "PATCH", {
+    community: { avatarMediaId: ids[0], avatarAudience: "private" },
+  })).res.status, 200);
+  assert.equal((await call("/api/account/profile", owner, "PATCH", {
+    community: { coverMediaId: foreign, coverAudience: "public" },
+  })).res.status, 403);
+  const mine = await call("/api/account/me", owner);
+  assert.equal(mine.data.profile.community.avatarMediaId, ids[0]);
+  assert.equal(mine.data.profile.community.avatarAudience, "private");
 });
 
 test("public /u/ avatar and cover require same-owner media and explicit public consent", async () => {
