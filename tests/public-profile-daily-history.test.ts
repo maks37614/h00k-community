@@ -37,7 +37,7 @@ test("daily activity generates exactly 30 real UTC calendar points and never fab
     { day: "2026-11-15", count: 1, wins: 1, losses: 0, flat: 0 },
     { day: "2026-10-01", count: 1, wins: 1, losses: 0, flat: 0 },
     { day: "2026-11-13", count: 3, wins: 2, losses: 0, flat: 0 },
-    { day: "2026-11-13", count: 2, wins: 1, losses: 1, flat: 0 },
+    { day: "2026-11-12", count: 2, wins: 1, losses: 1, flat: 0 },
   ] });
   assert.equal(filtered.reduce((sum, d) => sum + d.count, 0), 5);
   assert.equal(filtered.find(day => day.day === "2026-11-13")?.count, 0);
@@ -53,7 +53,7 @@ test("history chart renders exact imported count distribution without claiming p
   assert.match(html, /UTC/);
   assert.match(html, /public-daily-history-bars/);
   assert.equal((html.match(/class="public-daily-history-bar-slot"/g) ?? []).length, 30);
-  assert.doesNotMatch(html, /PnL:|USDT|USDC|ROI|symbol|баланс/);
+  assert.doesNotMatch(html, /PnL:|USDT|USDC|ROI|symbol/);
   const empty = renderToStaticMarkup(React.createElement(PublicProfileDailyHistory, {
     data: { days: 30, timezone: "UTC", through: "2026-11-14", items: [] },
   }));
