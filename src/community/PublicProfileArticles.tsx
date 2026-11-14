@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import type { ChartDocument } from "./chartDocument";
 import { ChartPreview } from "../components/community/ChartPreview";
+import { PublicProfilePhotoGallery, publicPhotoUrl } from "./PublicProfilePhotoGallery";
 import {
   communityPostUrl, publicArticleExcerpt, publicArticleReadMinutes, publicArticleUrl,
   publicArticlesUrl, type PublicReactionSummary,
@@ -42,10 +43,6 @@ type Props = {
   onOpenChart: (id: string) => void;
 };
 
-function photoUrl(base: string, postId: string, mediaId: string): string {
-  return base + "/posts/" + encodeURIComponent(postId) + "/media/" + encodeURIComponent(mediaId);
-}
-
 function actualReactions(post: PublicEducationalPost) {
   return post.reactions?.filter(row => Number.isInteger(row.count) && row.count > 0) ?? [];
 }
@@ -55,16 +52,13 @@ export function PublicProfileArticles({ posts, selected, pending, profile, base,
   const articles = posts.filter(post => post.category === "education");
   if (pending) return <p className="public-profile-loading" role="status">Відкриваємо публічну статтю…</p>;
   if (selected && selected.category === "education") {
-    const cover = selected.photos?.[0];
     return <article className="public-article-reader" id={"post-" + selected.id}>
       <a className="public-article-back" href={publicArticlesUrl(profile.url)}>
         <ArrowLeft size={16} aria-hidden="true" /> Назад до списку статей
       </a>
-      <div className="public-article-reader-cover">
-        {cover ? <img src={photoUrl(base, selected.id, cover)} alt="" loading="eager" /> :
-          <BookOpenText size={62} aria-hidden="true" />}
-        <span className="public-article-readtime"><Clock3 size={14} aria-hidden="true" /> ≈ {publicArticleReadMinutes(selected.text)} хв читання</span>
-      </div>
+      <PublicProfilePhotoGallery ids={selected.photos} postId={selected.id} base={base}
+        label={"Стаття: " + (selected.title || "Розбір трейдера")}
+        variant="article" readMinutes={publicArticleReadMinutes(selected.text)} />
       <div className="public-article-reader-head">
         <span className="public-profile-post-kind">Навчальна публікація</span>
         <h2>{selected.title || "Розбір трейдера"}</h2>
@@ -78,10 +72,6 @@ export function PublicProfileArticles({ posts, selected, pending, profile, base,
         </div>
       </div>
       <div className="public-article-reader-body">{selected.text || "Автор не додав текст до цієї публікації."}</div>
-      {selected.photos.length > 1 && <div className="public-article-reader-gallery" aria-label="Фотографії до статті">
-        {selected.photos.slice(1).map(mediaId => <img key={mediaId}
-          loading="lazy" alt="Ілюстрація до статті" src={photoUrl(base, selected.id, mediaId)} />)}
-      </div>}
       {selected.chart && <div className="public-article-chart">
         <h3><ChartNoAxesCombined size={18} aria-hidden="true" /> Збережений розбір HookChart</h3>
         <ChartPreview document={selected.chart} onOpen={() => onOpenChart(selected.id)} />
@@ -112,7 +102,7 @@ export function PublicProfileArticles({ posts, selected, pending, profile, base,
       <a className="public-article-card-link" href={publicArticleUrl(profile.url, post.id)}
         aria-label={"Читати статтю: " + (post.title || "Розбір трейдера")}>
         <div className="public-article-card-image">
-          {post.photos?.[0] ? <img src={photoUrl(base, post.id, post.photos[0])}
+          {post.photos?.[0] ? <img src={publicPhotoUrl(base, post.id, post.photos[0])}
             loading="lazy" alt="" /> : <BookOpenText size={45} aria-hidden="true" />}
           <span><Clock3 size={13} aria-hidden="true" /> ≈ {publicArticleReadMinutes(post.text)} хв читання</span>
         </div>
