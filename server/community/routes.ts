@@ -22,7 +22,7 @@ import { historyBlock } from "./history";
 import { TF_SECONDS } from "../../src/community/chartDocument";
 import { amount, evaluateRisk } from "./risk";
 import { connectBybit, syncBybit } from "./bybit";
-import { publicProfileUrl } from "./profileNames";
+import { publicProfileUrl, publicTraderAvatarPath } from "./profileNames";
 import { extractMentionHandles } from "./mentions";
 
 export function installCommunityRoutes(app: Express, getDb: () => Database) {
@@ -503,6 +503,7 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
             id: r.id,
             displayName: r.profile.displayName ?? "Трейдер",
             username: r.username ?? null,
+            avatarUrl: publicTraderAvatarPath(r),
             friend: p.accepted.has(r.id),
           })),
       });
@@ -526,6 +527,7 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
           id: r.id,
           displayName: r.profile.displayName ?? "Трейдер",
           username: r.username ?? null,
+          avatarUrl: publicTraderAvatarPath(r),
           accepted: r.accepted,
           incoming: r.recipient === a.id,
         })),
