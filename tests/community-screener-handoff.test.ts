@@ -6,7 +6,7 @@ import { normalizeChartDocument } from "../src/community/chartDocument";
 
 const source = readFileSync(new URL("../src/components/community/CommunityPage.tsx",import.meta.url),"utf8");
 const quality = readFileSync(new URL("../server/community/content.ts",import.meta.url),"utf8");
-const now = Date.UTC(2026,10,14,13,20,0);
+const now = Math.floor(Date.now()/60_000)*60_000 - 60_000;
 const step=60;
 function packet(){
   const capturedAt=now-60_000, latest=capturedAt/1000-step;
