@@ -258,10 +258,45 @@ test("guest /u/ wall shows only opt-in public comments, post deep links and aggr
   assert.equal(grouped.data.items[2].replyToId, quoted.data.id);
   assert.doesNotMatch(grouped.text, /SECRET_COMMENT|НЕ ПУБЛІКУВАТИ|НЕ ЗГОДЕН|email|password_hash/);
 
+  // Direct links must enforce the same privacy policy and safe allowlist as a page.
+  const direct = await call(root + "/comments/" + visible.data.id);
+  assert.equal(direct.res.status, 200, direct.text);
+  assert.equal(direct.data.item.text, "Відкритий коментар");
+  assert.deepEqual(direct.data.item, grouped.data.items[0]);
+  assert.doesNotMatch(direct.text, /SECRET_COMMENT|owner_id|email|password_hash|internalNote/);
+  const nestedDirect = await call(root + "/comments/" + nested.data.id);
+  assert.equal(nestedDirect.res.status, 200);
+  assert.equal(nestedDirect.data.item.replyToId, quoted.data.id);
+  assert.equal((await call(root + "/comments/" + privateComment.data.id)).res.status, 404);
+  assert.equal((await call(root + "/comments/" + noConsent.data.id)).res.status, 404);
+  assert.equal((await call(root + "/comments/" + randomUUID())).res.status, 404);
+  assert.equal((await call(root + "/comments/not-a-uuid")).res.status, 400);
+
+  // An older comment is reachable without walking all paginated comments.
+  await db.query(
+    `INSERT INTO hc_items(id, owner_id, kind, audience, parent_id, body, created_at)
+       SELECT gen_random_uuid(), $1, 'comment', 'public', $2,
+              jsonb_build_object('text','Older discussion '||n),
+              now() + n * INTERVAL '1 second'
+       FROM generate_series(1,25) n`,
+    [writer.id,id],
+  );
+  const late = (await db.query(
+    "SELECT id FROM hc_items WHERE parent_id=$1 AND body->>'text'='Older discussion 25'",
+    [id],
+  )).rows[0].id;
+  const firstPage = await call(root + "/comments");
+  assert.equal(firstPage.data.items.length, 20);
+  assert.ok(!firstPage.data.items.some((item: any) => item.id === late));
+  assert.equal((await call(root + "/comments/" + late)).data.item.text, "Older discussion 25");
+
   await enable(writer, { publicProfileEnabled: false });
   const revoked = await call(root + "/comments");
   assert.equal(revoked.res.status, 200);
   assert.deepEqual(revoked.data.items, []); // quoted descendants close with their source
+  assert.equal((await call(root + "/comments/" + visible.data.id)).res.status, 404);
+  assert.equal((await call(root + "/comments/" + late)).res.status, 404);
+  assert.equal((await call(root + "/comments/" + nested.data.id)).res.status, 404);
   assert.equal((await call(root)).res.status, 200); // owner's post remains public
   await enable(owner, { publicProfileEnabled: false });
   assert.equal((await call(root)).res.status, 404);
