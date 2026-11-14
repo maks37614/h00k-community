@@ -589,6 +589,14 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
               onClear={() => setAwardRecipient(null)}
               onGifted={changed}
             />
+            <div className="community-context-card community-social-market-card">
+              <span className="community-page-kicker">h00k TOP</span>
+              <h3><ChartNoAxesCombined size={17} aria-hidden="true" /> Пульс крипторинку</h3>
+              <p>Живі ціни, щільності та формації відкриваються в основному скрінері. Community не дублює біржові підключення.</p>
+              <a href="https://h00k.top/" target="_blank" rel="noopener noreferrer">
+                Відкрити скрінер h00k
+              </a>
+            </div>
             <div className="community-context-card">
               <span className="community-page-kicker">СПІЛЬНОТА</span>
               <h3>Ваш простір трейдера</h3>
