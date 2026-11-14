@@ -80,6 +80,41 @@ export function publicChartPostUrl(profileUrl: string, id: string): string {
   return url.toString();
 }
 
+/** Public educational post links stay within the already-authorized profile. */
+export function publicArticleUrl(profileUrl: string, id: string): string {
+  const url = new URL(publicPostUrl(profileUrl, id));
+  url.searchParams.delete("view");
+  url.searchParams.delete("comment");
+  url.searchParams.set("tab", "articles");
+  return url.toString();
+}
+
+/** Return to this trader's article collection without retaining post identity. */
+export function publicArticlesUrl(profileUrl: string): string {
+  const url = new URL(profileUrl);
+  if (!["https:", "http:"].includes(url.protocol) || url.username || url.password)
+    throw new Error("Некоректна адреса профілю");
+  url.searchParams.delete("view");
+  url.searchParams.delete("comment");
+  url.searchParams.delete("post");
+  url.searchParams.set("tab", "articles");
+  return url.toString();
+}
+
+/** Estimate reading time using only text already visible to anonymous readers. */
+export function publicArticleReadMinutes(value: unknown): number {
+  if (typeof value !== "string" || !value.trim()) return 1;
+  const words = value.trim().split(/\s+/u).length;
+  return Math.min(120, Math.max(1, Math.ceil(words / 200)));
+}
+
+export function publicArticleExcerpt(value: unknown, max = 180): string {
+  if (typeof value !== "string") return "";
+  const cleaned = value.replace(/\s+/gu, " ").trim();
+  if (cleaned.length <= max) return cleaned;
+  return cleaned.slice(0, max).trimEnd() + "…";
+}
+
 /** A URL can focus only a valid public post/comment pair. */
 export function publicCommentIdFromSearch(search: string): string | null {
   const params = new URLSearchParams(search);
