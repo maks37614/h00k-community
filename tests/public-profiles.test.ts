@@ -286,7 +286,9 @@ test("guest /u/ wall shows only opt-in public comments, post deep links and aggr
     [id],
   )).rows[0].id;
   const firstPage = await call(root + "/comments");
-  assert.equal(firstPage.data.items.length, 20);
+  assert.ok(firstPage.data.items.length > 0 && firstPage.data.items.length <= 20);
+  // Hidden/private authors are filtered from the bounded SQL page.
+  assert.doesNotMatch(firstPage.text, /НЕ ПУБЛІКУВАТИ КОМЕНТАР|НЕ ЗГОДЕН НА ПУБЛІЧНИЙ ПРОФІЛЬ/);
   assert.ok(!firstPage.data.items.some((item: any) => item.id === late));
   assert.equal((await call(root + "/comments/" + late)).data.item.text, "Older discussion 25");
 
