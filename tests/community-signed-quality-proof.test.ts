@@ -63,7 +63,7 @@ test("any edited score, time, source, signature or injected fields are rejected"
     ...signed, payload: { ...signed.payload, score: 100 },
   }, doc, publicKeyBase64, now), /недійсний/);
   assert.throws(() => verifyArchiveScoreProof({
-    ...signed, signature: signed.signature.slice(0, -1) + (signed.signature.endsWith("A") ? "B" : "A"),
+    ...signed, signature: (signed.signature.startsWith("A") ? "B" : "A") + signed.signature.slice(1),
   }, doc, publicKeyBase64, now), /недійсний/);
   assert.throws(() => verifyArchiveScoreProof({
     ...signed, payload: { ...signed.payload, issuer: "h00k-community" },
