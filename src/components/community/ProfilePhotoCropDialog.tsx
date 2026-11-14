@@ -34,6 +34,8 @@ export function ProfilePhotoCropDialog({
     photo.onload = () => {
       if (active) {
         if (!photo.naturalWidth || !photo.naturalHeight) setError("Не вдалося прочитати розмір фото.");
+        else if (photo.naturalWidth * photo.naturalHeight > 16_000_000)
+          setError("Зображення завелике за роздільністю. Оберіть фото до 16 мегапікселів.");
         else setImage(photo);
       }
     };
