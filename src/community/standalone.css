@@ -281,3 +281,38 @@
  .community-standalone-header-actions a,
  .community-standalone-header-actions button {font-size:11px;padding:7px 9px;}
 }
+
+/* Import-only welcome: data stays in the URL fragment until authentication. */
+.community-guest-handoff {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 22px 0 0;
+  padding: 16px clamp(14px, 2vw, 22px);
+  border: 1px solid #287f75;
+  border-radius: 14px;
+  background: linear-gradient(110deg, #103e3d, #14283a);
+}
+.community-guest-handoff div { flex: 1 1 260px; min-width: 0; }
+.community-guest-handoff strong { color: #cafff4; font-size: 15px; }
+.community-guest-handoff p { color: #abcbd7; font-size: 12px; margin: 6px 0 0; line-height: 1.6; }
+.community-guest-handoff button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 10px 14px;
+  background: #127a69;
+  border: 1px solid #43debc;
+  border-radius: 10px;
+  color: #eafff8;
+  font-size: 13px;
+  font-weight: 750;
+}
+@media (max-width: 640px) {
+  .community-guest-handoff { margin-top: 15px; padding: 13px; }
+  .community-guest-handoff button { width: 100%; }
+}
