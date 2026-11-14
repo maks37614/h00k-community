@@ -62,7 +62,7 @@ test("handoff is an opt-in non-publishing preview and scrubs fragment before ren
   assert.match(hook,/query\.delete\("handoff"\)/);
   assert.match(hook,/history\.replaceState\(/);
   assert.match(hook,/chartFromScreenerHandoff\(packet\)/);
-  assert.match(hook,/setDraft\(\{ document, target: \{ kind: "post" \} \}\)/);
+  assert.match(hook,/setDraft\(\{\s*editorSessionId: crypto\.randomUUID\(\),\s*document, target: \{ kind: "post" \} \}\)/);
   assert.match(hook,/опублікувати її можете тільки ви/);
   assert.match(hook,/Походження свічок у посиланні не перевірене незалежно/);
   assert.doesNotMatch(hook,/post\(|apiJson\(|saveChart\(|qualityScore:|fetch\(/);
