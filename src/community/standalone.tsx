@@ -46,9 +46,22 @@ const features = [
   },
 ] as const;
 
-function GuestLanding({ onAuth }: { onAuth: (mode: "signin" | "signup") => void }) {
+function GuestLanding({ onAuth, pendingHandoff }: {
+  onAuth: (mode: "signin" | "signup") => void;
+  pendingHandoff: boolean;
+}) {
   return (
     <main className="community-guest" aria-label="Про h00k Community">
+      {pendingHandoff && <aside className="community-guest-handoff" role="status">
+        <div>
+          <strong>Графік із h00k.top готовий до імпорту</strong>
+          <p>Увійдіть у свій акаунт Community, щоб відкрити чернетку.
+            Посилання діє 10 хвилин від створення. Нічого не публікується автоматично.</p>
+        </div>
+        <button type="button" onClick={() => onAuth("signin")}>
+          Увійти й відкрити чернетку <ArrowRight size={17} aria-hidden="true" />
+        </button>
+      </aside>}
       <section className="community-guest-hero">
         <div className="community-guest-hero-copy">
           <span className="community-guest-kicker">
@@ -162,6 +175,10 @@ function Workspace() {
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [error, setError] = useState("");
   const resetting = new URLSearchParams(location.search).has("reset");
+  // Only detect that a handoff is present; never read or render its contents
+  // on the guest page. The authenticated Community editor will consume it.
+  const pendingHandoff = location.hash.startsWith("#community?") &&
+    new URLSearchParams(location.hash.split("?")[1] ?? "").has("handoff");
 
   const openAuth = (mode: "signin" | "signup") => {
     setAuthMode(mode);
@@ -214,7 +231,7 @@ function Workspace() {
       ) : resetting ? (
         <main className="community-standalone-loading" role="status">Оновлення пароля</main>
       ) : (
-        <GuestLanding onAuth={openAuth} />
+        <GuestLanding onAuth={openAuth} pendingHandoff={pendingHandoff} />
       )}
 
       {!user && !loading && !resetting && (
