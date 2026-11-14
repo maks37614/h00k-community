@@ -9,6 +9,8 @@ import { ChartPreview } from "../components/community/ChartPreview";
 import { PublicProfileArticles } from "./PublicProfileArticles";
 import { PublicProfilePhotoGallery } from "./PublicProfilePhotoGallery";
 import { PublicProfileChartContext } from "./PublicProfileChartContext";
+import { PublicSetupGalleryToolbar } from "./PublicSetupGalleryToolbar";
+import { DEFAULT_PUBLIC_SETUP_FILTERS, filterPublicSetupGallery, type PublicSetupGalleryFilters } from "./publicSetupGalleryModel";
 import { PublicProfileChartLevels } from "./PublicProfileChartLevels";
 import { PublicProfileImportFreshness, PublicProfileVerifiedAwards } from "./PublicProfileVerifiedHighlights";
 import { PublicProfileTradeWindows, type PublicTradeWindow } from "./PublicProfileTradeWindows";
@@ -34,6 +36,7 @@ import "./publicProfileHighlights.css";
 import "./publicProfileTradeWindows.css";
 import "./publicProfileDailyHistory.css";
 import "./publicProfileLevels.css";
+import "./publicSetupGalleryToolbar.css";
 
 type PublicStats = {
   totals: Array<{
@@ -196,6 +199,7 @@ export function PublicProfile() {
   const [dailyHistoryError, setDailyHistoryError] = useState("");
   const [dailyHistoryRetry, setDailyHistoryRetry] = useState(0);
   const [items, setItems] = useState<PublicPost[]>([]);
+  const [setupFilters, setSetupFilters] = useState<PublicSetupGalleryFilters>(() => ({ ...DEFAULT_PUBLIC_SETUP_FILTERS }));
   const [focusedPost, setFocusedPost] = useState<PublicPost | null>(null);
   const [next, setNext] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -648,9 +652,13 @@ export function PublicProfile() {
   const profileJoinDate = publicProfileDate(profile?.joinedAt);
   const totalClosures = profile?.statistics?.totals.reduce((sum, currency) => sum + currency.count, 0) ?? 0;
   const overview = publicClosedOrderOverview(profile?.statistics?.totals ?? []);
-  const visibleWall = tab === "setups" ? publicProfileSetups(wall)
+  const allGallerySetups = publicProfileSetups(wall);
+  const filteredGallerySetups = filterPublicSetupGallery(wall, setupFilters);
+  const visibleWall = tab === "setups" ? filteredGallerySetups
     : tab === "articles" ? wall.filter(item => item.category === "education") : wall;
-  const chartPostIds = publicProfileSetups(wall).map(item => item.id);
+  // In the gallery, next/previous follows its visible filter. On the wall the
+  // same buttons still browse all the already-authorized saved snapshots.
+  const chartPostIds = (tab === "setups" ? filteredGallerySetups : allGallerySetups).map(item => item.id);
   const chartIndex = chartPostId ? chartPostIds.indexOf(chartPostId) : -1;
   const previousChartId = chartIndex > 0 ? chartPostIds[chartIndex - 1] : null;
   const followingChartId = chartIndex >= 0 ? chartPostIds[chartIndex + 1] ?? null : null;
@@ -863,6 +871,11 @@ export function PublicProfile() {
               </button>
               {copied === "error:gallery" && <small role="status">Не вдалося скопіювати адресу галереї.</small>}
             </div>}
+            {tab === "setups" && <PublicSetupGalleryToolbar
+              filters={setupFilters} totalLoaded={allGallerySetups.length}
+              matches={filteredGallerySetups.length} hasNextPage={!!loadedNext}
+              onChange={setSetupFilters}
+            />}
             {postError && <p className="public-profile-error" role="status">Допис за посиланням недоступний: {postError}</p>}
             {tab === "articles" && <PublicProfileArticles
               posts={visibleWall}
@@ -944,7 +957,15 @@ export function PublicProfile() {
             {pendingFeedKey === feedKey && <p className="public-profile-loading" role="status">
               {tab === "setups" ? "Шукаємо відкриті розбори HookChart…" : tab === "articles" ? "Завантажуємо статті та розбори…" : "Завантажуємо публікації…"}
             </p>}
-            {!visibleWall.length && pendingFeedKey !== feedKey && loadedFeedKey === feedKey && !error && !(tab === "articles" && linkedPostId && !postError) && <div className="public-profile-panel public-profile-empty-state">
+            {tab === "setups" && allGallerySetups.length > 0 && !filteredGallerySetups.length &&
+              pendingFeedKey !== feedKey && <div className="public-setup-gallery-empty" role="status">
+                <p>Серед завантажених графіків немає збігів із цими фільтрами.</p>
+                <button type="button" onClick={() => setSetupFilters({ ...DEFAULT_PUBLIC_SETUP_FILTERS })}>
+                  Показати всі завантажені графіки
+                </button>
+              </div>}
+            {!visibleWall.length && (tab !== "setups" || allGallerySetups.length === 0) &&
+              pendingFeedKey !== feedKey && loadedFeedKey === feedKey && !error && !(tab === "articles" && linkedPostId && !postError) && <div className="public-profile-panel public-profile-empty-state">
               <BookOpenText size={28} aria-hidden="true" />
               <h3>{tab === "setups" ? "Публічних графіків поки немає" : tab === "articles" ? "Публічних статей поки немає" : postCategory === "all" ? "Публікацій поки немає" : "У цій категорії поки немає дописів"}</h3>
               <p>Показуються тільки дозволені автором публікації серед уже завантажених. {loadedNext ? "Нижче можна завантажити наступні дописи." : "Поверніться до загальної стрічки."}</p>
