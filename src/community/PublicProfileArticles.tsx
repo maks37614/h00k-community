@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import type { ChartDocument } from "./chartDocument";
 import { ChartPreview } from "../components/community/ChartPreview";
-import { PublicProfilePhotoGallery, publicPhotoUrl } from "./PublicProfilePhotoGallery";
+import { PublicProfilePhotoGallery, publicPhotoIds, publicPhotoUrl } from "./PublicProfilePhotoGallery";
 import {
   communityPostUrl, publicArticleExcerpt, publicArticleReadMinutes, publicArticleUrl,
   publicArticlesUrl, type PublicReactionSummary,
@@ -42,6 +42,11 @@ type Props = {
   onShare: (id: string) => void;
   onOpenChart: (id: string) => void;
 };
+
+function coverPhotoUrl(base: string, post: PublicEducationalPost): string | null {
+  const id = publicPhotoIds(post.photos)[0];
+  return id ? publicPhotoUrl(base, post.id, id) : null;
+}
 
 function actualReactions(post: PublicEducationalPost) {
   return post.reactions?.filter(row => Number.isInteger(row.count) && row.count > 0) ?? [];
@@ -102,7 +107,7 @@ export function PublicProfileArticles({ posts, selected, pending, profile, base,
       <a className="public-article-card-link" href={publicArticleUrl(profile.url, post.id)}
         aria-label={"Читати статтю: " + (post.title || "Розбір трейдера")}>
         <div className="public-article-card-image">
-          {post.photos?.[0] ? <img src={publicPhotoUrl(base, post.id, post.photos[0])}
+          {coverPhotoUrl(base, post) ? <img src={coverPhotoUrl(base, post) ?? undefined}
             loading="lazy" alt="" /> : <BookOpenText size={45} aria-hidden="true" />}
           <span><Clock3 size={13} aria-hidden="true" /> ≈ {publicArticleReadMinutes(post.text)} хв читання</span>
         </div>
