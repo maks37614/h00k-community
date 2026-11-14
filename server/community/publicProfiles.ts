@@ -246,7 +246,7 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
     // public request, including its chart and upstream sharing permissions.
     let featuredPost = null;
     const pinnedId = c.featuredPublicPostId;
-    if (typeof pinnedId === "string" && /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(pinnedId)) {
+    if (typeof pinnedId === "string" && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(pinnedId)) {
       const { rows: candidates } = await db.query<Item>(
         `SELECT * FROM hc_items WHERE id=$1 AND owner_id=$2 AND kind='post'
           AND audience='public' AND conversation_id IS NULL AND NOT deleted`,
