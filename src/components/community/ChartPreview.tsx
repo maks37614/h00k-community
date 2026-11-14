@@ -42,7 +42,13 @@ export function ChartPreview({
       type="button"
       className="community-chart-preview"
       onClick={onOpen}
-      aria-label={`Відкрити HookChart ${document.symbol}`}
+      aria-label={`Відкрити HookChart ${document.symbol}${
+        authorizedServerSnapshot
+          ? signedArchive
+            ? ` · Оцінка з архіву h00k ${signedArchive.score} зі 100, підпис перевірено під час збереження`
+            : " · без архівної оцінки"
+          : ""
+      }`}
     >
       <svg
         viewBox="0 0 600 170"
