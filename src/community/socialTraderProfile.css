@@ -152,7 +152,7 @@ body { background: #080f1b; }
 .public-profile-articles .public-profile-post { border-color:#314b5c; }
 .public-profile-articles .public-profile-post h3 { font-size:19px; line-height:1.45; }
 .public-profile-articles .public-profile-photos img { object-fit:cover; max-height:320px; }
-@media (max-width:1150px) {
+@media (max-width:1320px) {
   .public-profile-identity { grid-template-columns:125px minmax(0,1fr); }
   .public-profile-hero-actions { grid-column:1/-1; justify-content:flex-start; padding-top:5px; }
   .public-profile-insights .public-profile-kpi-grid {
