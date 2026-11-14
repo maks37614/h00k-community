@@ -64,7 +64,7 @@ test("public gallery filter controls and share are reachable with focus and mobi
   assert.match(publicPage, /scrollIntoView\(\{ block: "center", behavior: "smooth" \}\)/);
   assert.match(publicPage, /panel\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(publicPage, /Поділитися галереєю/);
-  assert.match(gallerySkin, /min-height:44px; font-size: 16px/);
+  assert.match(gallerySkin, /min-height:\s*44px;\s*font-size:\s*16px/);
   assert.match(gallerySkin, /scroll-margin-block:20px/);
   assert.doesNotMatch(gallerySkin, /display:\s*none|visibility:\s*hidden/);
 });
