@@ -311,7 +311,7 @@ export function PublicProfileSettings() {
         busy={busy}
         onSelect={changeFeaturedPost}
       />
-      <PublicProfileMediaSettings />
+      <PublicProfileMediaSettings publicUrl={info?.url ?? undefined} />
       {notice && (
         <p
           className={"community-profile-address-notice community-address-notice-" + notice.kind}
