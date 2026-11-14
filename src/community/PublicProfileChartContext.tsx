@@ -27,6 +27,7 @@ export function PublicProfileChartContext({ document }: { document: ChartDocumen
         <CalendarClock size={13} aria-hidden="true" /> Знімок: {capturedAt}
       </time>}
       <span><ShieldCheck size={13} aria-hidden="true" /> Без live-даних</span>
+      <span title="Знімок не містить перевіреної алгоритмічної оцінки">Якість сетапу: не підтверджена</span>
     </div>
   </div>;
 }

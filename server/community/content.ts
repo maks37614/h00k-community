@@ -270,7 +270,7 @@ export async function presentItem(db: Database, rules: Policy, row: Item) {
   };
 }
 
-function bodyFor(raw: any, kind: string) {
+function bodyFor(raw: any, kind: string, hasChartAttachment = false) {
   if (
     !raw ||
     typeof raw !== "object" ||
@@ -334,9 +334,10 @@ function bodyFor(raw: any, kind: string) {
     !clean.text &&
     !clean.title &&
     !clean.photos?.length &&
-    kind !== "message"
+    kind !== "message" &&
+    !(kind === "post" && hasChartAttachment)
   )
-    fail("Додайте текст, заголовок або фото");
+    fail("Додайте текст, заголовок, фото або збережений графік");
   return clean;
 }
 
@@ -389,7 +390,7 @@ export async function createItem(db: Database, rules: Policy, input: any) {
     fail("Непідтримуваний тип матеріалу");
   const kind = input.kind,
     audience = input.audience ?? "private",
-    body = bodyFor(input.body, kind);
+    body = bodyFor(input.body, kind, Boolean(input.chartId));
   const parent = input.parentId ? await rules.item(uuid(input.parentId)) : null;
   if (input.parentId && (!parent || !(await rules.visible(parent))))
     fail("Матеріал недоступний", 404);

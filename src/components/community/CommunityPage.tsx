@@ -1458,6 +1458,7 @@ function ChartDialog({
 }) {
   const { user } = useAuth();
   const [text, setText] = useState(""),
+    [category, setCategory] = useState("analysis"),
     [audience, setAudience] = useState(() => draft.target.replyTo ? normalizeReplyAudience(draft.target.replyTo.audience) : "private"),
     [target, setTarget] = useState(draft.target),
     [busy, setBusy] = useState(false),
@@ -1527,6 +1528,16 @@ function ChartDialog({
           onChange={(e) => setText(e.target.value)}
         />
         <div className="community-composer-tools">
+          {target.kind === "post" && <label className="community-concept-category-label">
+            Розділ
+            <select aria-label="Категорія графіка" value={category}
+              onChange={(event) => setCategory(event.target.value)}>
+              <option value="analysis">Аналіз</option>
+              <option value="idea">Ідея</option>
+              <option value="education">Навчання</option>
+              <option value="general">Стрічка</option>
+            </select>
+          </label>}
           <select
             aria-label="Куди надіслати розбір"
             value={
@@ -1576,7 +1587,11 @@ function ChartDialog({
                   ...target,
                   audience,
                   chartId: id,
-                  body: { text: text || "Мій варіант розбору графіка", ...(target.replyTo ? { sourceItemId: target.replyTo.id } : {}) },
+                  body: {
+                    text: text.trim() || (target.kind === "post" ? "" : "Мій варіант розбору графіка"),
+                    ...(target.kind === "post" ? { category } : {}),
+                    ...(target.replyTo ? { sourceItemId: target.replyTo.id } : {}),
+                  },
                 });
                 onSaved();
               }).finally(() => setBusy(false));

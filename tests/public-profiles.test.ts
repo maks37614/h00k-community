@@ -362,6 +362,52 @@ test("saved public chart is fetched only explicitly and revocation closes direct
   assert.equal((await call("/api/public/profiles/chart-owner/posts")).data.items.length, 0);
 });
 
+test("chart-only setups publish to the public gallery without synthetic text or quality scores", async () => {
+  const owner = await named("chart-only-owner"), other = await named("chart-only-other");
+  const chartId = await saveChart(db, await policy(db, owner.id), snapshot());
+  const foreignChartId = await saveChart(db, await policy(db, other.id), snapshot());
+
+  // Empty ordinary posts must remain forbidden. An unauthorized chart
+  // attachment cannot bypass this validation or another user's ownership.
+  await assert.rejects(() => post(owner, { text: "", category: "analysis" }), /Додайте текст/);
+  await assert.rejects(
+    () => post(owner, { text: "", category: "analysis" }, "public", foreignChartId),
+    /Спершу створіть власну відповідь графіком/,
+  );
+  await assert.rejects(
+    () => post(owner, { text: "" }, "public", "invalid-chart-id"),
+  );
+
+  const id = await post(owner, {
+    text: "", title: "", category: "analysis",
+    qualityScore: 99, verified: true, hiddenNotes: "SECRET_CHART_ONLY_NOTE",
+  }, "public", chartId);
+
+  const list = await call("/api/public/profiles/chart-only-owner/posts?withChart=1&category=analysis");
+  assert.equal(list.res.status, 200, list.text);
+  assert.deepEqual(list.data.items.map((item: any) => item.id), [id]);
+  const card = list.data.items[0];
+  assert.equal(card.text, "");
+  assert.equal(card.title, "");
+  assert.equal(card.category, "analysis");
+  assert.equal(card.chart.symbol, "BTCUSDT");
+  assert.equal(card.chart.markers[0].type, "entry");
+  assert.equal(card.chart.markers[0].price, 100);
+  assert.equal(card.qualityScore, undefined);
+  assert.equal(card.verified, undefined);
+  assert.doesNotMatch(list.text, /SECRET_CHART_ONLY_NOTE|qualityScore|verified|confidence/);
+
+  const full = await call("/api/public/profiles/chart-only-owner/posts/" + id + "/chart");
+  assert.equal(full.res.status, 200, full.text);
+  assert.equal(full.data.document.symbol, "BTCUSDT");
+
+  // The same source becomes inaccessible as soon as its post is not public.
+  await db.query("UPDATE hc_items SET audience='friends' WHERE id=$1", [id]);
+  const revoked = await call("/api/public/profiles/chart-only-owner/posts?withChart=1");
+  assert.deepEqual(revoked.data.items, []);
+  assert.equal((await call("/api/public/profiles/chart-only-owner/posts/" + id + "/chart")).res.status, 404);
+});
+
 test("private source charts and disabled source owners cannot be exposed by public descendants", async () => {
   const source = await named("source-person"), reply = await named("reply-person"), document = snapshot();
   const parent = await saveChart(db, await policy(db, source.id), document);
