@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Camera, Check, ExternalLink, ImagePlus, Images, ShieldCheck, Trash2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { apiJson } from "../../utils/apiFetch";
@@ -28,7 +28,10 @@ export function PublicProfileMediaSettings({ publicUrl }: { publicUrl?: string }
   const [library, setLibrary] = useState<MediaItem[]>([]);
   const [next, setNext] = useState<string | null>(null);
   const [libraryBusy, setLibraryBusy] = useState(false);
+  const pickerCloseRef = useRef<HTMLButtonElement>(null);
+  const ownerRef = useRef(user?.uid);
   const enabled = profile?.community?.publicProfileEnabled === true;
+  ownerRef.current = user?.uid;
 
   // Never let thumbnails from one signed-in account persist into another.
   useEffect(() => {
@@ -37,6 +40,18 @@ export function PublicProfileMediaSettings({ publicUrl }: { publicUrl?: string }
     setNext(null);
     setCrop(null);
   }, [user?.uid]);
+
+  useEffect(() => {
+    if (!picker) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    pickerCloseRef.current?.focus();
+    return () => {
+      document.body.style.overflow = oldOverflow;
+      previous?.focus();
+    };
+  }, [picker]);
 
   const mediaId = (kind: Kind) => {
     const id = profile?.community?.[kind + "MediaId"];
@@ -81,10 +96,13 @@ export function PublicProfileMediaSettings({ publicUrl }: { publicUrl?: string }
 
   async function loadLibrary(before?: string) {
     if (libraryBusy) return;
+    const owner = user?.uid;
+    if (!owner) return;
     setLibraryBusy(true); setError("");
     try {
       const data = await apiJson("/api/community/media/library" +
         (before ? "?before=" + encodeURIComponent(before) : ""));
+      if (ownerRef.current !== owner) return;
       if (!Array.isArray(data.items)) throw new Error("Не вдалося завантажити ваші фото");
       const items: MediaItem[] = data.items.filter((x: any) =>
         x && validId(x.id) && typeof x.bytes === "number");
@@ -93,8 +111,12 @@ export function PublicProfileMediaSettings({ publicUrl }: { publicUrl?: string }
       ] : items);
       setNext(validId(data.next) ? data.next : null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Галерея тимчасово недоступна");
-    } finally { setLibraryBusy(false); }
+      if (ownerRef.current === owner) {
+        setError(e instanceof Error ? e.message : "Галерея тимчасово недоступна");
+      }
+    } finally {
+      if (ownerRef.current === owner) setLibraryBusy(false);
+    }
   }
 
   function openLibrary(kind: Kind) {
@@ -240,7 +262,7 @@ export function PublicProfileMediaSettings({ publicUrl }: { publicUrl?: string }
             if (event.key === "Escape" && !busy) { event.stopPropagation(); setPicker(null); }
           }}>
           <header><h3>Мої фотографії · {labels[picker]}</h3>
-            <button type="button" disabled={!!busy} onClick={() => setPicker(null)}
+            <button ref={pickerCloseRef} type="button" disabled={!!busy} onClick={() => setPicker(null)}
               aria-label="Закрити галерею">Закрити</button>
           </header>
           <p>Тільки ваші завантажені фото. Після вибору доступ автоматично стане приватним.</p>
