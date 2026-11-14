@@ -801,7 +801,7 @@ export function PublicProfile() {
               <BookOpenText size={28} aria-hidden="true" />
               <h3>{tab === "setups" ? "Публічних графіків поки немає" : tab === "articles" ? "Публічних статей поки немає" : postCategory === "all" ? "Публікацій поки немає" : "У цій категорії поки немає дописів"}</h3>
               <p>Показуються тільки дозволені автором публікації серед уже завантажених. {loadedNext ? "Нижче можна завантажити наступні дописи." : "Поверніться до загальної стрічки."}</p>
-              {postCategory !== "all" && <button type="button" onClick={() => setPostCategory("all")}>Усі публікації</button>}
+              {tab === "wall" && postCategory !== "all" && <button type="button" onClick={() => setPostCategory("all")}>Усі публікації</button>}
               {tab === "wall" && postCategory === "all" && !loadedNext && (
                 <div className="public-profile-empty-actions">
                   <a href={profile.communityOrigin + "/#community?section=feed"}>
