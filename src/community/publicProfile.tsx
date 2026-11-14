@@ -9,6 +9,7 @@ import { ChartPreview } from "../components/community/ChartPreview";
 import { PublicProfileArticles } from "./PublicProfileArticles";
 import { PublicProfilePhotoGallery } from "./PublicProfilePhotoGallery";
 import { PublicProfileChartContext } from "./PublicProfileChartContext";
+import { PublicProfileChartLevels } from "./PublicProfileChartLevels";
 import { PublicProfileImportFreshness, PublicProfileVerifiedAwards } from "./PublicProfileVerifiedHighlights";
 import { PublicProfileTradeWindows, type PublicTradeWindow } from "./PublicProfileTradeWindows";
 import { PublicProfileDailyHistory } from "./PublicProfileDailyHistory";
@@ -32,6 +33,7 @@ import "./publicProfileCards.css";
 import "./publicProfileHighlights.css";
 import "./publicProfileTradeWindows.css";
 import "./publicProfileDailyHistory.css";
+import "./publicProfileLevels.css";
 
 type PublicStats = {
   totals: Array<{
@@ -896,6 +898,7 @@ export function PublicProfile() {
                 <div className="public-profile-chart-card">
                   <PublicProfileChartContext document={item.chart} />
                   <ChartPreview document={item.chart} onOpen={() => void openChart(item.id)} />
+                  <PublicProfileChartLevels document={item.chart} />
                   <a className="public-profile-chart-deep-link"
                     href={publicChartPostUrl(profile.url, item.id)}>
                     <ChartNoAxesCombined size={15} aria-hidden="true" /> Відкрити окремий HookChart <ArrowUpRight size={14} aria-hidden="true" />
