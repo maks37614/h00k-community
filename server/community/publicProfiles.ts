@@ -297,11 +297,15 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
     const category = req.query.category === undefined ? null : req.query.category;
     if (category !== null && (typeof category !== "string" || !["idea", "analysis", "education"].includes(category)))
       fail("Некоректна категорія публікації", 400);
+    if (req.query.withChart !== undefined && req.query.withChart !== "1")
+      fail("Некоректний фільтр графіків", 400);
+    const withChart = req.query.withChart === "1";
     const { rows } = await db.query<Item>(
       `SELECT * FROM hc_items WHERE owner_id=$1 AND kind='post' AND audience='public' AND conversation_id IS NULL AND NOT deleted
       AND ($2::uuid IS NULL OR (created_at,id)<(SELECT created_at,id FROM hc_items WHERE id=$2 AND owner_id=$1 AND kind='post' AND audience='public' AND NOT deleted))
       AND ($3::text IS NULL OR body->>'category'=$3)
-      ORDER BY created_at DESC,id DESC LIMIT 16`, [owner.id, before, category],
+      AND (NOT $4::boolean OR chart_id IS NOT NULL)
+      ORDER BY created_at DESC,id DESC LIMIT 16`, [owner.id, before, category, withChart],
     );
     const output = [];
     for (const row of rows.slice(0, 15)) {

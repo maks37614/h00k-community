@@ -168,9 +168,14 @@ export function PublicProfile() {
   const [chart, setChart] = useState<ChartDocument | null>(null);
   const [tab, setTab] = useState<PublicTab>("wall");
   const [postCategory, setPostCategory] = useState<"all" | "idea" | "analysis" | "education">("all");
-  const currentCategory = useRef(postCategory);
-  currentCategory.current = postCategory;
-  const categoryLoadedOnce = useRef(false);
+  const feedKey = tab === "setups" ? "setups" : tab === "wall" ? "wall:" + postCategory : null;
+  const currentFeedKey = useRef(feedKey);
+  currentFeedKey.current = feedKey;
+  const feedRequestVersion = useRef(0);
+  const feedLoadedOnce = useRef(false);
+  const [loadedFeedKey, setLoadedFeedKey] = useState<string | null>(null);
+  const [pendingFeedKey, setPendingFeedKey] = useState<string | null>("wall:all");
+  const [wallPreviewCount, setWallPreviewCount] = useState(0);
   const [copied, setCopied] = useState("");
   const [expandedComments, setExpandedComments] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, CommentState>>({});
@@ -182,40 +187,62 @@ export function PublicProfile() {
   }, [!!chart]);
   useEffect(() => {
     const controller = new AbortController();
+    const requestVersion = ++feedRequestVersion.current;
     void Promise.all([read(base, controller.signal), read(base + "/posts", controller.signal)])
       .then(([account, wall]) => {
+        if (controller.signal.aborted) return;
         setProfile(account.profile);
-        if (currentCategory.current === "all") {
+        if (requestVersion === feedRequestVersion.current && currentFeedKey.current === "wall:all") {
           setItems(wall.items);
           setNext(wall.next);
+          setWallPreviewCount(wall.items.length);
+          setLoadedFeedKey("wall:all");
+          setPendingFeedKey(null);
         }
         document.title = account.profile.displayName + " · h00k Community";
       })
-      .catch(e => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "Профіль недоступний"); });
+      .catch(e => {
+        if (!controller.signal.aborted) {
+          setError(e instanceof Error ? e.message : "Профіль недоступний");
+          if (requestVersion === feedRequestVersion.current) setPendingFeedKey(null);
+        }
+      });
     return () => controller.abort();
   }, [base]);
   useEffect(() => {
-    if (!categoryLoadedOnce.current) {
-      categoryLoadedOnce.current = true;
+    if (!feedLoadedOnce.current) {
+      feedLoadedOnce.current = true;
       return;
     }
+    if (!feedKey) return;
     const controller = new AbortController();
+    const requestVersion = ++feedRequestVersion.current;
     setItems([]);
     setNext(null);
+    setLoadedFeedKey(null);
+    setPendingFeedKey(feedKey);
+    setError("");
     setPostError("");
-    const suffix = postCategory === "all" ? "" : "?category=" + encodeURIComponent(postCategory);
+    const suffix = feedKey === "setups" ? "?withChart=1"
+      : postCategory === "all" ? "" : "?category=" + encodeURIComponent(postCategory);
     void read(base + "/posts" + suffix, controller.signal)
       .then(wall => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || requestVersion !== feedRequestVersion.current ||
+            currentFeedKey.current !== feedKey) return;
         setItems(wall.items);
         setNext(wall.next);
-        setError("");
+        if (feedKey === "wall:all") setWallPreviewCount(wall.items.length);
+        setLoadedFeedKey(feedKey);
+        setPendingFeedKey(null);
       })
       .catch(e => {
-        if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "Не вдалося отримати публікації");
+        if (controller.signal.aborted || requestVersion !== feedRequestVersion.current ||
+            currentFeedKey.current !== feedKey) return;
+        setError(e instanceof Error ? e.message : "Не вдалося отримати публікації");
+        setPendingFeedKey(null);
       });
     return () => controller.abort();
-  }, [base, postCategory]);
+  }, [base, feedKey]);
 
   useEffect(() => {
     if (!linkedPostId) return;
@@ -227,17 +254,22 @@ export function PublicProfile() {
   }, [base, linkedPostId]);
 
   const more = async () => {
-    if (!next || busy) return;
+    if (!next || busy || pendingFeedKey || !feedKey || loadedFeedKey !== feedKey) return;
     setBusy(true); setError("");
+    const requestedKey = feedKey;
     try {
-      const requestedCategory = postCategory;
-      const params = new URLSearchParams({ before: next, ...(postCategory !== "all" ? { category: postCategory } : {}) });
+      const params = new URLSearchParams({
+        before: next,
+        ...(requestedKey === "setups" ? { withChart: "1" }
+          : postCategory !== "all" ? { category: postCategory } : {}),
+      });
       const page = await read(base + "/posts?" + params.toString());
-      if (currentCategory.current !== requestedCategory) return;
+      if (currentFeedKey.current !== requestedKey) return;
       setItems(old => [...new Map([...old, ...page.items].map(item => [item.id, item])).values()]);
       setNext(page.next);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не вдалося завантажити пости");
+      if (currentFeedKey.current === requestedKey)
+        setError(e instanceof Error ? e.message : "Не вдалося завантажити пости");
     } finally { setBusy(false); }
   };
   const openChart = async (id: string) => {
@@ -320,16 +352,18 @@ export function PublicProfile() {
     (tab !== "setups" || pinned.chart);
   // The deep-linked post stays discoverable and the pinned post is first for
   // normal browsing, even when it belongs to a later pagination page.
+  const loadedItems = feedKey && loadedFeedKey === feedKey ? items : [];
+  const loadedNext = feedKey && loadedFeedKey === feedKey ? next : null;
   const wall = [...new Map([
     ...(focusedPost ? [focusedPost] : []),
     ...(eligiblePinned ? [pinned] : []),
-    ...items,
+    ...loadedItems,
   ].map(item => [item.id, item])).values()];
   const profileJoinDate = publicProfileDate(profile?.joinedAt);
   const totalClosures = profile?.statistics?.totals.reduce((sum, currency) => sum + currency.count, 0) ?? 0;
   const overview = publicClosedOrderOverview(profile?.statistics?.totals ?? []);
   const visibleWall = tab === "setups" ? publicProfileSetups(wall) : wall;
-  const visiblePostCount = items.length;
+  const visiblePostCount = wallPreviewCount;
   const browsePosts = () => {
     setPostCategory("all");
     setTab("wall");
@@ -489,12 +523,15 @@ export function PublicProfile() {
                 <a className="public-profile-comment-cta" href={communityPostUrl(profile.communityOrigin, item.id)}>Увійти, щоб відповісти <ArrowUpRight size={14} aria-hidden="true" /></a>
               </div>}
             </article>)}
-            {!visibleWall.length && <div className="public-profile-panel public-profile-empty-state">
+            {pendingFeedKey === feedKey && <p className="public-profile-loading" role="status">
+              {tab === "setups" ? "Шукаємо відкриті розбори HookChart…" : "Завантажуємо публікації…"}
+            </p>}
+            {!visibleWall.length && pendingFeedKey !== feedKey && loadedFeedKey === feedKey && !error && <div className="public-profile-panel public-profile-empty-state">
               <BookOpenText size={28} aria-hidden="true" />
               <h3>{tab === "setups" ? "Публічних графіків поки немає" : postCategory === "all" ? "Публікацій поки немає" : "У цій категорії поки немає дописів"}</h3>
-              <p>Показуються тільки дозволені автором публікації серед уже завантажених. {next ? "Нижче можна завантажити наступні дописи." : "Поверніться до загальної стрічки."}</p>
+              <p>Показуються тільки дозволені автором публікації серед уже завантажених. {loadedNext ? "Нижче можна завантажити наступні дописи." : "Поверніться до загальної стрічки."}</p>
               {postCategory !== "all" && <button type="button" onClick={() => setPostCategory("all")}>Усі публікації</button>}
-              {tab === "wall" && postCategory === "all" && !next && (
+              {tab === "wall" && postCategory === "all" && !loadedNext && (
                 <div className="public-profile-empty-actions">
                   <a href={profile.communityOrigin + "/#community?section=feed"}>
                     <BookOpenText size={16} aria-hidden="true" /> Перейти до стрічки Community
@@ -506,7 +543,9 @@ export function PublicProfile() {
                 </div>
               )}
             </div>}
-            {next && <button type="button" className="public-profile-more" disabled={busy} onClick={() => void more()}>Ще публікації</button>}
+            {loadedNext && <button type="button" className="public-profile-more" disabled={busy} onClick={() => void more()}>
+              {tab === "setups" ? "Ще розбори HookChart" : "Ще публікації"}
+            </button>}
           </section>}
 
           {tab === "statistics" && profile.statistics && <section className="public-profile-results" aria-label="Торгові результати">
