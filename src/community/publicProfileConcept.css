@@ -632,3 +632,28 @@ body { background: #080f1b; }
     height:clamp(270px,72dvh,620px);min-height:270px;
   }
 }
+
+
+/* A public comment permalink is opt-in and privacy-gated server-side. */
+.public-profile .public-profile-comment-focused {
+  border-color:#38d7b1!important;
+  background:linear-gradient(130deg,#123a3c,#102a39)!important;
+  box-shadow:0 0 0 1px #29bca55c;
+}
+.public-profile .public-profile-comment {scroll-margin-top:24px;}
+.public-profile .public-profile-comment-share {
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:36px;padding:7px 11px;margin-top:8px;
+  border:1px solid #347e77;border-radius:9px;
+  background:#0f383c;color:#baf5e9;font-size:11px;font-weight:750;
+}
+.public-profile .public-profile-comment-share:hover {
+  background:#165656;border-color:#3bb9a5;
+}
+.public-profile .public-profile-comment > small[role="status"] {
+  display:block;margin-top:6px;color:#ffbfc8;font-size:11px;
+}
+@media(max-width:670px) {
+  .public-profile .public-profile-comment-share {min-height:42px;max-width:100%;}
+  .public-profile .public-profile-comment {scroll-margin-top:12px;}
+}
