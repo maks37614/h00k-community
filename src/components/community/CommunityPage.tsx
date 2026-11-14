@@ -2868,8 +2868,10 @@ function Profile({
   const friendships = useResource("profile-friends:" + id + ":" + user?.uid, () =>
     user?.uid === id ? Promise.resolve({ people: [] }) : apiJson(api + "/friends"),
   );
-  const [profileSection, setProfileSection] = useState<"wall" | "about" | "trades">("wall");
-  useEffect(() => setProfileSection("wall"), [id]);
+  const requestedProfileSection = () =>
+    new URLSearchParams(location.hash.split("?")[1] ?? "").get("profileTab") === "about" ? "about" : "wall";
+  const [profileSection, setProfileSection] = useState<"wall" | "about" | "trades">(requestedProfileSection);
+  useEffect(() => setProfileSection(requestedProfileSection()), [id]);
   const [form, setForm] = useState<any>({ ...profile?.community }),
     [displayName, setName] = useState(profile?.displayName ?? "");
   const hydratedFor = useRef<string | null>(profile && user?.uid === id ? id : null);

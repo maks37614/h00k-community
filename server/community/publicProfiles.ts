@@ -210,7 +210,7 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
       });
     });
   };
-  route("", async (_req, res, db, owner) => {
+  route("", async (_req, res, db, owner, rules) => {
     const p = owner.profile, c = p.community ?? {};
     const status = c.status?.audience === "public" && (!c.status.expiresAt || Date.parse(c.status.expiresAt) > Date.now())
       ? text(c.status.text, 280) : "";
@@ -242,6 +242,21 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
       }
       awards = { received: types.thanks + types.analysis + types.topTrader, ...types };
     }
+    // A featured post is not a privacy bypass: resolve it afresh on every
+    // public request, including its chart and upstream sharing permissions.
+    let featuredPost = null;
+    const pinnedId = c.featuredPublicPostId;
+    if (typeof pinnedId === "string" && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(pinnedId)) {
+      const { rows: candidates } = await db.query<Item>(
+        `SELECT * FROM hc_items WHERE id=$1 AND owner_id=$2 AND kind='post'
+          AND audience='public' AND conversation_id IS NULL AND NOT deleted`,
+        [pinnedId,owner.id],
+      );
+      const pinned = candidates[0];
+      if (pinned && await rules.visible(pinned) &&
+          (!pinned.chart_id || await rules.canReadChart(pinned.chart_id)))
+        featuredPost = await publicPostCard(db, rules, pinned);
+    }
     res.json({ success: true, profile: {
       id: owner.id, username: owner.username, displayName: text(p.displayName, 100) || "Трейдер",
       joinedAt: owner.created_at, url: publicProfileUrl(owner.username), communityOrigin: communityOrigin(),
@@ -249,7 +264,7 @@ export function installPublicProfiles(app: Express, getDb: () => Database, build
       interests: c.interestsAudience === "public" ? text(c.interests, 2000) : "",
       lifestyle: c.lifestyleAudience === "public" ? text(c.lifestyle, 2000) : "",
       telegram: c.telegramAudience === "public" && /^https:\/\/t\.me\/[A-Za-z0-9_]+$/.test(c.telegram ?? "") ? c.telegram : "",
-      status, statistics, awards,
+      status, statistics, awards, featuredPost,
       sessions: c.publicSessionsEnabled === true && Array.isArray(c.tradingSessionIds)
         ? c.tradingSessionIds.filter((value: unknown) => typeof value === "string" &&
           ["sydney", "tokyo", "london", "new-york"].includes(value)).slice(0, 4)

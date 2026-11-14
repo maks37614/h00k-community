@@ -47,6 +47,7 @@ type PublicTrader = {
   statistics: PublicStats | null;
   awards: { received: number; thanks: number; analysis: number; topTrader: number } | null;
   sessions: string[] | null;
+  featuredPost: PublicPost | null;
 };
 type PublicPost = {
   id: string;
@@ -314,8 +315,16 @@ export function PublicProfile() {
   };
 
   const communityUrl = profile ? profile.communityOrigin + "/#community?section=profile&owner=" + encodeURIComponent(profile.id) : null;
-  const wall = focusedPost && !items.some(item => item.id === focusedPost.id)
-    ? [focusedPost, ...items] : items;
+  const pinned = profile?.featuredPost ?? null;
+  const eligiblePinned = pinned && (postCategory === "all" || pinned.category === postCategory) &&
+    (tab !== "setups" || pinned.chart);
+  // The deep-linked post stays discoverable and the pinned post is first for
+  // normal browsing, even when it belongs to a later pagination page.
+  const wall = [...new Map([
+    ...(focusedPost ? [focusedPost] : []),
+    ...(eligiblePinned ? [pinned] : []),
+    ...items,
+  ].map(item => [item.id, item])).values()];
   const profileJoinDate = publicProfileDate(profile?.joinedAt);
   const totalClosures = profile?.statistics?.totals.reduce((sum, currency) => sum + currency.count, 0) ?? 0;
   const overview = publicClosedOrderOverview(profile?.statistics?.totals ?? []);
@@ -428,6 +437,7 @@ export function PublicProfile() {
             {postError && <p className="public-profile-error" role="status">Допис за посиланням недоступний: {postError}</p>}
             {visibleWall.map(item => <article className="public-profile-panel public-profile-post" key={item.id} id={"post-" + item.id}>
               {focusedPost?.id === item.id && <span className="public-profile-featured">Допис за посиланням</span>}
+              {pinned?.id === item.id && <span className="public-profile-pinned-post"><Sparkles size={14} aria-hidden="true" /> Закріплений допис трейдера</span>}
               <div className="public-profile-post-author">
                 <span className="public-profile-post-avatar" aria-hidden="true">
                   {profile.displayName.slice(0, 1).toUpperCase()}
@@ -484,6 +494,17 @@ export function PublicProfile() {
               <h3>{tab === "setups" ? "Публічних графіків поки немає" : postCategory === "all" ? "Публікацій поки немає" : "У цій категорії поки немає дописів"}</h3>
               <p>Показуються тільки дозволені автором публікації серед уже завантажених. {next ? "Нижче можна завантажити наступні дописи." : "Поверніться до загальної стрічки."}</p>
               {postCategory !== "all" && <button type="button" onClick={() => setPostCategory("all")}>Усі публікації</button>}
+              {tab === "wall" && postCategory === "all" && !next && (
+                <div className="public-profile-empty-actions">
+                  <a href={profile.communityOrigin + "/#community?section=feed"}>
+                    <BookOpenText size={16} aria-hidden="true" /> Перейти до стрічки Community
+                  </a>
+                  <a href={communityUrl! + "&profileTab=about"}>
+                    <UsersRound size={16} aria-hidden="true" /> Власник профілю? Заповнити сторінку
+                  </a>
+                  <p>Перший допис, фото та HookChart з'являться тут лише після публікації з дозволом «Публічно». Дані з особистих чатів чи приватних графіків не використовуються.</p>
+                </div>
+              )}
             </div>}
             {next && <button type="button" className="public-profile-more" disabled={busy} onClick={() => void more()}>Ще публікації</button>}
           </section>}

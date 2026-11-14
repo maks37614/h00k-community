@@ -7,6 +7,7 @@ import {
 } from "./profileAddressState";
 import "./profile-address.css";
 import { PublicProfileMediaSettings } from "./PublicProfileMediaSettings";
+import { PublicFeaturedPostSettings } from "./PublicFeaturedPostSettings";
 
 type AddressNotice = { kind: "error" | "success" | "info"; text: string };
 
@@ -140,6 +141,21 @@ export function PublicProfileSettings() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function changeFeaturedPost(id: string | null) {
+    if (busy || !info?.username || !enabled) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      await updateProfileData({ community: { featuredPublicPostId: id } });
+      setNotice({ kind: "success", text: id
+        ? "Допис закріплено у відкритому профілі."
+        : "Закріплений допис прибрано з публічного профілю." });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message
+        : "Не вдалося змінити закріплений допис." });
+    } finally { setBusy(false); }
   }
 
   async function changeSessionsVisibility(next: boolean) {
@@ -288,6 +304,13 @@ export function PublicProfileSettings() {
         <p className="community-hint">За замовчуванням вимкнено. Гості бачитимуть лише вибрані сесії та їхній розклад у власному часовому поясі, а не ваш часовий пояс або місцеперебування.</p>
       </div>
 
+      <PublicFeaturedPostSettings
+        username={info?.username ?? ""}
+        enabled={enabled}
+        selectedId={profile?.community?.featuredPublicPostId ?? null}
+        busy={busy}
+        onSelect={changeFeaturedPost}
+      />
       <PublicProfileMediaSettings />
       {notice && (
         <p
