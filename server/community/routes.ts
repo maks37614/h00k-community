@@ -185,8 +185,15 @@ export function installCommunityRoutes(app: Express, getDb: () => Database) {
       [reportId,action==="remove" ? "removed" : "dismissed"],
     );
     if (!rows.length) fail("Скаргу не знайдено", 404);
-    if (action==="remove") await db.query(
-      "UPDATE hc_room_messages SET deleted=true WHERE id=$1", [rows[0].message_id]);
+    if (action==="remove") {
+      await db.query(
+        "UPDATE hc_room_messages SET deleted=true WHERE id=$1", [rows[0].message_id]);
+      // One removed message closes all duplicate reports on that same content.
+      await db.query(
+        "UPDATE hc_room_reports SET status='removed' WHERE message_id=$1 AND status='pending'",
+        [rows[0].message_id],
+      );
+    }
     res.json({success:true});
   }, 20);
   route("get", "/feed", async (req, res, db, _a, p) => {
