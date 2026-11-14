@@ -48,6 +48,8 @@ import type {
   Timeframe,
 } from "../../types";
 import { ChartPreview } from "./ChartPreview";
+import { PublicSetupGalleryToolbar } from "../../community/PublicSetupGalleryToolbar";
+import { DEFAULT_PUBLIC_SETUP_FILTERS, filterPublicSetupGallery, type PublicSetupGalleryFilters } from "../../community/publicSetupGalleryModel";
 import { CommunityItemEditor } from "./CommunityItemEditor";
 import { CommunityReactions } from "./CommunityReactions";
 import { CommunityPhotoGallery } from "./CommunityPhotoGallery";
@@ -64,6 +66,7 @@ import "./social-edit-items.css";
 import "./social-photo-gallery.css";
 import "./social-profile-actions.css";
 import "./social-profile-tabs.css";
+import "./social-profile-gallery.css";
 import "./social-profile-hero.css";
 import "./social-resource-library.css";
 import "./social-concept-layout.css";
@@ -644,16 +647,19 @@ function Composer({
   onPick,
   onSent,
   run,
+  presetCategory,
 }: {
   target: Target;
   onPick: (target: Target) => void;
   onSent: () => void;
   run: Run;
+  presetCategory?: "education";
 }) {
   const { user, profile } = useAuth();
   const [text, setText] = useState("");
+  const [title, setTitle] = useState("");
   const [audience, setAudience] = useState(() => target.replyTo ? normalizeReplyAudience(target.replyTo.audience) : target.audience ? normalizeReplyAudience(target.audience) : target.kind === "post" ? "public" : "private");
-  const [category, setCategory] = useState("general");
+  const [category, setCategory] = useState(presetCategory ?? "general");
   const [photos, setPhotos] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
@@ -662,13 +668,17 @@ function Composer({
   const clientId = useRef(crypto.randomUUID());
   const emojiPanelId = useId();
   const audienceId = useId();
-  const canSubmit = canSendCommunityContent(text, photos.length, busy) && canShareReplyWithAudience(target.replyTo, audience);
+  const canSubmit = canSendCommunityContent(text, photos.length, busy) &&
+    canShareReplyWithAudience(target.replyTo, audience) &&
+    (presetCategory !== "education" || title.trim().length > 0);
   const kindLabel = target.kind === "post" ? "Нова публікація" :
     target.kind === "comment" ? "Написати коментар" : "Нове повідомлення";
 
   function send(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (inFlight.current || !canSendCommunityContent(text, photos.length, false) || !canShareReplyWithAudience(target.replyTo, audience)) return;
+    if (inFlight.current || !canSendCommunityContent(text, photos.length, false) ||
+      !canShareReplyWithAudience(target.replyTo, audience) ||
+      (presetCategory === "education" && !title.trim())) return;
     inFlight.current = true;
     setBusy(true);
     setPhotoError("");
@@ -679,9 +689,12 @@ function Composer({
         conversationId: target.conversationId,
         audience,
         clientId: clientId.current,
-        body: { ...replyBody(text, photos, target.replyTo), ...(target.kind === "post" ? { category } : {}) },
+        body: { ...replyBody(text, photos, target.replyTo), ...(target.kind === "post"
+          ? { category: presetCategory ?? category, ...(title.trim() ? { title: title.trim() } : {}) }
+          : {}) },
       });
       setText("");
+      setTitle("");
       setPhotos([]);
       setShowEmojis(false);
       clientId.current = crypto.randomUUID();
@@ -750,6 +763,14 @@ function Composer({
           <small>Відповідь залишиться в обговоренні цього допису.</small>
         </blockquote>
       )}
+      {target.kind === "post" && (presetCategory === "education" || category === "education") && (
+        <label className="community-article-title-label">Назва статті
+          <input type="text" aria-label="Назва статті" maxLength={200} value={title}
+            placeholder="Про що цей навчальний розбір?" disabled={busy}
+            required={presetCategory === "education"}
+            onChange={event => setTitle(event.target.value)} />
+        </label>
+      )}
       <textarea
         aria-label={
           target.kind === "comment"
@@ -811,7 +832,7 @@ function Composer({
             <Smile size={17} aria-hidden="true" /> <span>Емодзі</span>
           </button>
         </div>
-        {target.kind === "post" && (
+        {target.kind === "post" && !presetCategory && (
           <label className="community-concept-category-label">Розділ
             <select aria-label="Категорія публікації" value={category} onChange={(event) => setCategory(event.target.value)}>
               <option value="general">Стрічка</option>
