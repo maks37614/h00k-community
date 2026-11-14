@@ -1192,6 +1192,7 @@ function ItemCard({
       {item.chart && (
         <ChartPreview
           document={item.chart}
+          authorizedServerSnapshot
           onOpen={() => void onChart(item, target)}
         />
       )}
@@ -1361,6 +1362,7 @@ function ItemCard({
                 {comment.chart && (
                   <ChartPreview
                     document={comment.chart}
+                    authorizedServerSnapshot
                     onOpen={() =>
                       void onChart(comment, {
                         kind: "comment",
