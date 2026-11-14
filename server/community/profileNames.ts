@@ -81,3 +81,21 @@ export async function claimProfileName(db: Database, owner: string, input: unkno
 export async function retireProfileName(db: Database, owner: string, now = Date.now()) {
   await db.query("UPDATE hc_profile_names SET username=NULL,owner_id=NULL,retired_at=$2 WHERE owner_id=$1", [owner, new Date(now)]);
 }
+
+/** UI-safe avatar route: no private or friends-only media IDs are exposed. */
+export function publicTraderAvatarPath(user: {
+  username?: string | null;
+  profile?: { community?: {
+    publicProfileEnabled?: boolean;
+    avatarAudience?: string;
+    avatarMediaId?: string;
+  } };
+}): string | null {
+  const community = user.profile?.community;
+  if (!user.username || !/^[a-z][a-z0-9-]{1,28}[a-z0-9]$/.test(user.username) ||
+      community?.publicProfileEnabled !== true || community.avatarAudience !== "public" ||
+      typeof community.avatarMediaId !== "string" ||
+      !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(community.avatarMediaId))
+    return null;
+  return "/api/public/profiles/" + user.username + "/avatar";
+}
