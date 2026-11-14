@@ -2,6 +2,7 @@ import { AccountSecuritySettings } from "./AccountSecuritySettings";
 import { PublicProfileSettings } from "./PublicProfileSettings";
 import { CommunityNotificationCenter } from "./CommunityNotificationCenter";
 import { CommunityPublicRooms } from "./CommunityPublicRooms";
+import { swipeCommunityPane } from "./socialMobileSwipe";
 import { CommunityTradingSessions } from "./CommunityTradingSessions";
 import { CommunityConceptProfile } from "./CommunityConceptProfile";
 import { ownerAvatarUrl } from "./profileMediaAvatar";
@@ -182,6 +183,7 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
   }),
     [revision, bump] = useState(0);
   const [mobileFeedColumn, setMobileFeedColumn] = useState<"profile" | "feed" | "sessions">("feed");
+  const mobileSwipeStart = useRef<{x:number;y:number;at:number}|null>(null);
   async function run(fn: () => Promise<unknown>) {
     setNotice("");
     try {
@@ -440,13 +442,39 @@ export function CommunityPage({ onReplay }: { onReplay: () => void }) {
         {([["profile","Профіль"],["feed","Стрічка"],["sessions","Сесії й нагороди"]] as const)
           .map(([key,label]) => (
             <button type="button" key={key} aria-pressed={mobileFeedColumn === key}
-              onClick={() => setMobileFeedColumn(key)}>
+              onClick={() => setMobileFeedColumn(key)}
+              onKeyDown={event => {
+                if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+                event.preventDefault();
+                setMobileFeedColumn(current => swipeCommunityPane(
+                  current, event.key === "ArrowLeft" ? 100 : -100, 0, 150
+                ));
+              }}>
               {label}
             </button>
           ))}
       </nav>}
       <div className={"community-dashboard" + (tab === "feed" ? " community-dashboard-feed" : "")}
-        data-mobile-column={tab === "feed" ? mobileFeedColumn : undefined}>
+        data-mobile-column={tab === "feed" ? mobileFeedColumn : undefined}
+        onTouchStart={event => {
+          mobileSwipeStart.current = null;
+          if (tab !== "feed" || window.innerWidth > 760 || event.touches.length !== 1) return;
+          const target = event.target as Element;
+          if (target.closest('button,a,input,textarea,select,canvas,[contenteditable="true"],[role="slider"],.community-photo-gallery,.community-chart-preview,.community-concept-feed-tabs,.community-composer,.community-profile-gallery'))
+            return;
+          mobileSwipeStart.current = {x:event.touches[0].clientX,y:event.touches[0].clientY,at:Date.now()};
+        }}
+        onTouchEnd={event => {
+          const start = mobileSwipeStart.current;
+          mobileSwipeStart.current = null;
+          if (!start || tab !== "feed" || event.changedTouches.length !== 1 ||
+              window.innerWidth > 760) return;
+          const touch = event.changedTouches[0];
+          setMobileFeedColumn(current => swipeCommunityPane(
+            current, touch.clientX - start.x, touch.clientY - start.y, Date.now() - start.at
+          ));
+        }}
+        onTouchCancel={() => { mobileSwipeStart.current = null; }}>
         <div className="community-sidebar">
           <CommunityConceptProfile
             key={user.uid}
