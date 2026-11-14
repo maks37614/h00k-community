@@ -59,6 +59,7 @@ import "./social-edit-items.css";
 import "./social-photo-gallery.css";
 import "./social-profile-actions.css";
 import "./social-profile-tabs.css";
+import "./social-profile-hero.css";
 import "./social-resource-library.css";
 import "./social-concept-layout.css";
 const SharedHookChart = lazy(() => import("./SharedHookChart"));
@@ -2868,10 +2869,22 @@ function Profile({
   const friendships = useResource("profile-friends:" + id + ":" + user?.uid, () =>
     user?.uid === id ? Promise.resolve({ people: [] }) : apiJson(api + "/friends"),
   );
-  const requestedProfileSection = () =>
-    new URLSearchParams(location.hash.split("?")[1] ?? "").get("profileTab") === "about" ? "about" : "wall";
-  const [profileSection, setProfileSection] = useState<"wall" | "about" | "trades">(requestedProfileSection);
-  useEffect(() => setProfileSection(requestedProfileSection()), [id]);
+  type Section = "wall" | "articles" | "about" | "trades";
+  const requestedProfileSection = (): Section => {
+    const value = new URLSearchParams(location.hash.split("?")[1] ?? "").get("profileTab");
+    return value === "about" || value === "articles" || value === "trades" ? value : "wall";
+  };
+  const [profileSection, setProfileSection] = useState<Section>(requestedProfileSection);
+  useEffect(() => {
+    setProfileSection(requestedProfileSection());
+    const jump = () => {
+      const params = new URLSearchParams(location.hash.split("?")[1] ?? "");
+      if (params.get("section") === "profile" && params.get("owner") === id)
+        setProfileSection(requestedProfileSection());
+    };
+    window.addEventListener("hashchange", jump);
+    return () => window.removeEventListener("hashchange", jump);
+  }, [id]);
   const [form, setForm] = useState<any>({ ...profile?.community }),
     [displayName, setName] = useState(profile?.displayName ?? "");
   const hydratedFor = useRef<string | null>(profile && user?.uid === id ? id : null);
@@ -2886,6 +2899,43 @@ function Profile({
   const wall = useResource("wall:" + id, () =>
     apiJson(api + "/feed?mode=wall&owner=" + id),
   );
+  // The educational feed is lazy and server-filtered: old wall pages cannot
+  // conceal older articles, and no private content becomes public.
+  const articles = useResource("profile-articles:" + id + ":" + (profileSection === "articles"), () =>
+    profileSection === "articles"
+      ? apiJson(api + "/feed?mode=wall&owner=" + id + "&category=education")
+      : Promise.resolve(null),
+  );
+  const [articlePages, setArticlePages] = useState<any[]>([]);
+  const [articleNext, setArticleNext] = useState<string | null>(null);
+  const [articlesBusy, setArticlesBusy] = useState(false);
+  const [articlesError, setArticlesError] = useState("");
+  const currentProfileRef = useRef(id);
+  currentProfileRef.current = id;
+  useEffect(() => {
+    setArticlePages([]);
+    setArticleNext(articles.data?.next ?? null);
+    setArticlesError("");
+  }, [id, articles.data]);
+  const loadMoreArticles = async () => {
+    const cursor = articleNext;
+    if (!cursor || articlesBusy || !articles.data) return;
+    const requestedId = id;
+    setArticlesBusy(true);
+    setArticlesError("");
+    try {
+      const result = await apiJson(api + "/feed?mode=wall&owner=" + requestedId +
+        "&category=education&before=" + encodeURIComponent(cursor));
+      if (currentProfileRef.current !== requestedId) return;
+      setArticlePages(old => [...new Map([...old, ...result.items].map((item: any) => [item.id, item])).values()]);
+      setArticleNext(result.next);
+    } catch (error) {
+      if (currentProfileRef.current === requestedId)
+        setArticlesError(error instanceof Error ? error.message : "Не вдалося завантажити статті");
+    } finally {
+      if (currentProfileRef.current === requestedId) setArticlesBusy(false);
+    }
+  };
   const p = resource.data?.profile;
   const requestedContact = new URLSearchParams(location.hash.split("?")[1] ?? "").get("contact");
   const friends: CommunityFriend[] | undefined = friendships.data?.people;
@@ -2923,22 +2973,34 @@ function Profile({
       {p && (
         <article className="community-card community-profile-hero">
           <div className="community-profile-cover" aria-hidden="true">
+            {p.coverUrl && <img className="community-profile-cover-photo" src={p.coverUrl} alt=""
+              onError={event => { event.currentTarget.hidden = true; }} />}
             <span>h00k Community</span>
           </div>
           <div className="community-profile-identity">
             <span className="community-profile-avatar" aria-hidden="true">
-              {(p.displayName ?? "Т").trim().slice(0, 1).toUpperCase()}
+              <span>{(p.displayName ?? "Т").trim().slice(0, 1).toUpperCase()}</span>
+              {p.avatarUrl && <img className="community-profile-avatar-photo" src={p.avatarUrl} alt=""
+                onError={event => { event.currentTarget.hidden = true; }} />}
             </span>
             <div className="community-profile-heading">
               <span className="community-page-kicker">ПРОФІЛЬ ТРЕЙДЕРА</span>
               <h2>{p.displayName ?? "Трейдер"}</h2>
+              {p.username && <p className="community-profile-handle">@{p.username}</p>}
               {p.status?.text && <p className="community-profile-status">{p.status.text}</p>}
+              {p.joinedAt && !Number.isNaN(new Date(p.joinedAt).getTime()) && <p className="community-profile-joined">
+                У спільноті з {new Date(p.joinedAt).toLocaleDateString("uk-UA", { year: "numeric", month: "long" })}
+              </p>}
             </div>
-            {p.publicUrl && (
-              <a className="community-profile-link" href={p.publicUrl} target="_blank" rel="noopener noreferrer">
-                Персональна сторінка ↗
-              </a>
-            )}
+            <div className="community-profile-hero-actions">
+              {id === user?.uid && <button type="button" className="community-profile-edit-appearance"
+                onClick={() => setProfileSection("about")}>Налаштувати профіль</button>}
+              {p.publicUrl && (
+                <a className="community-profile-link" href={p.publicUrl} target="_blank" rel="noopener noreferrer">
+                  Персональна сторінка ↗
+                </a>
+              )}
+            </div>
           </div>
           <div className="community-profile-description">
             {p.bio && <p className="community-profile-bio">{p.bio}</p>}
@@ -3010,6 +3072,7 @@ function Profile({
         {(
           [
             ["wall", "Стіна"],
+            ["articles", "Статті та розбори"],
             ["about", "Про трейдера"],
             ["trades", "Статистика"],
           ] as const
@@ -3024,6 +3087,37 @@ function Profile({
           </button>
         ))}
       </nav>
+      {profileSection === "articles" && (
+        <section className="community-profile-articles" aria-label="Статті та розбори трейдера">
+          <header className="community-section-heading">
+            <div>
+              <span className="community-page-kicker">БАЗА ЗНАНЬ ТРЕЙДЕРА</span>
+              <h3>Статті та практичні розбори</h3>
+              <p className="community-hint">Лише доступні вам навчальні дописи автора. Права доступу перевіряє Community.</p>
+            </div>
+          </header>
+          {id === user?.uid && <button type="button" className="community-profile-write-article"
+            onClick={() => setProfileSection("wall")}>
+            Створити навчальний допис на своїй стіні
+          </button>}
+          {articles.error && <p role="status" className="community-profile-articles-error">{articles.error}</p>}
+          {!articles.data && !articles.error && <p role="status">Завантажуємо навчальні матеріали…</p>}
+          {articles.data && ![...articles.data.items, ...articlePages].some((item: any) => item.owner_id === id) &&
+            <p className="community-empty">Доступних навчальних дописів поки немає.</p>}
+          <div className="community-profile-article-list">
+            {[...new Map([...(articles.data?.items ?? []), ...articlePages]
+              .filter((item: any) => item.owner_id === id && item.body?.category === "education")
+              .map((item: any) => [item.id, item])).values()].map((item: any) =>
+                <ItemCard key={item.id} item={item} onChart={onChart}
+                  onPick={onPick} run={run} refresh={articles.refresh} />)}
+          </div>
+          {articlesError && <p role="status" className="community-profile-articles-error">{articlesError}</p>}
+          {articleNext && <button type="button" className="community-profile-articles-more"
+            disabled={articlesBusy} onClick={() => void loadMoreArticles()}>
+            {articlesBusy ? "Завантажуємо…" : "Ще статті та розбори"}
+          </button>}
+        </section>
+      )}
       {profileSection === "about" && (
         <section className="community-profile-about" aria-label="Інформація про трейдера">
           <header className="community-section-heading">
