@@ -39,7 +39,8 @@ test("guest design uses independent responsive CSS, not changes to global screen
 test("public profile remains server-controlled read-only and renders only returned fields", () => {
   assert.match(publicProfile, /data-network-mode="public-snapshot"/);
   assert.match(publicProfile, /fetch\(url, \{ credentials: "omit", cache: "no-store", signal \}\)/);
-  assert.match(publicProfile, /Promise\.all\(\[read\(base, controller\.signal\), read\(base \+ "\/posts", controller\.signal\)\]\)/);
+  assert.match(publicProfile, /const needInitialWall = currentFeedKey\.current === "wall:all"/);
+  assert.match(publicProfile, /needInitialWall \? read\(base \+ "\/posts", controller\.signal\) : Promise\.resolve\(null\)/);
   assert.match(publicProfile, /profile && <>/);
   assert.match(publicProfile, /profile\?\.communityOrigin \?\? "https:\/\/h00k\.top\/"/);
   assert.match(publicProfile, /className="public-profile-cover"/);
