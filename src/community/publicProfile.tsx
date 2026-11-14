@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   ArrowUpRight, Award, BookOpenText, CalendarDays, Check, Copy, MessageCircle,
   ShieldCheck, TrendingUp, UsersRound, UserPlus, ChartNoAxesCombined,
-  Globe2, Sparkles, Layers3, Lightbulb, GraduationCap, Trophy, Star, Send,
+  Globe2, Sparkles, Layers3, Lightbulb, GraduationCap, Trophy, Send,
 } from "lucide-react";
 import { ChartPreview } from "../components/community/ChartPreview";
 import { PublicProfileArticles } from "./PublicProfileArticles";
@@ -26,6 +26,7 @@ import "./publicProfileConcept.css";
 import "./socialTraderProfile.css";
 import "./publicProfileReferenceLayout.css";
 import "./publicProfileCards.css";
+import "./publicProfileHighlights.css";
 
 type PublicStats = {
   totals: Array<{
