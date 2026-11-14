@@ -8,6 +8,7 @@ import { STRATEGY_PRESETS } from "../hookchart/strategyEngine";
 import { saveChartArchive } from "../../community/archiveChart";
 import { chartFromScreenerHandoff } from "../../community/screenerHandoff";
 import { assessArchiveProofDraft } from "../../community/archiveScoreBinding";
+import { ArchiveScoreProvenance } from "./ArchiveScoreProvenance";
 import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, useId } from "react";
 import {
   Users,
@@ -1586,13 +1587,11 @@ function ChartDialog({
           <small>Скопіюйте «Оцінка для Community» в архіві скрінера та вставте сюди протягом 10 хвилин. Підпис підтверджує походження архівного запису, але не правильність оцінки чи виконання угоди.</small>
         </label>}
         {!draft.parentId && scoreAssessment.status !== "none" &&
-          <div className={"community-chart-score-feedback community-chart-score-" + scoreAssessment.status}
-            role={scoreBlocked ? "alert" : "status"}>
-            <p>{scoreAssessment.message}</p>
-            {scoreBlocked && <button type="button" onClick={removeProof}>
-              Вилучити архівну оцінку й залишити графік
-            </button>}
-          </div>}
+          <ArchiveScoreProvenance
+            proofText={qualityProofText}
+            assessment={scoreAssessment}
+            onRemove={removeProof}
+          />}
         <div className="community-composer-tools">
           {target.kind === "post" && <label className="community-concept-category-label">
             Розділ
