@@ -15,7 +15,8 @@ type Props = {
 export function PublicSetupGalleryToolbar({ filters, totalLoaded, matches, hasNextPage, onChange }: Props) {
   const reset = filters.symbol !== "" || filters.exchange !== "all" ||
     filters.timeframe !== "all" || filters.levels !== "all";
-  return <section className="public-setup-gallery-toolbar" aria-label="Фільтри публічних HookChart">
+  return <section id="public-setup-filters" className="public-setup-gallery-toolbar"
+    aria-label="Фільтри публічних HookChart" tabIndex={-1}>
     <div className="public-setup-gallery-toolbar-top">
       <h3><ListFilter size={16} aria-hidden="true" /> Фільтри галереї</h3>
       <span role="status" aria-live="polite">{matches} із {totalLoaded} завантажених графіків</span>

@@ -3,7 +3,8 @@
  * Visual reference: maks37614/social/src/components/TraderProfileView.tsx
  *
  * Adapted from the demo's Tailwind arrangement to existing Community components.
- * Styling is scoped to the "maks" route. NO demo data, mock biographies, remote
+ * Styling is scoped to the "maks" route; scale values mirror social App (1720px)
+ * and TraderProfileView (208/160px cover, 128/112px avatar). NO demo data, mock biographies, remote
  * stock portraits, fake PnL, badges, friends or trade counts are copied.
  */
 .public-profile[data-social-source-clone="maks"] {
@@ -11,18 +12,20 @@
   --social-panel: #0f172a;
   --social-panel-deep: #070e1b;
   --social-stroke: #263448;
-  --social-mint: #23dbc2;
+  --social-mint: #00e5bf;
   --social-muted: #9aaec1;
-  max-width: 1500px;
+  max-width: 1720px;
+  font-size: 14px;
+  line-height: 1.55;
   background: var(--social-bg);
   color: #f1f5f9;
   font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
-  padding: 0 clamp(12px, 2.2vw, 32px) 60px;
+  padding: 0 clamp(10px, 1.6vw, 28px) 60px;
 }
 .public-profile[data-social-source-clone="maks"] .public-profile-panel,
 .public-profile[data-social-source-clone="maks"] .public-profile-hero {
   border: 1px solid var(--social-stroke);
-  border-radius: 22px;
+  border-radius: 24px;
   background: linear-gradient(155deg, #111b2c, #0e1727 70%);
   box-shadow: 0 14px 42px #0000002e;
 }
@@ -32,8 +35,8 @@
   overflow: hidden;
 }
 .public-profile[data-social-source-clone="maks"] .public-profile-cover {
-  height: 180px;
-  min-height: 180px !important;
+  height: 208px;
+  min-height: 208px !important;
   padding: 16px 22px;
   background:
     linear-gradient(0deg, #0e1727 0%, transparent 46%),
@@ -91,7 +94,7 @@
   align-self: end;
 }
 .public-profile[data-social-source-clone="maks"] .public-profile-hero-text h1 {
-  font-size: clamp(22px, 2.2vw, 30px);
+  font-size: clamp(20px, 1.7vw, 24px);
   font-weight: 850;
   line-height: 1.2;
   letter-spacing: -.025em;
@@ -125,7 +128,7 @@
 }
 .public-profile[data-social-source-clone="maks"] .public-profile-hero-bio {
   color: #cbd5e1;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.65;
   max-width: 980px;
 }
@@ -318,37 +321,61 @@
   }
 }
 @media (max-width: 800px) {
-  .public-profile[data-social-source-clone="maks"] .public-profile-cover {height: 155px;min-height:155px!important;}
+  .public-profile[data-social-source-clone="maks"] .public-profile-cover {height: 208px;min-height:208px!important;}
   .public-profile[data-social-source-clone="maks"] .public-profile-identity {
-    grid-template-columns: 100px minmax(0, 1fr);
-    margin-top: -53px;
+    grid-template-columns: 128px minmax(0, 1fr);
+    margin-top: -64px;
     gap: 9px 12px;
   }
   .public-profile[data-social-source-clone="maks"] .public-profile-avatar {
-    width:100px;height:100px;flex-basis:100px;border-radius:20px;font-size:38px;
+    width:128px;height:128px;flex-basis:128px;border-radius:22px;font-size:48px;
   }
-  .public-profile[data-social-source-clone="maks"] .public-profile-avatar-image {border-radius:16px;}
-  .public-profile[data-social-source-clone="maks"] .public-profile-hero-text {padding-top:37px;}
+  .public-profile[data-social-source-clone="maks"] .public-profile-avatar-image {border-radius:18px;}
+  .public-profile[data-social-source-clone="maks"] .public-profile-hero-text {padding-top:55px;}
   .public-profile[data-social-source-clone="maks"] .public-profile-hero-actions {grid-column:1 / -1;max-width:100%;width:100%;justify-content:flex-start;}
   .public-profile[data-social-source-clone="maks"] .public-profile-social-layout > .public-profile-aside {grid-template-columns:minmax(0,1fr);}
+}
+/* social uses Tailwind's 640px breakpoint for a 160px mobile cover.
+   Keep the 112px photo even on compact displays, but let actions wrap. */
+@media (max-width: 640px) {
+  .public-profile[data-social-source-clone="maks"] .public-profile-cover {
+    height: 160px; min-height: 160px !important;
+  }
+  .public-profile[data-social-source-clone="maks"] .public-profile-identity {
+    grid-template-columns: 112px minmax(0, 1fr);
+    margin-top: -56px;
+    gap: 10px 12px;
+    padding-inline: 13px;
+  }
+  .public-profile[data-social-source-clone="maks"] .public-profile-avatar {
+    width: 112px; height: 112px; flex-basis: 112px;
+    border-radius: 19px; border-width: 4px;
+  }
+  .public-profile[data-social-source-clone="maks"] .public-profile-avatar-image {
+    border-radius: 15px;
+  }
+  .public-profile[data-social-source-clone="maks"] .public-profile-hero-text {
+    padding-top: 48px;
+  }
+  .public-profile[data-social-source-clone="maks"] .public-profile-hero-text h1 {font-size:20px;}
 }
 @media (max-width: 560px) {
   .public-profile[data-social-source-clone="maks"] {padding:0 10px 40px;}
   .public-profile[data-social-source-clone="maks"] .public-profile-hero {border-radius:16px;}
   .public-profile[data-social-source-clone="maks"] .public-profile-cover {
-    height: 135px;
-    min-height:135px!important;
+    height: 160px;
+    min-height:160px!important;
     padding: 10px;
   }
   .public-profile[data-social-source-clone="maks"] .public-profile-identity {
-    grid-template-columns: 86px minmax(0,1fr);
-    margin-top:-40px;
+    grid-template-columns: 112px minmax(0,1fr);
+    margin-top:-56px;
     padding-inline:13px;
   }
-  .public-profile[data-social-source-clone="maks"] .public-profile-avatar {width:86px;height:86px;flex-basis:86px;border-radius:16px;border-width:3px;}
-  .public-profile[data-social-source-clone="maks"] .public-profile-avatar-image {border-radius:13px;}
-  .public-profile[data-social-source-clone="maks"] .public-profile-hero-text {padding-top:27px;}
-  .public-profile[data-social-source-clone="maks"] .public-profile-hero-text h1 {font-size:19px;}
+  .public-profile[data-social-source-clone="maks"] .public-profile-avatar {width:112px;height:112px;flex-basis:112px;border-radius:19px;border-width:4px;}
+  .public-profile[data-social-source-clone="maks"] .public-profile-avatar-image {border-radius:15px;}
+  .public-profile[data-social-source-clone="maks"] .public-profile-hero-text {padding-top:48px;}
+  .public-profile[data-social-source-clone="maks"] .public-profile-hero-text h1 {font-size:20px;}
   .public-profile[data-social-source-clone="maks"] .public-profile-hero-actions {gap:8px;}
   .public-profile[data-social-source-clone="maks"] .public-profile-hero-actions > a,
   .public-profile[data-social-source-clone="maks"] .public-profile-hero-actions > button {

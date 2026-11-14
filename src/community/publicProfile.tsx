@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   ArrowUpRight, Award, BookOpenText, CalendarDays, Check, Copy, MessageCircle,
   ShieldCheck, TrendingUp, UsersRound, UserPlus, ChartNoAxesCombined,
-  Globe2, Sparkles, Layers3, Lightbulb, GraduationCap, Trophy, Send,
+  Globe2, Sparkles, Layers3, Lightbulb, GraduationCap, Trophy, Send, ListFilter,
 } from "lucide-react";
 import { ChartPreview } from "../components/community/ChartPreview";
 import { PublicProfileArticles } from "./PublicProfileArticles";
@@ -886,6 +886,15 @@ export function PublicProfile() {
             </nav>}
             {tab === "setups" && <div className="public-profile-gallery-share">
               <span>Лише відкриті автором збережені графіки. Без live-підключення до біржі.</span>
+              <button type="button" className="public-profile-gallery-jump"
+                aria-controls="public-setup-filters"
+                onClick={() => {
+                  const panel = document.getElementById("public-setup-filters");
+                  panel?.scrollIntoView({ block: "center", behavior: "smooth" });
+                  panel?.focus({ preventScroll: true });
+                }}>
+                <ListFilter size={15} aria-hidden="true" /> До фільтрів
+              </button>
               <button type="button" onClick={() => void copy(publicChartGalleryUrl(profile.url), "gallery")}>
                 {copied === "gallery" ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
                 {copied === "gallery" ? "Посилання скопійовано" : "Поділитися галереєю"}
