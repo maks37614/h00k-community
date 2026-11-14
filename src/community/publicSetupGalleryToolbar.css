@@ -1,0 +1,138 @@
+/* Local controls only. No styling leaks into the main screener or private workspace. */
+.public-profile .public-setup-gallery-toolbar {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 13px;
+  border-radius: 14px;
+  border: 1px solid #2b5964;
+  background: linear-gradient(120deg,#122b39,#0a1c2e);
+}
+.public-profile .public-setup-gallery-toolbar-top {
+  display: flex;
+  gap: 8px 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.public-profile .public-setup-gallery-toolbar h3 {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  margin: 0;
+  font-size: 13px;
+  color: #d8fbf4;
+}
+.public-profile .public-setup-gallery-toolbar h3 svg {color: #48decb;}
+.public-profile .public-setup-gallery-toolbar-top > span {
+  font-size: 11px;
+  color: #a4c3d4;
+  font-variant-numeric: tabular-nums;
+}
+.public-profile .public-setup-gallery-toolbar-fields {
+  display: grid;
+  grid-template-columns: minmax(150px,1.5fr) repeat(3,minmax(105px,1fr));
+  gap: 9px;
+}
+.public-profile .public-setup-gallery-toolbar-fields > label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 6px;
+  font-size: 10px;
+  color: #a8cdd7;
+  font-weight: 650;
+}
+.public-profile .public-setup-gallery-toolbar input,
+.public-profile .public-setup-gallery-toolbar select {
+  width: 100%;
+  min-width: 0;
+  min-height: 39px;
+  padding: 8px 9px;
+  color: #e4faf8;
+  border: 1px solid #366276;
+  border-radius: 9px;
+  background: #0b1e30;
+  font: 500 12px/1.4 inherit;
+}
+.public-profile .public-setup-gallery-toolbar input {
+  padding-left: 31px;
+  font-family: inherit;
+  font-size: 13px;
+}
+.public-profile .public-setup-gallery-toolbar input::placeholder {color: #829eaf;}
+.public-profile .public-setup-gallery-toolbar select {font-family: inherit;}
+.public-profile .public-setup-gallery-toolbar :is(input,select,button):focus-visible {
+  outline: 2px solid #47d9c5;
+  outline-offset: 2px;
+}
+.public-profile .public-setup-gallery-input-wrap {position: relative;display: block;}
+.public-profile .public-setup-gallery-input-wrap svg {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #5ac8c4;
+  pointer-events: none;
+}
+.public-profile .public-setup-gallery-toolbar-bottom {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 13px;
+  margin-top: 10px;
+}
+.public-profile .public-setup-gallery-toolbar-bottom small {
+  color: #91b2c3;
+  font-size: 10px;
+  line-height: 1.55;
+  flex: 1 1 250px;
+}
+.public-profile .public-setup-gallery-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 6px 10px;
+  background: #123e43;
+  border: 1px solid #357c80;
+  border-radius: 8px;
+  font-size: 11px;
+  color: #a9f1e4;
+}
+.public-profile .public-setup-gallery-empty {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 17px;
+  color: #b9d6e0;
+  border: 1px dashed #426779;
+  border-radius: 12px;
+  background: #102739;
+  text-align: center;
+  font-size: 12px;
+}
+.public-profile .public-setup-gallery-empty p {margin: 0 0 9px;}
+.public-profile .public-setup-gallery-empty button {
+  min-height: 37px;
+  padding: 7px 12px;
+  background: #15514a;
+  border: 1px solid #39a994;
+  border-radius: 8px;
+  color: #d7fcf3;
+}
+@media (max-width: 1190px) {
+  .public-profile .public-setup-gallery-toolbar-fields {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+}
+@media (max-width: 640px) {
+  .public-profile .public-setup-gallery-toolbar {padding: 11px;}
+  .public-profile .public-setup-gallery-toolbar-fields {gap: 9px;}
+  .public-profile .public-setup-gallery-toolbar input,
+  .public-profile .public-setup-gallery-toolbar select {min-height: 44px; font-size: 16px;}
+}
+@media (max-width: 390px) {
+  .public-profile .public-setup-gallery-toolbar-fields {
+    grid-template-columns: minmax(0,1fr);
+  }
+}
