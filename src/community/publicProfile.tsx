@@ -21,6 +21,7 @@ import { TRADING_SESSIONS, getSessionWindow, formatZonedTime, resolveTimeZone, s
 import "./publicProfile.css";
 import "./publicProfileConcept.css";
 import "./socialTraderProfile.css";
+import "./publicProfileReferenceLayout.css";
 
 type PublicStats = {
   totals: Array<{
@@ -621,7 +622,8 @@ export function PublicProfile() {
       </section>
 
       <div className="public-profile-columns public-profile-social-layout">
-        <aside className="public-profile-insights" aria-label="Торгові результати й участь у Community">
+        <aside className="public-profile-insights" aria-label="Торгові сесії, нагороди та підтверджені результати">
+          {profile.sessions !== null && <PublicSessionPanel ids={profile.sessions} />}
       <section className="public-profile-overview public-profile-panel" aria-labelledby="public-profile-overview-title">
         <div className="public-profile-overview-header">
           <div>
@@ -696,14 +698,22 @@ export function PublicProfile() {
         <aside className="public-profile-aside" aria-label="Інформація про трейдера">
           <section className="public-profile-panel public-profile-about-preview">
             <h2><UsersRound size={18} aria-hidden="true" /> Про трейдера</h2>
-            <p className="public-profile-sidebar-handle">@{profile.username}</p>
+            <div className="public-profile-sidebar-identity">
+              <div className="public-profile-sidebar-avatar" aria-hidden="true">
+                {(profile.displayName || "Т").slice(0, 1).toUpperCase()}
+                {profile.avatarUrl && <img src={profile.avatarUrl} alt="" onError={e => { e.currentTarget.hidden = true; }} />}
+              </div>
+              <div className="public-profile-sidebar-name">
+                <strong>{profile.displayName}</strong>
+                <p className="public-profile-sidebar-handle">@{profile.username}</p>
+              </div>
+            </div>
             {profile.status && <p className="public-profile-sidebar-status">{profile.status}</p>}
             {profile.bio && <p>{profile.bio}</p>}
             {!profile.bio && <p className="public-profile-muted">Біографія не опублікована.</p>}
             {profileJoinDate && <p className="public-profile-sidebar-joined"><CalendarDays size={14} aria-hidden="true" /> У спільноті з {profileJoinDate}</p>}
             <button type="button" onClick={() => { setTab("about"); document.getElementById("public-profile-tabs")?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>Детальніше про профіль <ArrowUpRight size={14} aria-hidden="true" /></button>
           </section>
-          {profile.sessions !== null && <PublicSessionPanel ids={profile.sessions} />}
           {(profile.interests || profile.lifestyle || profile.telegram) && <section className="public-profile-panel">
             {profile.interests && <><h2>Інтереси</h2><p>{profile.interests}</p></>}
             {profile.lifestyle && <><h2>Звички та спосіб життя</h2><p>{profile.lifestyle}</p></>}

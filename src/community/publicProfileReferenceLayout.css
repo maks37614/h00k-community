@@ -1,0 +1,371 @@
+/* Final layout layer for the reference public trader page.
+   Imported after both historical skins to stop the later two-column rules
+   from overriding the intended profile / feed / insights desktop layout.
+   Anonymous content remains sourced exclusively from public-profile APIs. */
+
+.public-profile {
+  max-width: 1700px;
+  padding: 0 clamp(12px, 1.7vw, 28px) 56px;
+  color: #eaf4ff;
+  font-size: 13px;
+}
+.public-profile .public-profile-panel,
+.public-profile .public-profile-hero {
+  border-radius: 15px;
+  border-color: #294356;
+  background: linear-gradient(150deg, #122237, #0b1928 85%);
+  box-shadow: 0 10px 30px #00000025, inset 0 1px #ffffff07;
+}
+.public-profile .public-profile-hero {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+}
+.public-profile .public-profile-cover {
+  height: 132px;
+  min-height: 132px !important;
+  padding: 14px 18px;
+  background:
+    radial-gradient(ellipse at 15% 90%, #12b69d32, transparent 55%),
+    linear-gradient(110deg, #08172a, #124045 54%, #0b1d31);
+}
+.public-profile .public-profile-cover-image {
+  opacity: .68;
+  object-position: center 45%;
+}
+.public-profile .public-profile-identity {
+  grid-template-columns: 98px minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px 15px;
+  padding: 0 20px;
+  margin-top: -40px;
+}
+.public-profile .public-profile-avatar {
+  width: 96px;
+  height: 96px;
+  flex-basis: 96px;
+  border-radius: 50%;
+  border: 4px solid #0b1c2c;
+  box-shadow: 0 7px 22px #0008, 0 0 0 1px #30b2a6;
+}
+.public-profile .public-profile-avatar-image {
+  border-radius: 50%;
+}
+.public-profile .public-profile-hero-text {
+  align-self: end;
+  padding: 35px 0 2px;
+}
+.public-profile .public-profile-hero-text h1 {
+  font-size: clamp(22px, 2.1vw, 29px);
+  margin: 0 0 4px;
+}
+.public-profile .public-profile-hero-actions {
+  max-width: 560px;
+  align-self: end;
+  justify-content: flex-end;
+  gap: 7px;
+  padding-bottom: 3px;
+}
+.public-profile .public-profile-hero-actions > a,
+.public-profile .public-profile-hero-actions > button {
+  min-height: 39px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+.public-profile .public-profile-hero-detail {padding: 0 20px;}
+.public-profile .public-profile-hero-facts {
+  margin: 12px 20px 0;
+  padding-top: 10px;
+  gap: 8px 18px;
+}
+
+/* Exact structure of the reference: profile LEFT, posts + saved HookChart
+   CENTER, trading sessions + Community awards + verified stats RIGHT. */
+.public-profile .public-profile-columns.public-profile-social-layout {
+  display: grid;
+  grid-template-columns: minmax(214px, 260px) minmax(0, 1fr) minmax(265px, 310px);
+  grid-template-areas: "trader feed insights";
+  align-items: start;
+  gap: clamp(11px, 1.25vw, 17px);
+  margin: 0;
+}
+.public-profile .public-profile-social-layout > .public-profile-aside {
+  grid-area: trader;
+  grid-column: auto;
+  grid-row: auto;
+  order: 0;
+  position: sticky;
+  top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.public-profile .public-profile-social-layout > .public-profile-main {
+  grid-area: feed;
+  grid-column: auto;
+  grid-row: auto;
+  order: 0;
+  min-width: 0;
+  width: 100%;
+}
+.public-profile .public-profile-social-layout > .public-profile-insights {
+  grid-area: insights;
+  grid-column: auto;
+  grid-row: auto;
+  order: 0;
+  position: static;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.public-profile .public-profile-aside > *,
+.public-profile .public-profile-insights > * { margin: 0; min-width: 0; }
+.public-profile .public-profile-sidebar-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 13px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #2d4754;
+}
+.public-profile .public-profile-sidebar-avatar {
+  flex: 0 0 49px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  width: 49px;
+  height: 49px;
+  border-radius: 13px;
+  color: #dbfff7;
+  font-size: 21px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #0b756c, #123d60);
+  border: 1px solid #36938c;
+}
+.public-profile .public-profile-sidebar-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.public-profile .public-profile-sidebar-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.public-profile .public-profile-sidebar-name strong {
+  display: block;
+  line-height: 1.3;
+  color: #f2f9ff;
+  font-size: 13px;
+}
+.public-profile .public-profile-sidebar-handle {
+  margin: 4px 0 0;
+  font-size: 11px;
+}
+.public-profile .public-profile-insights .public-profile-public-sessions {
+  order: 0;
+  padding: 15px;
+}
+.public-profile .public-profile-insights .public-profile-achievements {
+  order: 1;
+  padding: 15px;
+  border-radius: 15px;
+}
+.public-profile .public-profile-insights .public-profile-overview {
+  order: 2;
+  padding: 15px;
+  border-radius: 15px;
+}
+.public-profile .public-profile-insights .public-profile-right-help { order: 3; }
+.public-profile .public-profile-insights .public-profile-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding-top: 10px;
+}
+.public-profile .public-profile-insights .public-profile-kpi {
+  min-width: 0;
+  padding: 10px 8px;
+  border-radius: 11px;
+}
+.public-profile .public-profile-insights .public-profile-kpi strong {
+  font-size: clamp(15px, 1.45vw, 19px);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.public-profile .public-profile-insights .public-profile-achievement-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.public-profile .public-profile-insights .public-profile-awards-summary {
+  grid-column: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+}
+.public-profile .public-profile-insights .public-profile-awards-summary > small {
+  grid-column: auto;
+}
+.public-profile .public-profile-insights .public-profile-awards-breakdown {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+.public-profile .public-profile-insights .public-profile-overview-header,
+.public-profile .public-profile-insights .public-profile-achievements-heading {
+  align-items: flex-start;
+}
+.public-profile .public-profile-insights .public-profile-overview-header h2,
+.public-profile .public-profile-insights .public-profile-achievements-heading h2 {
+  font-size: 14px;
+  letter-spacing: 0;
+}
+.public-profile .public-profile-insights .public-profile-right-help {
+  display: block;
+}
+.public-profile .public-profile-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0 0 12px;
+  padding: 7px;
+  border: 1px solid #2b4358;
+  border-radius: 12px;
+  background: #132234;
+}
+.public-profile .public-profile-tabs button[aria-current="page"] {
+  background: linear-gradient(105deg, #14584d, #124b5d);
+  border-color: #2cae9d;
+  color: #aaffed;
+}
+.public-profile .public-profile-wall,
+.public-profile .public-profile-articles {
+  min-width: 0;
+}
+.public-profile .public-profile-wall-heading h2 { font-size: 19px; }
+.public-profile .public-profile-post {
+  padding: clamp(12px, 1.5vw, 18px);
+  border-radius: 15px;
+}
+.public-profile .community-chart-preview {
+  overflow: hidden;
+  max-width: 100%;
+  border-radius: 12px;
+}
+
+/* Two-column on medium screens; retain the center feed as the priority. */
+@media (max-width: 1190px) {
+  .public-profile .public-profile-columns.public-profile-social-layout {
+    grid-template-columns: minmax(214px, 278px) minmax(0, 1fr);
+    grid-template-areas: "trader feed" "insights feed";
+  }
+  .public-profile .public-profile-social-layout > .public-profile-aside {position: static;}
+  .public-profile .public-profile-social-layout > .public-profile-insights {
+    display: flex;
+    flex-direction: column;
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .public-profile .public-profile-identity {
+    grid-template-columns: 94px minmax(0,1fr);
+  }
+  .public-profile .public-profile-hero-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    padding: 7px 0 0;
+  }
+}
+@media (max-width: 860px) {
+  .public-profile .public-profile-columns.public-profile-social-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "trader" "feed" "insights";
+    gap: 12px;
+  }
+  .public-profile .public-profile-social-layout > .public-profile-aside {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 12px;
+  }
+  .public-profile .public-profile-social-layout > .public-profile-insights {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    align-items: start;
+    gap: 12px;
+  }
+  .public-profile .public-profile-insights .public-profile-overview {grid-column: 1 / -1;}
+  .public-profile .public-profile-insights .public-profile-right-help {grid-column: 1 / -1;}
+}
+@media (max-width: 640px) {
+  .public-profile {padding-inline: 12px;}
+  .public-profile .public-profile-cover {
+    height: 125px;
+    min-height: 125px !important;
+    padding: 11px 12px;
+  }
+  .public-profile .public-profile-identity {
+    grid-template-columns: 76px minmax(0,1fr);
+    gap: 9px;
+    padding: 0 12px;
+    margin-top: -35px;
+  }
+  .public-profile .public-profile-avatar {
+    width: 74px;
+    height: 74px;
+    flex-basis: 74px;
+  }
+  .public-profile .public-profile-hero-text {
+    padding-top: 33px;
+  }
+  .public-profile .public-profile-hero-text h1 {font-size: 22px;}
+  .public-profile .public-profile-hero-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+    flex-basis: auto;
+    display: flex;
+    margin: 8px 0 0;
+  }
+  .public-profile .public-profile-hero-actions > a,
+  .public-profile .public-profile-hero-actions > button {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+    white-space: normal;
+    padding: 9px;
+  }
+  .public-profile .public-profile-hero-detail {padding-inline: 12px;}
+  .public-profile .public-profile-hero-facts {margin-inline: 12px;}
+  .public-profile .public-profile-social-layout > .public-profile-aside,
+  .public-profile .public-profile-social-layout > .public-profile-insights {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .public-profile .public-profile-social-layout > .public-profile-aside > *,
+  .public-profile .public-profile-social-layout > .public-profile-insights > * {
+    width: 100%;
+  }
+  .public-profile .public-profile-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .public-profile .public-profile-tabs button {
+    flex: 0 0 auto;
+    min-height: 41px;
+  }
+  .public-profile .public-profile-insights .public-profile-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+}
+@media (max-width: 390px) {
+  .public-profile .public-profile-hero-actions > a,
+  .public-profile .public-profile-hero-actions > button {flex-basis: 100%;}
+  .public-profile .public-profile-cover-status {max-width: 54%;}
+  .public-profile .public-profile-insights .public-profile-awards-breakdown {grid-template-columns: minmax(0,1fr);}
+}
