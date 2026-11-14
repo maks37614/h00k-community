@@ -7,6 +7,7 @@ import type {
   MarketType,
   Timeframe,
 } from "../types";
+import { normalizeArchiveScoreProof, type SignedArchiveScoreProof } from "./archiveScoreProof";
 
 export const COMMUNITY_TIMEFRAMES: Timeframe[] = [
   "1m",
@@ -37,6 +38,8 @@ export interface ChartDocument {
   markers: ChartMarkerInfo[];
   drawings: HookChartDrawing[];
   viewport?: ChartRestoreParams["visibleRange"];
+  /** Server-verified signature of a user-saved h00k archive score, not an audited signal. */
+  qualityProof?: SignedArchiveScoreProof;
 }
 
 export function cloneChartDocument(document: ChartDocument): ChartDocument {
@@ -217,6 +220,7 @@ export function normalizeChartDocument(raw: any): ChartDocument {
     series,
     markers,
     drawings,
+    ...(raw.qualityProof !== undefined ? { qualityProof: normalizeArchiveScoreProof(raw.qualityProof) } : {}),
     ...(raw.viewport &&
     Number.isFinite(raw.viewport.from) &&
     Number.isFinite(raw.viewport.to) &&
