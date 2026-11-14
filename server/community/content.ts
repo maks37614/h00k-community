@@ -1,6 +1,7 @@
 import type { Database } from "./db";
 import { randomUUID, createHash } from "node:crypto";
 import { fail, bounded, uuid } from "./security";
+import { verifyArchiveScoreProof } from "./qualityProof";
 import {
   normalizeChartDocument,
   chartCandles,
@@ -139,6 +140,11 @@ export async function saveChart(
   parentId?: string,
 ) {
   const document = normalizeChartDocument(raw);
+  if (document.qualityProof) {
+    // Copies and replies cannot inherit another author's provenance claim.
+    if (parentId) fail("Підписаний запис оцінки дозволено лише для нового власного графіка", 422);
+    verifyArchiveScoreProof(document.qualityProof, document, process.env.H00K_QUALITY_VERIFY_KEY_B64);
+  }
   if (parentId) {
     uuid(parentId);
     if (!(await rules.canReadChart(parentId)))
