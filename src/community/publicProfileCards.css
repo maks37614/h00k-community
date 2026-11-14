@@ -1,0 +1,321 @@
+/* Public social cards. Load this after all legacy skins, and scope every rule
+   to the anonymous /u/ profile so authenticated Community and HookChart stay intact. */
+.public-profile .public-profile-post {
+  background:
+    linear-gradient(164deg, #17273b 0%, #101d30 63%, #0d1929 100%);
+  border: 1px solid #2c4456;
+  border-radius: 18px;
+  box-shadow: 0 11px 28px #00000025, inset 0 1px #ffffff08;
+  padding: clamp(13px, 1.45vw, 19px);
+  margin-bottom: 13px;
+  min-width: 0;
+  scroll-margin-top: 22px;
+}
+.public-profile .public-profile-post:focus-within {
+  border-color: #3b9b94;
+}
+.public-profile .public-profile-post-author {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.public-profile .public-profile-post-author > div {
+  min-width: 0;
+  flex: 1 1 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.public-profile .public-profile-post-author strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: #f5fbff;
+  overflow-wrap: anywhere;
+}
+.public-profile .public-profile-post-author time {
+  font-size: 10px;
+  color: #a4b9c8;
+}
+.public-profile .public-profile-post-public {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #226e67;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #0a3a37;
+  color: #a7f6dc;
+  font-size: 10px;
+  font-weight: 750;
+}
+.public-profile .public-profile-post-kind {
+  margin: 0 0 12px;
+  background: #123e46;
+  border-color: #267a80;
+  color: #a1f6ee;
+}
+.public-profile .public-profile-post h3 {
+  margin: 5px 0 9px;
+  font-size: clamp(16px, 1.4vw, 19px);
+  line-height: 1.4;
+  letter-spacing: -.016em;
+  overflow-wrap: anywhere;
+}
+.public-profile .public-profile-post > p {
+  color: #cddce8;
+  font-size: 12px;
+  line-height: 1.74;
+  overflow-wrap: anywhere;
+}
+.public-profile .public-profile-post-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding-top: 13px;
+  margin-top: 14px;
+  border-top: 1px solid #2c4352;
+}
+.public-profile .public-profile-post-actions > button,
+.public-profile .public-profile-post-actions > a {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-height: 39px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid #345366;
+  color: #d4e9f3;
+  background: #172b3f;
+  font-weight: 750;
+  font-size: 11px;
+  text-decoration: none;
+}
+.public-profile .public-profile-post-actions > a:hover,
+.public-profile .public-profile-post-actions > button:hover {
+  background: #18433f;
+  border-color: #3bb5a4;
+  color: #dcfff5;
+}
+.public-profile .public-profile-post-actions > a:last-child {
+  background: #0d4843;
+  border-color: #218a7b;
+  color: #c2fff1;
+}
+.public-profile .public-profile-reactions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-right: auto;
+}
+.public-profile .public-profile-reactions > span {
+  border-radius: 9px;
+  background: #122c3b;
+  border-color: #305267;
+  color: #deebf8;
+}
+.public-profile .public-profile-chart-card {
+  min-width: 0;
+  padding: 11px;
+  margin: 13px 0 5px;
+  border-radius: 15px;
+  border: 1px solid #2b5161;
+  background:
+    radial-gradient(circle at 90% 5%, #0d64511b, transparent 50%),
+    linear-gradient(160deg, #0c1e30, #091624);
+  overflow: hidden;
+}
+.public-profile .public-profile-chart-context {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 2px 4px 10px;
+}
+.public-profile .public-profile-chart-context-heading,
+.public-profile .public-profile-chart-context-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-width: 0;
+}
+.public-profile .public-profile-chart-context-heading > svg {
+  flex: none;
+  color: #41ddc9;
+}
+.public-profile .public-profile-chart-context-heading strong {
+  font-size: 14px;
+  color: #e9fff7;
+  font-weight: 850;
+  letter-spacing: .005em;
+  overflow-wrap: anywhere;
+}
+.public-profile .public-profile-chart-context-pill,
+.public-profile .public-profile-chart-context-exchange {
+  padding: 4px 7px;
+  border-radius: 8px;
+  border: 1px solid #2c5a60;
+  color: #a2e6db;
+  background: #103a40;
+  font: 700 10px/1.3 ui-monospace, monospace;
+}
+.public-profile .public-profile-chart-context-exchange {
+  border-color: #364d65;
+  color: #acccdc;
+  background: #172b40;
+}
+.public-profile .public-profile-chart-context-info {
+  color: #97b7c7;
+  font-size: 10px;
+  gap: 8px 13px;
+}
+.public-profile .public-profile-chart-context-info > * {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.public-profile .public-profile-chart-context-info svg {color: #49bfae;}
+.public-profile .public-profile-chart-card .community-chart-preview,
+.public-profile .public-article-chart .community-chart-preview {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #305364;
+  background: #091827;
+}
+.public-profile .public-profile-chart-card .community-chart-preview svg,
+.public-profile .public-article-chart .community-chart-preview svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.public-profile .public-profile-chart-card .community-chart-preview > span,
+.public-profile .public-article-chart .community-chart-preview > span {
+  display: block;
+  color: #b5d3dd;
+  background: #11263a;
+  padding: 8px 10px;
+  font-size: 10px;
+}
+.public-profile .public-profile-chart-card .public-profile-chart-deep-link {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  min-height: 37px;
+  margin-top: 9px;
+  padding: 8px 10px;
+  background: #123f40;
+  border: 1px solid #2b8a79;
+  border-radius: 9px;
+  color: #aaf6e5;
+  font-size: 11px;
+  text-decoration: none;
+}
+.public-profile .public-profile-chart-card .public-profile-chart-deep-link:hover {
+  background: #175952;
+}
+.public-profile .public-article-chart .public-profile-chart-context {
+  padding: 7px 0 10px;
+}
+.public-profile .public-profile-winrate-band {
+  padding: 11px 9px 10px;
+  margin: 9px 0 2px;
+  border: 1px solid #28525a;
+  border-radius: 11px;
+  background: #0d2c36;
+}
+.public-profile .public-profile-winrate-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 7px;
+  color: #a7d0cd;
+  font-size: 10px;
+}
+.public-profile .public-profile-winrate-caption strong {
+  color: #58efd2;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.public-profile .public-profile-winrate-band meter {
+  display: block;
+  height: 12px;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 8px;
+  accent-color: #35dfb5;
+}
+.public-profile .public-profile-winrate-band meter::-webkit-meter-bar {
+  border: 0;
+  border-radius: 10px;
+  background: #163f45;
+}
+.public-profile .public-profile-winrate-band meter::-webkit-meter-optimum-value {
+  border-radius: 10px;
+  background: linear-gradient(90deg, #159b8a, #35dfb5);
+}
+.public-profile .public-profile-insights .public-profile-kpi,
+.public-profile .public-profile-insights .public-profile-achievement-card,
+.public-profile .public-profile-insights .public-profile-awards-summary {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  box-shadow: inset 0 1px #ffffff08;
+}
+
+/* Two compact chart cards per row where there really is room. No second
+   chart engine is mounted: each preview remains a single static SVG. */
+@media (min-width: 1440px) {
+  .public-profile .public-profile-wall.public-profile-setup-gallery {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: start;
+  }
+  .public-profile .public-profile-setup-gallery > .public-profile-wall-heading,
+  .public-profile .public-profile-setup-gallery > .public-profile-gallery-share,
+  .public-profile .public-profile-setup-gallery > .public-profile-error,
+  .public-profile .public-profile-setup-gallery > .public-profile-loading,
+  .public-profile .public-profile-setup-gallery > .public-profile-empty-state,
+  .public-profile .public-profile-setup-gallery > .public-profile-more {
+    grid-column: 1 / -1;
+  }
+  .public-profile .public-profile-setup-gallery > .public-profile-post {
+    margin-bottom: 0;
+  }
+}
+@media (max-width: 640px) {
+  .public-profile .public-profile-post {padding: 13px; border-radius: 14px;}
+  .public-profile .public-profile-post-actions > button,
+  .public-profile .public-profile-post-actions > a {
+    flex: 1 1 145px;
+    min-width: 0;
+    min-height: 44px;
+    white-space: normal;
+  }
+  .public-profile .public-profile-post-author {flex-wrap: nowrap;}
+  .public-profile .public-profile-post-author > div {flex-basis: 0;}
+  .public-profile .public-profile-post-public {flex: 0 0 auto; font-size: 9px;}
+  .public-profile .public-profile-chart-card {padding: 8px;}
+  .public-profile .public-profile-chart-context-heading {gap: 5px;}
+  .public-profile .public-profile-chart-context-info {font-size: 9px;}
+  .public-profile .public-profile-winrate-band {padding: 9px;}
+}
+@media (max-width: 390px) {
+  .public-profile .public-profile-post-actions > button,
+  .public-profile .public-profile-post-actions > a {flex: 1 1 100%;}
+  .public-profile .public-profile-chart-context-exchange {flex: 0 1 auto;}
+}
+@media (prefers-reduced-motion: reduce) {
+  .public-profile .public-profile-chart-card,
+  .public-profile .public-profile-post {scroll-behavior: auto;}
+}
