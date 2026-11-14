@@ -518,3 +518,61 @@ body { background: #080f1b; }
   .public-profile .public-profile-empty-actions {flex-direction:column;width:100%;}
   .public-profile .public-profile-empty-actions > a {width:100%;min-height:42px;}
 }
+
+
+/* Guest navigation is scoped to already-authorized public saved chart posts. */
+.public-profile .public-profile-gallery-share {
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:9px;
+  margin:0 0 11px;padding:10px 12px;border:1px solid #28665e;
+  border-radius:12px;background:#103b3b;color:#b8ddd9;
+  font-size:11px;line-height:1.5;
+}
+.public-profile .public-profile-gallery-share button,
+.public-profile .public-profile-chart-navigation button,
+.public-profile .public-profile-chart-navigation a,
+.public-profile .public-profile-chart-deep-link {
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:38px;padding:8px 12px;border:1px solid #338577;
+  border-radius:10px;background:#14554b;color:#d8fff3;
+  font-size:11px;font-weight:800;text-decoration:none;
+}
+.public-profile .public-profile-gallery-share button:hover,
+.public-profile .public-profile-chart-navigation button:hover:not(:disabled),
+.public-profile .public-profile-chart-navigation a:hover,
+.public-profile .public-profile-chart-deep-link:hover {
+  background:#1a7062;border-color:#49b9a3;text-decoration:none;
+}
+.public-profile .public-profile-chart-deep-link {
+  margin:0 0 11px;max-width:100%;
+}
+.public-profile .public-profile-chart-navigation {
+  display:grid;gap:9px;margin:12px 0;padding:12px;
+  border:1px solid #2d615b;border-radius:13px;background:#102936;
+}
+.public-profile .public-profile-chart-navigation-move,
+.public-profile .public-profile-chart-navigation-links {
+  display:flex;align-items:center;flex-wrap:wrap;gap:9px;
+}
+.public-profile .public-profile-chart-navigation-move {justify-content:space-between;}
+.public-profile .public-profile-chart-navigation-move > span {
+  flex:1 1 auto;text-align:center;font-size:11px;color:#bdd5dc;
+  font-variant-numeric:tabular-nums;
+}
+.public-profile .public-profile-chart-navigation-links {justify-content:flex-end;}
+.public-profile .public-profile-chart-navigation button:disabled {
+  opacity:.4;cursor:not-allowed;
+}
+.public-profile .public-profile-chart-navigation small,
+.public-profile .public-profile-gallery-share small {
+  color:#ffd7d7;font-size:11px;
+}
+@media(max-width:670px) {
+  .public-profile .public-profile-gallery-share,
+  .public-profile .public-profile-chart-navigation-move,
+  .public-profile .public-profile-chart-navigation-links {align-items:stretch;}
+  .public-profile .public-profile-gallery-share > button {width:100%;min-height:42px;}
+  .public-profile .public-profile-chart-navigation-move > button {flex:1 1 30%;min-height:42px;}
+  .public-profile .public-profile-chart-navigation-move > span {order:-1;flex-basis:100%;}
+  .public-profile .public-profile-chart-navigation-links > a,
+  .public-profile .public-profile-chart-navigation-links > button {flex:1 1 45%;min-height:42px;}
+}

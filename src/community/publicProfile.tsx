@@ -8,7 +8,8 @@ import {
 import { ChartPreview } from "../components/community/ChartPreview";
 import type { ChartDocument } from "./chartDocument";
 import {
-  communityPostUrl, publicPostId, publicPostUrl,
+  communityPostUrl, publicPostUrl,
+  publicChartGalleryUrl, publicChartPostUrl, publicProfileDeepLink,
   publicProfileDate, visibleReactionSummary,
   type PublicReactionSummary,
 } from "./publicProfileViewModel";
@@ -166,7 +167,8 @@ export function PublicProfile() {
   const [postError, setPostError] = useState("");
   const [busy, setBusy] = useState(false);
   const [chart, setChart] = useState<ChartDocument | null>(null);
-  const [tab, setTab] = useState<PublicTab>("wall");
+  const [chartPostId, setChartPostId] = useState<string | null>(null);
+  const [tab, setTab] = useState<PublicTab>(() => publicProfileDeepLink(location.search).tab);
   const [postCategory, setPostCategory] = useState<"all" | "idea" | "analysis" | "education">("all");
   const feedKey = tab === "setups" ? "setups" : tab === "wall" ? "wall:" + postCategory : null;
   const currentFeedKey = useRef(feedKey);
@@ -180,7 +182,8 @@ export function PublicProfile() {
   const [expandedComments, setExpandedComments] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, CommentState>>({});
   const base = "/api/public/profiles/" + encodeURIComponent(nameAtLocation());
-  const linkedPostId = publicPostId(new URLSearchParams(location.search).get("post"));
+  const initialLink = publicProfileDeepLink(location.search);
+  const linkedPostId = initialLink.postId;
 
   useEffect(() => {
     if (chart) document.getElementById("public-chart-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -192,6 +195,7 @@ export function PublicProfile() {
       .then(([account, wall]) => {
         if (controller.signal.aborted) return;
         setProfile(account.profile);
+        if (initialLink.tab === "statistics" && !account.profile.statistics) setTab("wall");
         if (requestVersion === feedRequestVersion.current && currentFeedKey.current === "wall:all") {
           setItems(wall.items);
           setNext(wall.next);
@@ -212,7 +216,9 @@ export function PublicProfile() {
   useEffect(() => {
     if (!feedLoadedOnce.current) {
       feedLoadedOnce.current = true;
-      return;
+      // The initial wall request is already part of the profile fetch.
+      // Deep links to HookChart still need their own first-page request.
+      if (feedKey === "wall:all") return;
     }
     if (!feedKey) return;
     const controller = new AbortController();
@@ -248,10 +254,34 @@ export function PublicProfile() {
     if (!linkedPostId) return;
     const controller = new AbortController();
     void read(base + "/posts/" + encodeURIComponent(linkedPostId), controller.signal)
-      .then(result => { setFocusedPost(result.item); setTab("wall"); })
+      .then(result => {
+        if (controller.signal.aborted) return;
+        setFocusedPost(result.item);
+        if (initialLink.openChart) {
+          setTab("setups");
+          if (!result.item.chart) {
+            setPostError("Графік цього допису не опубліковано або доступ відкликано.");
+            return;
+          }
+          // The full saved chart is separately authorized; the preview does
+          // not bypass chart or parent-post privacy.
+          void read(base + "/posts/" + encodeURIComponent(linkedPostId) + "/chart", controller.signal)
+            .then(data => {
+              if (controller.signal.aborted) return;
+              setChart(data.document);
+              setChartPostId(linkedPostId);
+            })
+            .catch(e => {
+              if (!controller.signal.aborted)
+                setPostError(e instanceof Error ? e.message : "Графік недоступний");
+            });
+        } else {
+          setTab("wall");
+        }
+      })
       .catch(e => { if (!controller.signal.aborted) setPostError(e instanceof Error ? e.message : "Допис недоступний"); });
     return () => controller.abort();
-  }, [base, linkedPostId]);
+  }, [base, linkedPostId, initialLink.openChart]);
 
   const more = async () => {
     if (!next || busy || pendingFeedKey || !feedKey || loadedFeedKey !== feedKey) return;
@@ -274,9 +304,12 @@ export function PublicProfile() {
   };
   const openChart = async (id: string) => {
     if (busy) return;
-    setBusy(true); setError(""); setChart(null);
-    try { setChart((await read(base + "/posts/" + encodeURIComponent(id) + "/chart")).document); }
-    catch (e) { setError(e instanceof Error ? e.message : "Графік недоступний"); }
+    setBusy(true); setError(""); setChart(null); setChartPostId(null);
+    try {
+      const result = await read(base + "/posts/" + encodeURIComponent(id) + "/chart");
+      setChart(result.document);
+      setChartPostId(id);
+    } catch (e) { setError(e instanceof Error ? e.message : "Графік недоступний"); }
     finally { setBusy(false); }
   };
   const loadComments = async (id: string, after?: string) => {
@@ -345,6 +378,19 @@ export function PublicProfile() {
     }
     await copy(url, id);
   };
+  const shareChart = async (id: string) => {
+    if (!profile) return;
+    const url = publicChartPostUrl(profile.url, id);
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: profile.displayName + " · HookChart", url });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+    await copy(url, "chart");
+  };
 
   const communityUrl = profile ? profile.communityOrigin + "/#community?section=profile&owner=" + encodeURIComponent(profile.id) : null;
   const pinned = profile?.featuredPost ?? null;
@@ -363,6 +409,10 @@ export function PublicProfile() {
   const totalClosures = profile?.statistics?.totals.reduce((sum, currency) => sum + currency.count, 0) ?? 0;
   const overview = publicClosedOrderOverview(profile?.statistics?.totals ?? []);
   const visibleWall = tab === "setups" ? publicProfileSetups(wall) : wall;
+  const chartPostIds = publicProfileSetups(wall).map(item => item.id);
+  const chartIndex = chartPostId ? chartPostIds.indexOf(chartPostId) : -1;
+  const previousChartId = chartIndex > 0 ? chartPostIds[chartIndex - 1] : null;
+  const followingChartId = chartIndex >= 0 ? chartPostIds[chartIndex + 1] ?? null : null;
   const visiblePostCount = wallPreviewCount;
   const browsePosts = () => {
     setPostCategory("all");
@@ -468,6 +518,14 @@ export function PublicProfile() {
                   onClick={() => setPostCategory(id)}><Icon size={15} aria-hidden="true" /> {label}</button>
               ))}
             </nav>}
+            {tab === "setups" && <div className="public-profile-gallery-share">
+              <span>Лише відкриті автором збережені графіки. Без live-підключення до біржі.</span>
+              <button type="button" onClick={() => void copy(publicChartGalleryUrl(profile.url), "gallery")}>
+                {copied === "gallery" ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
+                {copied === "gallery" ? "Посилання скопійовано" : "Поділитися галереєю"}
+              </button>
+              {copied === "error:gallery" && <small role="status">Не вдалося скопіювати адресу галереї.</small>}
+            </div>}
             {postError && <p className="public-profile-error" role="status">Допис за посиланням недоступний: {postError}</p>}
             {visibleWall.map(item => <article className="public-profile-panel public-profile-post" key={item.id} id={"post-" + item.id}>
               {focusedPost?.id === item.id && <span className="public-profile-featured">Допис за посиланням</span>}
@@ -488,7 +546,13 @@ export function PublicProfile() {
               {!!item.photos?.length && <div className="public-profile-photos">
                 {item.photos.map((id: string) => <img key={id} loading="lazy" alt="Фото до публікації" src={base + "/posts/" + item.id + "/media/" + id} />)}
               </div>}
-              {item.chart && <ChartPreview document={item.chart} onOpen={() => void openChart(item.id)} />}
+              {item.chart && <>
+                <ChartPreview document={item.chart} onOpen={() => void openChart(item.id)} />
+                <a className="public-profile-chart-deep-link"
+                  href={publicChartPostUrl(profile.url, item.id)}>
+                  <ChartNoAxesCombined size={15} aria-hidden="true" /> Відкрити окремий HookChart <ArrowUpRight size={14} aria-hidden="true" />
+                </a>
+              </>}
               <div className="public-profile-post-actions">
                 <ReactionTotals reactions={item.reactions} />
                 <button
@@ -663,7 +727,32 @@ export function PublicProfile() {
       </div>
 
       {chart && <section id="public-chart-workspace" className="public-profile-panel public-profile-workspace" aria-label="Збережений HookChart">
-        <div className="public-profile-workspace-heading"><h2>HookChart · власний розбір</h2><button type="button" onClick={() => setChart(null)}>Закрити графік</button></div>
+        <div className="public-profile-workspace-heading">
+          <h2>HookChart · публічний розбір</h2>
+          <button type="button" onClick={() => { setChart(null); setChartPostId(null); }}>Закрити графік</button>
+        </div>
+        {chartPostId && <div className="public-profile-chart-navigation" aria-label="Навігація між графіками">
+          <div className="public-profile-chart-navigation-move">
+            <button type="button" disabled={!previousChartId || busy}
+              onClick={() => previousChartId && void openChart(previousChartId)}
+              aria-label="Попередній публічний HookChart">Попередній</button>
+            <span aria-live="polite">{chartIndex < 0 ? "Публічний знімок" :
+              "Графік " + (chartIndex + 1) + " із " + chartPostIds.length + " завантажених"}</span>
+            <button type="button" disabled={!followingChartId || busy}
+              onClick={() => followingChartId && void openChart(followingChartId)}
+              aria-label="Наступний публічний HookChart">Наступний</button>
+          </div>
+          <div className="public-profile-chart-navigation-links">
+            <a href={publicPostUrl(profile.url, chartPostId)}>
+              <BookOpenText size={15} aria-hidden="true" /> До публікації
+            </a>
+            <button type="button" onClick={() => void shareChart(chartPostId)}>
+              {copied === "chart" ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
+              {copied === "chart" ? "Посилання скопійовано" : "Поділитися HookChart"}
+            </button>
+          </div>
+          {copied === "error:chart" && <small role="status">Не вдалося скопіювати адресу графіка.</small>}
+        </div>}
         <p>Зміни локальні й не змінюють публікацію. Доступні свічки збереженого знімка; біржових підключень немає. Для публікації відповіді відкрийте оригінал у Community.</p>
         <Suspense fallback={<p role="status">Відкриваємо HookChart…</p>}><HookChart value={chart} onChange={setChart} /></Suspense>
       </section>}
