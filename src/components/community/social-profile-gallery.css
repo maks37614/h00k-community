@@ -1,0 +1,114 @@
+/* Authenticated social profile: reuse the public gallery controls without exposing
+   public-only data or modifying the main screener's layout. */
+.community-workspace .community-profile-setups,
+.community-workspace .community-profile-articles {
+  min-width: 0;
+}
+.community-workspace .community-profile-setups > .community-section-heading {
+  margin: 0 0 17px;
+  padding: 0 2px 13px;
+  border-bottom: 1px solid #263f51;
+}
+.community-workspace .community-profile-setups > .community-section-heading h3 {
+  margin: 5px 0 0;
+  font-size: clamp(20px,2.3vw,26px);
+  color: #f1f8ff;
+}
+.community-workspace .community-profile-setups .public-setup-gallery-toolbar {
+  min-width: 0;
+  padding: 15px;
+  margin-bottom: 16px;
+  border: 1px solid #31626a;
+  border-radius: 16px;
+  background: linear-gradient(120deg,#112e39,#0d1a2a);
+  scroll-margin-block: 20px;
+}
+.community-workspace .community-profile-setups .public-setup-gallery-toolbar-top {
+  display: flex;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.community-workspace .community-profile-setups .public-setup-gallery-toolbar h3 {
+  display: flex; align-items: center; gap: 8px;
+  color: #d5fff5; font-size: 14px; margin: 0;
+}
+.community-workspace .community-profile-setups .public-setup-gallery-toolbar-top > span {
+  color: #9fbec9; font-size: 12px; font-variant-numeric: tabular-nums;
+}
+.community-workspace .community-profile-setups .public-setup-gallery-toolbar-fields {
+  display: grid;
+  grid-template-columns: minmax(165px,1.4fr) repeat(3,minmax(115px,1fr));
+  gap: 10px;
+}
+.community-workspace .community-profile-setups .public-setup-gallery-toolbar-fields > label {
+  display: flex; flex-direction: column; gap: 6px;
+  min-width: 0; color: #b3cfd7; font-size: 12px; font-weight: 700;
+}
+.community-workspace .community-profile-setups .public-setup-gallery-toolbar :is(input,select) {
+  display: block; width: 100%; min-width: 0; min-height: 42px;
+  padding: 10px; border: 1px solid #376978; border-radius: 10px;
+  background: #0b1c2e; color: #e7fff9; font-size: 14px;
+}
+.community-workspace .community-profile-setups .public-setup-gallery-input-wrap {
+  display: block; position: relative; min-width: 0;
+}
+.community-workspace .community-profile-setups .public-setup-gallery-input-wrap input {
+  padding-left: 34px;
+}
+.community-workspace .community-profile-setups .public-setup-gallery-input-wrap svg {
+  position: absolute; top: 50%; left: 11px;
+  transform: translateY(-50%); pointer-events: none; color: #67d9c9;
+}
+.community-workspace .community-profile-setups .public-setup-gallery-toolbar-bottom {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 13px;
+  margin-top: 12px;
+}
+.community-workspace .community-profile-setups .public-setup-gallery-toolbar-bottom small {
+  flex: 1 1 240px; color: #a2bdc9; font-size: 11px; line-height: 1.55;
+}
+.community-workspace .community-profile-setups .public-setup-gallery-reset,
+.community-workspace .community-profile-gallery-more {
+  min-height: 42px; padding: 9px 14px; border-radius: 10px;
+  border: 1px solid #36897d; background: #134940; color: #dcfff8;
+  font-size: 13px; font-weight: 750;
+}
+.community-workspace .community-profile-gallery-more {margin-top: 14px;}
+.community-workspace .community-profile-gallery-list {
+  display: grid; grid-template-columns: minmax(0,1fr); gap: 12px;
+}
+.community-workspace .community-profile-gallery-error {
+  margin: 12px 0; color: #ffb6c4; overflow-wrap: anywhere;
+}
+.community-workspace .community-article-title-label {
+  display: grid; gap: 7px; margin: 0 0 13px;
+  color: #c8e6eb; font-size: 13px; font-weight: 750;
+}
+.community-workspace .community-article-title-label input {
+  width: 100%; min-height: 44px; font-size: 15px;
+  border: 1px solid #36746d; border-radius: 10px;
+  background: #0b1d2b; color: #f0fffc;
+}
+.community-workspace .community-profile-setups .community-empty button {
+  display: block; margin: 12px auto 0;
+}
+@media (max-width: 1120px) {
+  .community-workspace .community-profile-setups .public-setup-gallery-toolbar-fields {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+}
+@media (max-width: 640px) {
+  .community-workspace .community-profile-setups .public-setup-gallery-toolbar-fields {
+    grid-template-columns: minmax(0,1fr);
+  }
+  .community-workspace .community-profile-setups .public-setup-gallery-toolbar :is(input,select),
+  .community-workspace .community-article-title-label input {
+    min-height: 44px;
+    font-size: 16px; /* prevent iOS focus zoom */
+  }
+  .community-workspace .community-profile-setups .public-setup-gallery-toolbar {
+    padding: 11px;
+  }
+}
