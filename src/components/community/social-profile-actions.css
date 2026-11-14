@@ -85,3 +85,13 @@
     flex: 1 1 100%;
   }
 }
+
+/* Public profile links land on the action selected by the visitor. */
+.community-workspace .community-profile-connect[data-contact-focus="true"] {
+  border-color:#35cbbd;
+  box-shadow:0 0 0 2px #1de3be22,0 10px 25px #001a1b44;
+}
+.community-workspace .community-profile-connect[data-contact-focus="true"] > button:focus-visible {
+  outline:3px solid #74f6e3;
+  outline-offset:3px;
+}

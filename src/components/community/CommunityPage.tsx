@@ -2888,15 +2888,23 @@ function Profile({
   );
   const p = resource.data?.profile;
   const requestedContact = new URLSearchParams(location.hash.split("?")[1] ?? "").get("contact");
-  useEffect(() => {
-    if (!p || user?.uid === id || !["friend", "message"].includes(requestedContact ?? "")) return;
-    const frame = requestAnimationFrame(() => {
-      document.getElementById("community-profile-contact")?.scrollIntoView({ block: "start", behavior: "smooth" });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [id, p, requestedContact, user?.uid]);
   const friends: CommunityFriend[] | undefined = friendships.data?.people;
   const relation = friends?.find((person) => person.id === id);
+  useEffect(() => {
+    if (!p || !friends || user?.uid === id || !["friend", "message"].includes(requestedContact ?? "")) return;
+    const frame = requestAnimationFrame(() => {
+      // The visitor chose an action on the public page. Focus the permitted
+      // authenticated control, but never send an unconfirmed friend request or message.
+      const controlId = requestedContact === "message" && relation?.accepted
+        ? "community-profile-message-action" : "community-profile-friend-action";
+      const button = document.getElementById(controlId);
+      (button ?? document.getElementById("community-profile-contact"))?.scrollIntoView({
+        block: "start", behavior: "smooth",
+      });
+      button?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [id, p, requestedContact, user?.uid, !!friends, relation?.accepted, relation?.incoming]);
   function changeFriend(action: "send" | "accept" | "cancel" | "remove") {
     if (action === "remove" && !window.confirm("Видалити цього трейдера з друзів?")) return;
     void run(async () => {
@@ -2951,7 +2959,7 @@ function Profile({
         </article>
       )}
       {id !== user?.uid && p && (
-        <section id="community-profile-contact" className="community-profile-connect" data-contact-focus={requestedContact ? "true" : undefined} aria-label="Зв'язок із трейдером">
+        <section id="community-profile-contact" className="community-profile-connect" data-contact-focus={["friend", "message"].includes(requestedContact ?? "") ? "true" : undefined} aria-label="Зв'язок із трейдером">
           {friendships.error ? (
             <p role="status">{friendships.error}</p>
           ) : !friends ? (
@@ -2967,6 +2975,7 @@ function Profile({
                   <span className="community-profile-friend-status">Ви друзі</span>
                   <button
                     className="community-primary"
+                    id="community-profile-message-action"
                     type="button"
                     onClick={() => onChatInvite(id, p.displayName ?? "Трейдер")}
                   >
@@ -2978,17 +2987,17 @@ function Profile({
               ) : relation?.incoming ? (
                 <>
                   <span className="community-profile-request-status">Вхідний запит дружби</span>
-                  <button className="community-primary" type="button" onClick={() => changeFriend("accept")}>
+                  <button id="community-profile-friend-action" className="community-primary" type="button" onClick={() => changeFriend("accept")}>
                     Прийняти запит
                   </button>
                 </>
               ) : relation ? (
                 <>
                   <span className="community-profile-request-status">Очікується відповідь</span>
-                  <button type="button" onClick={() => changeFriend("cancel")}>Відкликати запит</button>
+                  <button id="community-profile-friend-action" type="button" onClick={() => changeFriend("cancel")}>Відкликати запит</button>
                 </>
               ) : (
-                <button className="community-primary" type="button" onClick={() => changeFriend("send")}>
+                <button id="community-profile-friend-action" className="community-primary" type="button" onClick={() => changeFriend("send")}>
                   <Users size={16} aria-hidden="true" />
                   Додати в друзі
                 </button>

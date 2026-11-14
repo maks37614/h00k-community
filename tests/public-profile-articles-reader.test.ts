@@ -44,7 +44,7 @@ test("articles have a responsive gallery and full reader without synthetic views
   assert.match(articleView, /posts\.filter\(post => post\.category === "education"\)/);
   assert.match(articleView, /publicArticleUrl\(profile\.url, post\.id\)/);
   assert.match(articleView, /publicArticlesUrl\(profile\.url\)/);
-  assert.match(articleView, /selected\.photos\.slice\(1\)/);
+  assert.match(articleView, /<PublicProfilePhotoGallery ids=\{selected\.photos\}/);
   assert.match(articleView, /<ChartPreview document=\{selected\.chart\}/);
   assert.match(articleView, /communityPostUrl\(profile\.communityOrigin, selected\.id\)/);
   assert.match(articleView, /loading="lazy"/);
