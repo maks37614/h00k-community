@@ -474,6 +474,12 @@ export function installAccountRoutes(
           clean[key] = raw[key];
         }
       }
+      if (raw.featuredPublicPostId !== undefined) {
+        if (raw.featuredPublicPostId !== null && typeof raw.featuredPublicPostId !== "string")
+          fail("Некоректний допис для закріплення");
+        clean.featuredPublicPostId = raw.featuredPublicPostId === null
+          ? null : uuid(raw.featuredPublicPostId);
+      }
       for (const field of ["avatarMediaId", "coverMediaId"]) {
         if (raw[field] !== undefined) {
           if (raw[field] !== null && typeof raw[field] !== "string")
@@ -543,6 +549,16 @@ export function installAccountRoutes(
       if (patch.community?.publicProfileEnabled === true) {
         const name = await tx.query("SELECT username FROM hc_profile_names WHERE owner_id=$1", [a!.id]);
         if (!name.rows.length) fail("Спочатку зарезервуйте персональну адресу", 409);
+      }
+      if (typeof patch.community?.featuredPublicPostId === "string") {
+        const featured = await tx.query(
+          `SELECT id FROM hc_items
+             WHERE id=$1 AND owner_id=$2 AND kind='post'
+               AND audience='public' AND conversation_id IS NULL AND NOT deleted`,
+          [patch.community.featuredPublicPostId, a!.id],
+        );
+        if (!featured.rows.length)
+          fail("Закріпити можна лише власний відкритий допис", 403);
       }
       for (const field of ["avatarMediaId", "coverMediaId"]) {
         const id = patch.community?.[field];
