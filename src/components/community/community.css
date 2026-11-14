@@ -284,6 +284,42 @@
   color: #94a3b8;
   border-top: 1px solid #1e293b;
 }
+/* Trusted feed API cards only; raw local drafts never receive a verified badge. */
+.community-workspace .community-chart-preview .community-chart-preview-origin {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 10px 12px;
+  color: #b9d6d9;
+  background: #0c2832;
+  border-top: 1px solid #2a5557;
+  line-height: 1.45;
+  text-align: left;
+}
+.community-workspace .community-chart-preview .community-chart-preview-origin strong {
+  color: #99f0df;
+  font-size: 12px;
+  font-weight: 800;
+}
+.community-workspace .community-chart-preview .community-chart-preview-origin span {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #aecad3;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.community-workspace .community-chart-preview .community-chart-preview-origin em {
+  font-style: normal;
+  color: #90afbb;
+  font-size: 10px;
+  line-height: 1.45;
+}
+@media (max-width: 640px) {
+  .community-workspace .community-chart-preview .community-chart-preview-origin {padding: 10px; gap: 7px;}
+}
 .community-comments {
   border-top: 1px solid #243248;
   margin-top: 16px;
